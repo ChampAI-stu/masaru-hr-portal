@@ -513,20 +513,21 @@
         </div>
         <div class="grid-2">
           <div class="field"><label>ตำแหน่งที่สมัคร <span class="req">*</span></label>
-            <select id="a-pos">
-              <option value="">— เลือกตำแหน่ง —</option>
-              <optgroup label="Customer Service"><option>CS ประสานงาน</option><option>CS Facebook</option><option>Support Facebook</option></optgroup>
-              <optgroup label="การตลาด"><option>การตลาด Facebook</option><option>การตลาดออนไลน์</option><option>KOL Specialist</option><option>Branding</option><option>Live</option><option>Content Creator</option><option>Graphic Design</option></optgroup>
-              <optgroup label="Sales"><option>Sale Wholesale ขายส่ง</option><option>Add-order</option><option>Telesale</option><option>Sale Admin</option></optgroup>
-              <optgroup label="จัดซื้อ"><option>Purchasing จัดซื้อต่างประเทศ</option><option>Purchasing จัดซื้อในประเทศ</option></optgroup>
-              <optgroup label="บัญชี / การเงิน"><option>Accountant</option><option>Internal Auditor</option></optgroup>
-              <optgroup label="HR / IT"><option>Human Resources</option><option>IT Support</option></optgroup>
-              <optgroup label="หัวหน้าฝ่าย"><option>หัวหน้าฝ่ายบุคคล</option><option>หัวหน้าการตลาด</option><option>หัวหน้าบัญชี</option><option>หัวหน้าคลังสินค้า</option></optgroup>
-              <optgroup label="ช่าง / เลขา"><option>ช่างเคลม</option><option>เลขา</option></optgroup>
-            </select>
+            <input id="a-pos" list="dl-pos" placeholder="เลือกหรือพิมพ์ตำแหน่ง" autocomplete="off">
+            <datalist id="dl-pos">
+              <option>CS ประสานงาน</option><option>CS Facebook</option><option>Support Facebook</option>
+              <option>การตลาด Facebook</option><option>การตลาดออนไลน์</option><option>KOL Specialist</option><option>Branding</option><option>Live</option><option>Content Creator</option><option>Graphic Design</option>
+              <option>Sale Wholesale ขายส่ง</option><option>Add-order</option><option>Telesale</option><option>Sale Admin</option>
+              <option>Purchasing จัดซื้อต่างประเทศ</option><option>Purchasing จัดซื้อในประเทศ</option>
+              <option>Accountant</option><option>Internal Auditor</option>
+              <option>Human Resources</option><option>IT Support</option>
+              <option>หัวหน้าฝ่ายบุคคล</option><option>หัวหน้าการตลาด</option><option>หัวหน้าบัญชี</option><option>หัวหน้าคลังสินค้า</option>
+              <option>ช่างเคลม</option><option>เลขา</option>
+            </datalist>
           </div>
           <div class="field"><label>แหล่งที่มา</label>
-            <select id="a-src"><option value="">— เลือก —</option><option>Jobthai</option><option>Jobbkk</option><option>Facebook</option><option>Walk-in</option><option>อื่นๆ</option></select>
+            <input id="a-src" list="dl-src" placeholder="เลือกหรือพิมพ์" autocomplete="off">
+            <datalist id="dl-src"><option>Jobthai</option><option>Jobbkk</option><option>Facebook</option><option>Walk-in</option><option>อื่นๆ</option></datalist>
           </div>
         </div>
         <div class="field">
@@ -924,7 +925,8 @@
           </div>
           <div class="grid-2">
             <div class="field"><label>รูปแบบการจ้าง</label>
-              <select class="inp" id="f-otype" data-af="offerType"><option ${a.offerType==='พนักงานประจำ'?'selected':''}>พนักงานประจำ</option><option ${a.offerType==='สัญญาจ้าง'?'selected':''}>สัญญาจ้าง</option><option ${a.offerType==='พาร์ทไทม์'?'selected':''}>พาร์ทไทม์</option></select>
+              <input class="inp" id="f-otype" data-af="offerType" list="dl-otype" value="${esc(a.offerType || '')}" placeholder="เลือกหรือพิมพ์" autocomplete="off">
+              <datalist id="dl-otype"><option>พนักงานประจำ</option><option>สัญญาจ้าง</option><option>พาร์ทไทม์</option></datalist>
             </div>
             <div class="field"></div>
           </div>
@@ -939,7 +941,8 @@
             <div class="banner banner-info"><i class="ti ti-info-circle"></i>บันทึกรายละเอียด Offer ให้ครบก่อน แล้วบันทึกว่าได้ส่งให้ผู้สมัครทางช่องทางใด</div>
             <div class="grid-2">
               <div class="field"><label>ช่องทางที่ส่ง</label>
-                <select class="inp" id="f-ochannel" onchange="toggleEmail()"><option>Email</option><option>LINE</option><option>โทรศัพท์</option><option>เอกสารตัวจริง</option></select>
+                <input class="inp" id="f-ochannel" list="dl-ochannel" value="${esc(a.offerChannel || 'Email')}" oninput="toggleEmail()" placeholder="เลือกหรือพิมพ์" autocomplete="off">
+                <datalist id="dl-ochannel"><option>Email</option><option>LINE</option><option>โทรศัพท์</option><option>เอกสารตัวจริง</option></datalist>
               </div>
               <div class="field" id="email-field"><label>Email ผู้สมัคร</label><input class="inp" id="f-oemail" data-af="offerEmail" placeholder="email@example.com" value="${esc(a.offerEmail)}"></div>
             </div>
@@ -1302,7 +1305,7 @@
     function closeAdd() {
       document.getElementById('add-overlay').classList.remove('on');
       ['a-name', 'a-phone'].forEach(i => document.getElementById(i).value = '');
-      ['a-pos', 'a-src'].forEach(i => document.getElementById(i).selectedIndex = 0);
+      ['a-pos', 'a-src'].forEach(i => document.getElementById(i).value = '');
       document.getElementById('dz').classList.remove('has');
       document.getElementById('dz-fn').textContent = '';
       document.getElementById('dup-warn').style.display = 'none';
