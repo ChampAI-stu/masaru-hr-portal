@@ -706,7 +706,7 @@
       document.getElementById('su-av').textContent = ini(name);
       document.getElementById('su-name').textContent = name;
       const sub = document.getElementById('su-role');
-      if (sub) sub.textContent = ROLE === 'exec' ? 'ผู้บริหาร (ดูอย่างเดียว)' : 'ฝ่ายบุคคล';
+      if (sub) sub.textContent = ROLE === 'exec' ? 'ผู้บริหาร' : 'ฝ่ายบุคคล';
       await dbLoad();
       await migrateLegacy();
       renderAll();
