@@ -219,6 +219,8 @@
     .icon-btn.int.on:hover { background: #f0b638; }
     .icon-btn.int.locked { background: #f4f2ec; color: #9a8a5e; cursor: default; }
     .icon-btn.int.locked:hover { background: #f4f2ec; }
+    .icon-btn.restore { border-color: #bcd6ea; background: #eef5fb; color: #1f6f9c; }
+    .icon-btn.restore:hover { background: #ddecf7; }
     body.exec-mode .add-btn { display: none !important; }
 
     .db { flex: 1; overflow-y: auto; padding: 24px 26px; }
@@ -650,7 +652,7 @@
       offerSentNote: 'offer_sent_note', offerSentBy: 'offer_sent_by',
       offerResult: 'offer_result', respondedAt: 'responded_at', offerRespNote: 'offer_resp_note',
       closeReason: 'close_reason', execInterested: 'exec_interested', photoPath: 'photo_path',
-      interestedBy: 'interested_by', closedAt: 'closed_at',
+      interestedBy: 'interested_by', closedAt: 'closed_at', prevStatus: 'prev_status',
     };
     function mapRow(r) {
       return {
@@ -664,7 +666,7 @@
         offerEmail: r.offer_email || '', offerSentNote: r.offer_sent_note || '', offerSentBy: r.offer_sent_by || '',
         offerResult: r.offer_result || '', respondedAt: r.responded_at || '', offerRespNote: r.offer_resp_note || '',
         closeReason: r.close_reason || '', execInterested: r.exec_interested === true, photoPath: r.photo_path || '',
-        interestedBy: r.interested_by || '', closedAt: r.closed_at || '',
+        interestedBy: r.interested_by || '', closedAt: r.closed_at || '', prevStatus: r.prev_status || '',
       };
     }
     async function dbLoad() {
@@ -867,7 +869,8 @@
           <div class="dh-acts">
             <span class="save-ind" id="save-ind"></span>
             ${interestBtn(a)}
-            ${isExec ? '' : `${!['rejected','cancelled','hired'].includes(st) ? `<button class="icon-btn warn" onclick="doWithdraw('${a.id}')"><i class="ti ti-user-x"></i>ผู้สมัครยกเลิก</button>` : ''}
+            ${isExec ? '' : `${st === 'cancelled' ? `<button class="icon-btn restore" onclick="restoreCancelled('${a.id}')"><i class="ti ti-arrow-back-up"></i>คืนค่า</button>` : ''}
+            ${!['rejected','cancelled','hired'].includes(st) ? `<button class="icon-btn warn" onclick="doWithdraw('${a.id}')"><i class="ti ti-user-x"></i>ผู้สมัครยกเลิก</button>` : ''}
             <button class="icon-btn danger" onclick="doDelete('${a.id}')"><i class="ti ti-trash"></i></button>`}
           </div>
         </div>
@@ -1077,7 +1080,7 @@
       if (result === 'accepted') {
         if (await dbUpdate(id, { offerResult: 'accepted', respondedAt: todayTh(), offerRespNote: note, status: 'hired' })) { showToast('🎉 รับเข้าทำงานแล้ว'); await refresh(); }
       } else {
-        if (await dbUpdate(id, { offerResult: 'rejected', respondedAt: todayTh(), offerRespNote: note, status: 'cancelled', closeReason: 'ผู้สมัครปฏิเสธ Offer', closedAt: todayTh() })) { showToast('บันทึก: ปฏิเสธ Offer'); await refresh(); }
+        if (await dbUpdate(id, { offerResult: 'rejected', respondedAt: todayTh(), offerRespNote: note, status: 'cancelled', closeReason: 'ผู้สมัครปฏิเสธ Offer', closedAt: todayTh(), prevStatus: 'offer' })) { showToast('บันทึก: ปฏิเสธ Offer'); await refresh(); }
       }
     }
     async function actReject(id, reason) {
@@ -1088,8 +1091,22 @@
       if (await dbUpdate(id, fields)) { showToast('บันทึกว่าไม่ผ่านแล้ว'); await refresh(); }
     }
     async function doWithdraw(id) {
+      const a = getA(id); if (!a) return;
       if (!await askConfirm('บันทึกว่าผู้สมัครยกเลิก / ถอนตัว?', { title: 'ผู้สมัครยกเลิก', okText: 'ยืนยัน', danger: true })) return;
-      if (await dbUpdate(id, { status: 'cancelled', closeReason: 'ผู้สมัครยกเลิก/ถอนตัว', closedAt: todayTh() })) { showToast('บันทึกว่ายกเลิกแล้ว'); await refresh(); }
+      if (await dbUpdate(id, { status: 'cancelled', closeReason: 'ผู้สมัครยกเลิก/ถอนตัว', closedAt: todayTh(), prevStatus: statusOf(a) })) { showToast('บันทึกว่ายกเลิกแล้ว'); await refresh(); }
+    }
+    function inferPrev(a) {
+      if (a.offerResult === 'rejected' || a.offerSentAt || a.offerSalary) return 'offer';
+      if (a.result === 'pass') return 'offer';
+      if (a.intDate) return 'interview';
+      if (a.hrBy || a.hrNote) return 'screening';
+      return 'new';
+    }
+    async function restoreCancelled(id) {
+      const a = getA(id); if (!a) return;
+      const prev = a.prevStatus || inferPrev(a);
+      if (!await askConfirm(`คืนค่าผู้สมัคร <b>${esc(a.name)}</b> กลับสู่สถานะ “${stMeta(prev).label}”?`, { title: 'คืนค่าผู้สมัคร', okText: 'คืนค่า' })) return;
+      if (await dbUpdate(id, { status: prev, closeReason: '', closedAt: '', prevStatus: '', offerResult: '', respondedAt: '' })) { showToast('คืนค่าผู้สมัครแล้ว'); await refresh(); }
     }
     async function doDelete(id) {
       if (!await askConfirm('ลบผู้สมัครนี้ถาวร? การลบไม่สามารถกู้คืนได้', { title: 'ลบผู้สมัคร', okText: 'ลบถาวร', danger: true })) return;
