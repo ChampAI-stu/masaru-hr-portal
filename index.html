@@ -647,7 +647,7 @@
       offerSentNote: 'offer_sent_note', offerSentBy: 'offer_sent_by',
       offerResult: 'offer_result', respondedAt: 'responded_at', offerRespNote: 'offer_resp_note',
       closeReason: 'close_reason', execInterested: 'exec_interested', photoPath: 'photo_path',
-      interestedBy: 'interested_by',
+      interestedBy: 'interested_by', closedAt: 'closed_at',
     };
     function mapRow(r) {
       return {
@@ -661,7 +661,7 @@
         offerEmail: r.offer_email || '', offerSentNote: r.offer_sent_note || '', offerSentBy: r.offer_sent_by || '',
         offerResult: r.offer_result || '', respondedAt: r.responded_at || '', offerRespNote: r.offer_resp_note || '',
         closeReason: r.close_reason || '', execInterested: r.exec_interested === true, photoPath: r.photo_path || '',
-        interestedBy: r.interested_by || '',
+        interestedBy: r.interested_by || '', closedAt: r.closed_at || '',
       };
     }
     async function dbLoad() {
@@ -780,10 +780,10 @@
     function stepperHtml(a) {
       const st = statusOf(a);
       if (st === 'rejected') {
-        return `<div class="banner banner-err"><i class="ti ti-circle-x"></i><div><b>ไม่ผ่าน</b>${a.closeReason ? ' — ' + esc(a.closeReason) : ''}</div></div>`;
+        return `<div class="banner banner-err"><i class="ti ti-circle-x"></i><div><b>ไม่ผ่าน</b>${a.closeReason ? ' — ' + esc(a.closeReason) : ''}${a.closedAt ? ` · เมื่อ ${esc(a.closedAt)}` : ''}</div></div>`;
       }
       if (st === 'cancelled') {
-        return `<div class="banner banner-cancel"><i class="ti ti-user-x"></i><div><b>ยกเลิก</b>${a.closeReason ? ' — ' + esc(a.closeReason) : ''}</div></div>`;
+        return `<div class="banner banner-cancel"><i class="ti ti-user-x"></i><div><b>ยกเลิก</b>${a.closeReason ? ' — ' + esc(a.closeReason) : ''}${a.closedAt ? ` · เมื่อ ${esc(a.closedAt)}` : ''}</div></div>`;
       }
       const curIdx = FLOW.indexOf(st);
       return `<div class="stepper">${FLOW.map((s, i) => {
@@ -1050,7 +1050,7 @@
       if (r === 'pass') {
         if (await dbUpdate(id, { result: 'pass', resultNote: note, agreedSalary: sal, offerSalary: sal, status: 'offer' })) { showToast('ผ่าน → ไปขั้น Offer'); await refresh(); }
       } else {
-        if (await dbUpdate(id, { result: 'fail', resultNote: note, status: 'rejected', closeReason: 'ไม่ผ่านการสัมภาษณ์' })) { showToast('บันทึก: ไม่ผ่านสัมภาษณ์'); await refresh(); }
+        if (await dbUpdate(id, { result: 'fail', resultNote: note, status: 'rejected', closeReason: 'ไม่ผ่านการสัมภาษณ์', closedAt: todayTh() })) { showToast('บันทึก: ไม่ผ่านสัมภาษณ์'); await refresh(); }
       }
     }
     async function actSendOffer(id) {
@@ -1072,19 +1072,19 @@
       if (result === 'accepted') {
         if (await dbUpdate(id, { offerResult: 'accepted', respondedAt: todayTh(), offerRespNote: note, status: 'hired' })) { showToast('🎉 รับเข้าทำงานแล้ว'); await refresh(); }
       } else {
-        if (await dbUpdate(id, { offerResult: 'rejected', respondedAt: todayTh(), offerRespNote: note, status: 'cancelled', closeReason: 'ผู้สมัครปฏิเสธ Offer' })) { showToast('บันทึก: ปฏิเสธ Offer'); await refresh(); }
+        if (await dbUpdate(id, { offerResult: 'rejected', respondedAt: todayTh(), offerRespNote: note, status: 'cancelled', closeReason: 'ผู้สมัครปฏิเสธ Offer', closedAt: todayTh() })) { showToast('บันทึก: ปฏิเสธ Offer'); await refresh(); }
       }
     }
     async function actReject(id, reason) {
       if (!await askConfirm(`บันทึกว่า <b>ไม่ผ่าน</b>: ${reason}?`, { title: 'ไม่ผ่าน', okText: 'ยืนยัน', danger: true })) return;
       const note = document.getElementById('f-hrnote')?.value;
-      const fields = { status: 'rejected', closeReason: reason };
+      const fields = { status: 'rejected', closeReason: reason, closedAt: todayTh() };
       if (note) fields.hrNote = note;
       if (await dbUpdate(id, fields)) { showToast('บันทึกว่าไม่ผ่านแล้ว'); await refresh(); }
     }
     async function doWithdraw(id) {
       if (!await askConfirm('บันทึกว่าผู้สมัครยกเลิก / ถอนตัว?', { title: 'ผู้สมัครยกเลิก', okText: 'ยืนยัน', danger: true })) return;
-      if (await dbUpdate(id, { status: 'cancelled', closeReason: 'ผู้สมัครยกเลิก/ถอนตัว' })) { showToast('บันทึกว่ายกเลิกแล้ว'); await refresh(); }
+      if (await dbUpdate(id, { status: 'cancelled', closeReason: 'ผู้สมัครยกเลิก/ถอนตัว', closedAt: todayTh() })) { showToast('บันทึกว่ายกเลิกแล้ว'); await refresh(); }
     }
     async function doDelete(id) {
       if (!await askConfirm('ลบผู้สมัครนี้ถาวร? การลบไม่สามารถกู้คืนได้', { title: 'ลบผู้สมัคร', okText: 'ลบถาวร', danger: true })) return;
@@ -1181,9 +1181,9 @@
       const outcome = S === 'hired'
         ? `<div class="outcome oc-ok"><div class="oc-ic">✓</div><div><div class="oc-t">รับเข้าทำงาน</div><div class="oc-s">ผู้สมัครตอบรับ Offer${a.respondedAt ? ' · ' + esc(a.respondedAt) : ''}</div></div></div>`
         : S === 'rejected'
-          ? `<div class="outcome oc-no"><div class="oc-ic">✕</div><div><div class="oc-t">ไม่ผ่าน</div><div class="oc-s">${esc(a.closeReason || '')}</div></div></div>`
+          ? `<div class="outcome oc-no"><div class="oc-ic">✕</div><div><div class="oc-t">ไม่ผ่าน</div><div class="oc-s">${esc(a.closeReason || '')}${a.closedAt ? ' · เมื่อ ' + esc(a.closedAt) : ''}</div></div></div>`
           : S === 'cancelled'
-            ? `<div class="outcome oc-cancel"><div class="oc-ic">–</div><div><div class="oc-t">ยกเลิก</div><div class="oc-s">${esc(a.closeReason || '')}</div></div></div>`
+            ? `<div class="outcome oc-cancel"><div class="oc-ic">–</div><div><div class="oc-t">ยกเลิก</div><div class="oc-s">${esc(a.closeReason || '')}${a.closedAt ? ' · เมื่อ ' + esc(a.closedAt) : ''}</div></div></div>`
             : '';
 
       const resumePage = resumeImgs.length
