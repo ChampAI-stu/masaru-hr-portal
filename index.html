@@ -437,6 +437,7 @@
     <nav class="nav">
       <div class="ni on" data-p="list"><i class="ti ti-user-search"></i>ผู้สมัคร<span class="ni-count" id="nc-list">0</span></div>
       <div class="ni" data-p="int"><i class="ti ti-calendar-week"></i>สัมภาษณ์<span class="ni-count" id="nc-int">0</span></div>
+      <div class="ni" data-p="start"><i class="ti ti-briefcase"></i>วันเริ่มงาน<span class="ni-count" id="nc-start">0</span></div>
       <div class="ni" data-p="rep"><i class="ti ti-chart-histogram"></i>รายงาน</div>
     </nav>
     <div class="su">
@@ -484,6 +485,14 @@
       <div class="rep-wrap">
         <div class="rep-title">ตารางสัมภาษณ์</div>
         <div id="int-body"></div>
+      </div>
+    </div>
+
+    <!-- Start dates -->
+    <div class="pg" id="pg-start">
+      <div class="rep-wrap">
+        <div class="rep-title">ตารางวันเริ่มงาน</div>
+        <div id="start-body"></div>
       </div>
     </div>
 
@@ -743,11 +752,12 @@
       document.querySelectorAll('.ni').forEach(x => x.classList.toggle('on', x.dataset.p === p));
       if (p === 'rep') renderRep();
       if (p === 'int') renderInterviews();
+      if (p === 'start') renderStartDates();
     }
     document.querySelectorAll('.ni').forEach(n => n.addEventListener('click', () => navTo(n.dataset.p)));
 
     // ═══════════════════ RENDER ═══════════════════
-    function renderAll() { renderList(); renderInterviews(); renderRep(); }
+    function renderAll() { renderList(); renderInterviews(); renderStartDates(); renderRep(); }
 
     function setFilter(f) {
       filter = f;
@@ -988,6 +998,7 @@
       await dbLoad();
       renderList();
       renderInterviews();
+      renderStartDates();
       renderRep();
       if (selId) { const a = getA(selId); if (a) renderDetail(a); }
     }
@@ -1446,6 +1457,48 @@
     }
     function gotoCand(id) { navTo('list'); selId = id; editInt = null; renderList(); const a = getA(id); if (a) renderDetail(a); }
 
+    function renderStartDates() {
+      const list = DATA.filter(a => ['offer', 'hired'].includes(statusOf(a)) && a.offerStart);
+      const nc = document.getElementById('nc-start'); if (nc) nc.textContent = list.length;
+      const groups = { overdue: [], today: [], week: [], later: [] };
+      list.forEach(a => {
+        const diff = dayDiff(a.offerStart);
+        if (diff === null) return;
+        if (diff < 0) groups.overdue.push(a);
+        else if (diff === 0) groups.today.push(a);
+        else if (diff <= 7) groups.week.push(a);
+        else groups.later.push(a);
+      });
+      const byDate = (x, y) => (x.offerStart || '').localeCompare(y.offerStart || '');
+      Object.values(groups).forEach(g => g.sort(byDate));
+
+      const el = document.getElementById('start-body');
+      if (!list.length) { el.innerHTML = '<div class="empty"><i class="ti ti-calendar-off"></i>ยังไม่มีผู้สมัครที่ระบุวันเริ่มงาน</div>'; return; }
+
+      const sec = (title, arr, color, icon) => arr.length ? `
+        <div class="int-sec-title" style="color:${color}"><i class="ti ${icon}"></i>${title}<span class="int-sec-n">${arr.length}</span></div>
+        ${arr.map(a => {
+          const av = avStyle(a), stm = stMeta(statusOf(a));
+          const d = dayDiff(a.offerStart);
+          const rel = d === 0 ? 'วันนี้' : d === 1 ? 'พรุ่งนี้' : d > 1 ? `อีก ${d} วัน` : d < 0 ? `ผ่านมา ${-d} วัน` : '';
+          return `<div class="int-card" onclick="gotoCand('${a.id}')">
+            <div class="int-day"><div class="int-day-d">${esc(thDate(a.offerStart) || '—')}</div><div class="int-day-t">เริ่มงาน</div></div>
+            <div class="aiv" style="${av.bg};width:36px;height:36px">${av.inner}</div>
+            <div style="flex:1;min-width:0">
+              <div class="int-name">${esc(a.name)}</div>
+              <div class="int-pos">${esc(a.pos)} · <span style="color:${stm.color}">${stm.label}</span></div>
+            </div>
+            ${rel ? `<span class="int-rel" style="color:${color}">${rel}</span>` : ''}
+          </div>`;
+        }).join('')}` : '';
+
+      el.innerHTML =
+        sec('เริ่มงานแล้ว', groups.overdue, '#556066', 'ti-check') +
+        sec('เริ่มวันนี้', groups.today, '#16785d', 'ti-star') +
+        sec('ภายใน 7 วัน', groups.week, '#8a5a12', 'ti-calendar-week') +
+        sec('ถัดไป', groups.later, '#1f6f9c', 'ti-calendar');
+    }
+
     // ═══════════════════ REPORTS ═══════════════════
     function renderRep() {
       const tot = DATA.length;
@@ -1523,7 +1576,7 @@
       clearTimeout(rtTimer);
       rtTimer = setTimeout(async () => {
         await dbLoad();
-        renderList(); renderInterviews(); renderRep();
+        renderList(); renderInterviews(); renderStartDates(); renderRep();
         const active = document.activeElement;
         const typingInDetail = active && active.closest && active.closest('#detail')
           && ['TEXTAREA', 'INPUT', 'SELECT'].includes(active.tagName);
