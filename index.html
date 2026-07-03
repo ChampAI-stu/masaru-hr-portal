@@ -612,6 +612,8 @@
       return dt.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
     }
     function todayTh() { return new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }); }
+    function money(v) { const d = String(v == null ? '' : v).replace(/[^\d]/g, ''); return d ? Number(d).toLocaleString('en-US') : ''; }
+    function fmtMoney(el) { const d = el.value.replace(/[^\d]/g, ''); el.value = d ? Number(d).toLocaleString('en-US') : ''; }
     function isoOnly(d) { return /^\d{4}-\d{2}-\d{2}$/.test(d || '') ? d : ''; }
 
     function showToast(msg, err = false) {
@@ -846,7 +848,7 @@
               ${isExec ? '' : `<button class="icon-btn" style="text-transform:none;letter-spacing:0" onclick="editInterview('${a.id}')"><i class="ti ti-pencil"></i>แก้ไขวัน/เวลา</button>`}
             </div>
             <div class="note-box">📅 ${esc(thDate(a.intDate))} เวลา ${esc(a.intTime)} น.${a.intBy ? ' · ผู้สัมภาษณ์: ' + esc(a.intBy) : ''}</div>
-            ${a.result ? `<div class="note-box" style="margin-top:8px">${a.result === 'pass' ? '✅ ผ่านการสัมภาษณ์' : '❌ ไม่ผ่าน'}${a.resultNote ? ' — ' + esc(a.resultNote) : ''}${a.agreedSalary ? `<br>💰 เงินเดือนที่ตกลง: <b>${esc(a.agreedSalary)} บาท</b>` : ''}</div>` : ''}</div>`;
+            ${a.result ? `<div class="note-box" style="margin-top:8px">${a.result === 'pass' ? '✅ ผ่านการสัมภาษณ์' : '❌ ไม่ผ่าน'}${a.resultNote ? ' — ' + esc(a.resultNote) : ''}${a.agreedSalary ? `<br>💰 เงินเดือนที่ตกลง: <b>${money(a.agreedSalary)} บาท</b>` : ''}</div>` : ''}</div>`;
         }
       }
 
@@ -907,7 +909,7 @@
         return `<div class="card">
           <div class="card-title"><i class="ti ti-clipboard-check"></i>บันทึกผลสัมภาษณ์</div>
           <div class="field"><label>รายละเอียดผลสัมภาษณ์</label><textarea id="f-resnote" data-af="resultNote" placeholder="สรุปผล จุดเด่น ข้อสังเกต...">${esc(a.resultNote)}</textarea><div class="autosave-hint"><i class="ti ti-cloud-check"></i>บันทึกอัตโนมัติขณะพิมพ์</div></div>
-          <div class="field"><label>เงินเดือนที่ตกลงกับผู้สมัคร (บาท)</label><input class="inp" id="f-agreedsal" data-af="agreedSalary" placeholder="เช่น 25000" value="${esc(a.agreedSalary)}"></div>
+          <div class="field"><label>เงินเดือนที่ตกลงกับผู้สมัคร (บาท)</label><input class="inp" id="f-agreedsal" data-af="agreedSalary" inputmode="numeric" placeholder="เช่น 25,000" value="${money(a.agreedSalary)}" oninput="fmtMoney(this)"></div>
           <div class="btn-row">
             <button class="btn btn-danger" onclick="actResult('${a.id}','fail')"><i class="ti ti-x"></i>ไม่ผ่าน</button>
             <button class="btn btn-primary" onclick="actResult('${a.id}','pass')"><i class="ti ti-check"></i>ผ่าน → เตรียม Offer</button>
@@ -920,7 +922,7 @@
         const detailCard = `<div class="card">
           <div class="card-title"><i class="ti ti-briefcase"></i>รายละเอียด Offer</div>
           <div class="grid-2">
-            <div class="field"><label>เงินเดือน (บาท) <span class="req">*</span></label><input class="inp" id="f-osal" data-af="offerSalary" placeholder="เช่น 25000" value="${esc(a.offerSalary || a.agreedSalary)}"></div>
+            <div class="field"><label>เงินเดือน (บาท) <span class="req">*</span></label><input class="inp" id="f-osal" data-af="offerSalary" inputmode="numeric" placeholder="เช่น 25,000" value="${money(a.offerSalary || a.agreedSalary)}" oninput="fmtMoney(this)"></div>
             <div class="field"><label>วันเริ่มงาน</label><input type="date" id="f-ostart" data-af="offerStart" value="${esc(a.offerStart)}"></div>
           </div>
           <div class="grid-2">
@@ -969,7 +971,7 @@
           <div class="banner banner-ok"><i class="ti ti-circle-check"></i><div><b>ผู้สมัครตอบรับ Offer แล้ว</b>${a.respondedAt ? ' · ' + esc(a.respondedAt) : ''}</div></div>
           <div class="info-grid">
             <div class="info-f"><div class="k">ตำแหน่ง</div><div class="v">${esc(a.pos)}</div></div>
-            <div class="info-f"><div class="k">เงินเดือน</div><div class="v">${esc(a.offerSalary || '—')} บาท</div></div>
+            <div class="info-f"><div class="k">เงินเดือน</div><div class="v">${a.offerSalary ? money(a.offerSalary) : '—'} บาท</div></div>
             <div class="info-f"><div class="k">วันเริ่มงาน</div><div class="v">${esc(thDate(a.offerStart) || '—')}</div></div>
             <div class="info-f"><div class="k">รูปแบบการจ้าง</div><div class="v">${esc(a.offerType)}</div></div>
           </div>
@@ -1172,10 +1174,10 @@
       const resTag = a.result === 'pass' ? '<span class="tag ok">ผ่าน</span>' : a.result === 'fail' ? '<span class="tag no">ไม่ผ่าน</span>' : '';
       const interview = F('วัน/เวลาสัมภาษณ์', a.intDate ? esc(thDate(a.intDate)) + ' · ' + esc(a.intTime) + ' น.' : '') +
         F('ผู้สัมภาษณ์', esc(a.intBy)) + F('ผลสัมภาษณ์', resTag) +
-        F('เงินเดือนที่ตกลง', a.agreedSalary ? esc(a.agreedSalary) + ' บาท' : '') +
+        F('เงินเดือนที่ตกลง', a.agreedSalary ? money(a.agreedSalary) + ' บาท' : '') +
         FULL('รายละเอียดผล', esc(a.resultNote));
       const respTag = a.offerResult === 'accepted' ? '<span class="tag ok">ตอบรับ</span>' : a.offerResult === 'rejected' ? '<span class="tag no">ปฏิเสธ</span>' : '';
-      const offer = F('เงินเดือน', a.offerSalary ? esc(a.offerSalary) + ' บาท' : '') +
+      const offer = F('เงินเดือน', a.offerSalary ? money(a.offerSalary) + ' บาท' : '') +
         F('วันเริ่มงาน', esc(thDate(a.offerStart))) + F('รูปแบบการจ้าง', esc(a.offerType)) +
         F('ส่ง Offer', a.offerSentAt ? esc(a.offerSentAt) + ' · ' + esc(a.offerChannel) : '') +
         F('ผลตอบรับ', respTag);
