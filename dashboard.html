@@ -97,7 +97,7 @@
 <div id="app">
   <header>
     <div class="brand"><span class="b">M</span> ผลแบบทดสอบผู้สมัคร</div>
-    <div class="u"><span id="u-name"></span><button id="logout">ออกจากระบบ</button></div>
+    <div class="u"><span id="u-name"></span><button id="copyQuiz">คัดลอกลิงก์แบบทดสอบ</button><button id="logout">ออกจากระบบ</button></div>
   </header>
   <div class="layout">
     <div class="panel">
@@ -113,6 +113,8 @@
 <script>
 const SUPABASE_URL = "https://kxgqfwljzqjxperyxnfn.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_vh-qLGPFmlSZ0VWxQIG3CA_CMHDAZKv";
+// ลิงก์หน้าทำแบบทดสอบ (repo hrmbmtiquiz) — ถ้า URL เปลี่ยน แก้ตรงนี้จุดเดียว
+const QUIZ_URL = "https://champai-stu.github.io/hrmbmtiquiz/";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const MBTI_TYPES = {
@@ -164,6 +166,23 @@ function afterLogin(user){
 }
 
 $("logout").onclick = async () => { await sb.auth.signOut(); location.reload(); };
+
+$("copyQuiz").onclick = async () => {
+  const btn = $("copyQuiz");
+  const done = () => { btn.textContent = "คัดลอกแล้ว ✓"; setTimeout(() => btn.textContent = "คัดลอกลิงก์แบบทดสอบ", 1800); };
+  try{
+    await navigator.clipboard.writeText(QUIZ_URL);
+    done();
+  }catch(e){
+    // fallback: เลือกข้อความจากกล่องชั่วคราว (เผื่อเบราว์เซอร์บล็อก clipboard)
+    const t = document.createElement("textarea");
+    t.value = QUIZ_URL; t.style.position = "fixed"; t.style.opacity = "0";
+    document.body.appendChild(t); t.select();
+    try{ document.execCommand("copy"); done(); }
+    catch(_){ prompt("คัดลอกลิงก์นี้:", QUIZ_URL); }
+    document.body.removeChild(t);
+  }
+};
 
 sb.auth.getSession().then(({ data:{ session } }) => { if(session) afterLogin(session.user); });
 
