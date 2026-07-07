@@ -125,6 +125,17 @@
   .pd-empty{color:#9aa39e;font-size:13px;padding:8px 0}
   .pd-note{background:#f5faf7;border:1px solid #e3e9e4;border-radius:10px;padding:12px 14px;font-size:12.5px;color:#6b756f;margin-top:6px}
   .pd-foot{text-align:center;color:#9aa39e;font-size:11px;margin-top:20px;padding-top:12px;border-top:1px solid #eef2ee}
+  .pd-siggrid{display:grid;grid-template-columns:320px 1fr;gap:16px;align-items:center}
+  .pd-hex{display:flex;justify-content:center}
+  .pd-trait{display:grid;grid-template-columns:14px 150px 1fr 44px;align-items:center;gap:9px;margin-bottom:12px;font-size:13.5px}
+  .pd-trait .dot{width:11px;height:11px;border-radius:50%}
+  .pd-trait .tl{font-weight:600;color:#16241f}
+  .pd-track2{height:11px;background:#eef3f0;border-radius:99px;overflow:hidden}
+  .pd-track2>i{display:block;height:100%;border-radius:99px}
+  .pd-trait .tv{font-weight:700;text-align:right;font-size:13px;color:#0e5b45}
+  .pd-chips{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .pd-chips .chip-lab{font-weight:700;color:#0e5b45;font-size:13px}
+  .pd-chips .chip{background:linear-gradient(135deg,#0e5b45,#16785d);color:#fff;font-size:12.5px;font-weight:600;padding:5px 13px;border-radius:99px;border:1.5px solid #C9A84C}
 </style>
 </head>
 <body>
@@ -406,6 +417,42 @@ function svgRadar(sc){
 }
 
 // สร้าง DOM รายงาน 1 คน (A4) สำหรับแปลงเป็น PDF
+// 6 มิติสไตล์การทำงาน คำนวณจาก MBTI + BOSI ผสมกัน (ต้องมีทั้งคู่)
+function derivedTraits(m,b){
+  const S=m.scores, B=b.scores, g=x=>Math.max(0,Math.min(100,Math.round(x)));
+  return [
+    ["ภาวะผู้นำ",            g(.4*(S.E??0)+.4*(B.B??0)+.2*(S.J??0))],
+    ["นวัตกรรม & ไอเดีย",     g(.4*(S.N??0)+.4*(B.I??0)+.2*(B.O??0))],
+    ["ความละเอียด & คุณภาพ",  g(.4*(S.S??0)+.4*(B.S??0)+.2*(S.J??0))],
+    ["มนุษยสัมพันธ์",        g(.6*(S.F??0)+.4*(S.E??0))],
+    ["กล้าเสี่ยง & ปรับตัว",  g(.5*(B.O??0)+.3*(S.P??0)+.2*(S.N??0))],
+    ["วางแผน & ระบบ",        g(.5*(S.J??0)+.3*(B.S??0)+.2*(S.T??0))],
+  ];
+}
+const traitColor = v => v>=70 ? "#16785d" : v>=45 ? "#2e9e6b" : "#c6d8cf";
+
+// hexagon radar 6 แกน
+function svgHex(traits){
+  const short=["ผู้นำ","ไอเดีย","คุณภาพ","สัมพันธ์","กล้าเสี่ยง","วางแผน"];
+  const cx=160,cy=150,R=95, ang=i=>(-90+i*60)*Math.PI/180;
+  const pt=(i,r)=>[cx+Math.cos(ang(i))*r, cy+Math.sin(ang(i))*r];
+  let grid="";[25,50,75,100].forEach(p=>{
+    const pts=[0,1,2,3,4,5].map(i=>pt(i,R*p/100).map(n=>n.toFixed(1)).join(",")).join(" ");
+    grid+=`<polygon points="${pts}" fill="none" stroke="#c6e6d7" stroke-width="1"/>`;});
+  let axes="";for(let i=0;i<6;i++){const[x,y]=pt(i,R);axes+=`<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#c6e6d7" stroke-width="1"/>`;}
+  const poly=[0,1,2,3,4,5].map(i=>pt(i,R*(traits[i][1])/100).map(n=>n.toFixed(1)).join(",")).join(" ");
+  let dots="",labs="";
+  for(let i=0;i<6;i++){
+    const[px,py]=pt(i,R*(traits[i][1])/100); dots+=`<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="3.5" fill="#0e5b45"/>`;
+    const[lx,ly]=pt(i,R+22); const anchor=Math.abs(lx-cx)<8?"middle":(lx>cx?"start":"end");
+    labs+=`<text x="${lx.toFixed(1)}" y="${(ly+4).toFixed(1)}" fill="#0e5b45" font-size="12.5" font-weight="600" text-anchor="${anchor}">${short[i]}</text>`;
+  }
+  return `<svg width="320" height="300" viewBox="0 0 320 300" xmlns="http://www.w3.org/2000/svg">
+    ${grid}${axes}
+    <polygon points="${poly}" fill="rgba(201,168,76,.22)" stroke="#C9A84C" stroke-width="2.5"/>
+    ${dots}${labs}</svg>`;
+}
+
 function reportNode(a){
   const m=a.mbti, b=a.bosi, arche=m&&MBTI_TYPES[m.type]?MBTI_TYPES[m.type]:null;
   const dimRows = m ? DIMS.map(([l,r])=>{
@@ -416,6 +463,31 @@ function reportNode(a){
     const v=b.scores[k]??0, meta=BOSI[k];
     return `<div class="pd-bosi"><span class="lab" style="color:${meta[1]}">${meta[0]}</span><div class="pd-track"><i style="width:${v}%;background:${meta[1]}"></i></div><span class="v">${v}%</span></div>`;
   }).join("") : `<div class="pd-empty">— ยังไม่มีผล BOSI —</div>`;
+
+  // ลายเซ็นบุคลิก (ต้องมีทั้ง MBTI + BOSI)
+  let sigHTML = "";
+  if(m && b){
+    const tr = derivedTraits(m,b);
+    const meters = tr.map(([lab,v])=>{
+      const c = traitColor(v);
+      return `<div class="pd-trait"><span class="dot" style="background:${c}"></span>
+        <span class="tl">${lab}</span>
+        <div class="pd-track2"><i style="width:${v}%;background:${c}"></i></div>
+        <span class="tv">${v}%</span></div>`;
+    }).join("");
+    const top3 = [...tr].sort((x,y)=>y[1]-x[1]).slice(0,3)
+      .map(t=>`<span class="chip">${t[0]} · ${t[1]}%</span>`).join("");
+    sigHTML = `
+    <div class="pd-sec">
+      <div class="pd-st">ลายเซ็นบุคลิก <span>Personality Signature</span></div>
+      <div class="pd-arche">6 มิติสไตล์การทำงาน วิเคราะห์จาก MBTI + BOSI รวมกัน</div>
+      <div class="pd-siggrid">
+        <div class="pd-hex">${svgHex(tr)}</div>
+        <div>${meters}</div>
+      </div>
+      <div class="pd-chips"><span class="chip-lab">จุดเด่น</span>${top3}</div>
+    </div>`;
+  }
 
   const n=document.createElement("div");
   n.className="pdf-page";
@@ -437,6 +509,7 @@ function reportNode(a){
       <div class="pd-st">BOSI DNA <span>${b?esc(b.type)+" — เด่นสุด":"—"}</span></div>
       ${bosiRows}
     </div>
+    ${sigHTML}
     <div class="pd-note">ผลนี้เป็นข้อมูลประกอบเพื่อทำความเข้าใจผู้สมัครก่อนสัมภาษณ์ — ไม่ใช่เกณฑ์ผ่าน/ไม่ผ่าน และไม่ใช่แบบทดสอบทางการที่มีลิขสิทธิ์</div>
     <div class="pd-foot">เหนือกว่า ทุกวัน — Surpass Every Day · MASARU HR</div>`;
   return n;
