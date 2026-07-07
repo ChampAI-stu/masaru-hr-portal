@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ระบบเตือน Deadline HR — MASARU</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
-    --navy:#1F3864; --blue:#2E75B6; --gold:#C9A84C;
-    --red:#C00000; --green:#1E7145;
-    --bg:#f4f6fb; --card:#ffffff; --line:#e3e8f0; --muted:#6b7280;
+    --green:#16785d; --green-dark:#0e5b45; --gold:#C9A84C;
+    --red:#C00000; --ok:#1E7145;
+    --bg:#f1f5f2; --card:#ffffff; --line:#e3e9e4; --muted:#6b756f;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Sarabun',sans-serif;background:var(--bg);color:#1a2233;line-height:1.5}
+  body{font-family:'IBM Plex Sans Thai',system-ui,sans-serif;background:var(--bg);color:#16241f;line-height:1.5}
   .wrap{max-width:1000px;margin:0 auto;padding:16px}
 
   /* Header */
-  header{background:var(--navy);color:#fff;border-radius:14px;padding:20px 22px;margin-bottom:16px;
+  header{background:linear-gradient(120deg,#0e5b45,#16785d);color:#fff;border-radius:14px;padding:20px 22px;margin-bottom:16px;border-bottom:4px solid var(--gold);
     display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
   header h1{font-size:1.35rem;font-weight:700;display:flex;align-items:center;gap:10px}
   header .date{font-size:.95rem;color:#cdd8ee}
@@ -32,24 +32,24 @@
   .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
   .scard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:.15s}
   .scard:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(31,56,100,.08)}
-  .scard.active{border-color:var(--navy);box-shadow:0 0 0 2px var(--navy) inset}
+  .scard.active{border-color:var(--green-dark);box-shadow:0 0 0 2px var(--green-dark) inset}
   .scard .num{font-size:1.9rem;font-weight:700;line-height:1}
   .scard .lbl{font-size:.82rem;color:var(--muted);margin-top:4px}
   .scard.overdue .num{color:var(--red)}
   .scard.urgent .num{color:#e06a00}
   .scard.soon .num{color:var(--gold)}
-  .scard.ok .num{color:var(--green)}
+  .scard.ok .num{color:var(--ok)}
 
   /* Toolbar */
   .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
   .filters{display:flex;gap:6px;flex-wrap:wrap}
   .chip{border:1px solid var(--line);background:#fff;color:#334;border-radius:20px;padding:6px 14px;font-size:.86rem;cursor:pointer;font-family:inherit}
-  .chip.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .chip.active{background:var(--green-dark);color:#fff;border-color:var(--green-dark)}
   .spacer{flex:1}
-  .btn{background:var(--blue);color:#fff;border:none;border-radius:9px;padding:9px 16px;font-size:.92rem;font-weight:600;cursor:pointer;font-family:inherit}
-  .btn:hover{background:#2560a0}
+  .btn{background:var(--green);color:#fff;border:none;border-radius:9px;padding:9px 16px;font-size:.92rem;font-weight:600;cursor:pointer;font-family:inherit}
+  .btn:hover{background:var(--green-dark)}
   .btn.gold{background:var(--gold);color:#3a2f00}
-  .btn.ghost{background:#fff;color:var(--navy);border:1px solid var(--line)}
+  .btn.ghost{background:#fff;color:var(--green-dark);border:1px solid var(--line)}
 
   /* Alert list */
   .list{display:flex;flex-direction:column;gap:10px}
@@ -58,8 +58,8 @@
   .item.overdue{border-left-color:var(--red)}
   .item.urgent{border-left-color:#e06a00}
   .item.soon{border-left-color:var(--gold)}
-  .item.prep{border-left-color:var(--blue)}
-  .item.ok{border-left-color:var(--green)}
+  .item.prep{border-left-color:#2E75B6}
+  .item.ok{border-left-color:var(--ok)}
   .item.done{opacity:.5}
   .item.done .title{text-decoration:line-through}
   .item .icon{font-size:1.5rem;width:34px;text-align:center}
@@ -73,20 +73,20 @@
   .badge.overdue{background:var(--red)}
   .badge.urgent{background:#e06a00}
   .badge.soon{background:var(--gold);color:#3a2f00}
-  .badge.prep{background:var(--blue)}
-  .badge.ok{background:var(--green)}
+  .badge.prep{background:#2E75B6}
+  .badge.ok{background:var(--ok)}
   .item .acts{display:flex;gap:6px;margin-left:6px}
   .iconbtn{border:1px solid var(--line);background:#fff;border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:1rem}
   .iconbtn:hover{background:#f0f3f9}
   .empty{text-align:center;color:var(--muted);padding:40px}
 
-  .section-title{font-weight:700;color:var(--navy);margin:18px 0 8px;font-size:1rem}
+  .section-title{font-weight:700;color:var(--green-dark);margin:18px 0 8px;font-size:1rem}
 
   /* Modal */
   .overlay{position:fixed;inset:0;background:rgba(20,30,55,.5);display:none;align-items:flex-start;justify-content:center;padding:24px;overflow:auto;z-index:50}
   .overlay.show{display:flex}
   .modal{background:#fff;border-radius:14px;width:100%;max-width:520px;padding:22px}
-  .modal h2{color:var(--navy);font-size:1.15rem;margin-bottom:14px}
+  .modal h2{color:var(--green-dark);font-size:1.15rem;margin-bottom:14px}
   .field{margin-bottom:12px}
   .field label{display:block;font-size:.86rem;font-weight:600;margin-bottom:4px;color:#334}
   .field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-family:inherit;font-size:.95rem}
@@ -101,7 +101,7 @@
   .pop-head{display:flex;gap:18px;align-items:center;margin-bottom:20px}
   .pop-icon{font-size:2.8rem;background:#fff4d6;width:78px;height:78px;border-radius:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;animation:ring 1.2s ease-in-out}
   @keyframes ring{0%,100%{transform:rotate(0)}20%{transform:rotate(-12deg)}40%{transform:rotate(10deg)}60%{transform:rotate(-6deg)}80%{transform:rotate(4deg)}}
-  .pop-head h2{color:var(--navy);font-size:1.7rem;margin:0;font-weight:700}
+  .pop-head h2{color:var(--green-dark);font-size:1.7rem;margin:0;font-weight:700}
   .pop-sub{font-size:1.05rem;color:#444;margin-top:5px;font-weight:600}
   .pop-list{display:flex;flex-direction:column;gap:12px;max-height:56vh;overflow:auto;margin-bottom:16px}
   .pop-row{display:flex;align-items:center;gap:14px;padding:16px 18px;border-radius:12px;border-left:8px solid var(--line);background:#fafbfe}
