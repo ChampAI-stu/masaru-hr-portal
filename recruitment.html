@@ -412,6 +412,35 @@
       .info-grid, .grid-2, .grid-3 { grid-template-columns: 1fr; }
       .stat-grid { grid-template-columns: 1fr 1fr; }
     }
+
+    /* ══ polish pass — ปรับความประณีต (override, ไม่แตะของเดิม) ══ */
+    :root{
+      --bg:#eef2ef;
+      --line:#e2e7e2;
+    }
+    /* สกรอลบาร์บางเนียนขึ้นทั้งระบบ */
+    *{ scrollbar-width:thin; scrollbar-color:#cdd7cf transparent; }
+    *::-webkit-scrollbar{ width:9px; height:9px; }
+    *::-webkit-scrollbar-track{ background:transparent; }
+    *::-webkit-scrollbar-thumb{ background:#cdd7cf; border:2px solid transparent; background-clip:content-box; border-radius:20px; }
+    *::-webkit-scrollbar-thumb:hover{ background:#b6c4b9; background-clip:content-box; }
+
+    /* หัวข้อคมขึ้นเล็กน้อย */
+    .brand-name,.lh-top h2,.dh-name{ letter-spacing:-.2px; }
+
+    /* จุดเด่น: แถบเขียวไฮไลต์เมนู/ผู้สมัครที่กำลังเลือก */
+    .ni.on{ box-shadow:inset 3px 0 0 var(--green); font-weight:600; }
+    .ai{ transition:background .14s, box-shadow .14s; }
+    .ai:hover{ background:var(--line-soft); }
+    .ai.on{ box-shadow:inset 3px 0 0 var(--green); }
+
+    /* ยกหัวรายละเอียดผู้สมัครให้มีมิติบาง ๆ */
+    .dh{ box-shadow:0 10px 22px -20px rgba(23,36,31,.55); }
+
+    /* การ์ด/อินพุตโฟกัสนุ่มขึ้น + ปุ่มหลักมีน้ำหนักตอนกด */
+    .add-btn:active,.icon-btn:active,.name-mini:active{ transform:translateY(1px); }
+    .sb:focus-within{ box-shadow:0 0 0 3px var(--green-soft); }
+
   </style>
 </head>
 
