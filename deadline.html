@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ระบบเตือน Deadline HR — MASARU</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --navy:#1F3864; --blue:#2E75B6; --gold:#C9A84C;
+    --red:#C00000; --green:#1E7145;
+    --bg:#f4f6fb; --card:#ffffff; --line:#e3e8f0; --muted:#6b7280;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Sarabun',sans-serif;background:var(--bg);color:#1a2233;line-height:1.5}
+  .wrap{max-width:1000px;margin:0 auto;padding:16px}
+
+  /* Header */
+  header{background:var(--navy);color:#fff;border-radius:14px;padding:20px 22px;margin-bottom:16px;
+    display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+  header h1{font-size:1.35rem;font-weight:700;display:flex;align-items:center;gap:10px}
+  header .date{font-size:.95rem;color:#cdd8ee}
+  .brand-dot{width:10px;height:10px;border-radius:50%;background:var(--gold);display:inline-block}
+  .sync{font-size:.8rem;padding:4px 10px;border-radius:20px;font-weight:600}
+  .sync.ok{background:rgba(46,180,120,.25);color:#d6ffe9}
+  .sync.off{background:rgba(255,120,120,.25);color:#ffdede}
+
+  /* Summary cards */
+  .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+  .scard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:.15s}
+  .scard:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(31,56,100,.08)}
+  .scard.active{border-color:var(--navy);box-shadow:0 0 0 2px var(--navy) inset}
+  .scard .num{font-size:1.9rem;font-weight:700;line-height:1}
+  .scard .lbl{font-size:.82rem;color:var(--muted);margin-top:4px}
+  .scard.overdue .num{color:var(--red)}
+  .scard.urgent .num{color:#e06a00}
+  .scard.soon .num{color:var(--gold)}
+  .scard.ok .num{color:var(--green)}
+
+  /* Toolbar */
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  .filters{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{border:1px solid var(--line);background:#fff;color:#334;border-radius:20px;padding:6px 14px;font-size:.86rem;cursor:pointer;font-family:inherit}
+  .chip.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .spacer{flex:1}
+  .btn{background:var(--blue);color:#fff;border:none;border-radius:9px;padding:9px 16px;font-size:.92rem;font-weight:600;cursor:pointer;font-family:inherit}
+  .btn:hover{background:#2560a0}
+  .btn.gold{background:var(--gold);color:#3a2f00}
+  .btn.ghost{background:#fff;color:var(--navy);border:1px solid var(--line)}
+
+  /* Alert list */
+  .list{display:flex;flex-direction:column;gap:10px}
+  .item{background:var(--card);border:1px solid var(--line);border-left:6px solid var(--line);border-radius:11px;padding:14px 16px;
+    display:flex;align-items:center;gap:14px;transition:.15s}
+  .item.overdue{border-left-color:var(--red)}
+  .item.urgent{border-left-color:#e06a00}
+  .item.soon{border-left-color:var(--gold)}
+  .item.prep{border-left-color:var(--blue)}
+  .item.ok{border-left-color:var(--green)}
+  .item.done{opacity:.5}
+  .item.done .title{text-decoration:line-through}
+  .item .icon{font-size:1.5rem;width:34px;text-align:center}
+  .item .body{flex:1;min-width:0}
+  .item .title{font-weight:600}
+  .item .meta{font-size:.83rem;color:var(--muted);margin-top:2px}
+  .item .tag{display:inline-block;font-size:.72rem;padding:1px 8px;border-radius:6px;background:#eef1f7;color:#445;margin-right:6px;font-weight:600}
+  .item .right{text-align:right;white-space:nowrap}
+  .item .days{font-weight:700;font-size:1.05rem}
+  .badge{display:inline-block;font-size:.74rem;font-weight:700;padding:2px 10px;border-radius:20px;color:#fff;margin-top:4px}
+  .badge.overdue{background:var(--red)}
+  .badge.urgent{background:#e06a00}
+  .badge.soon{background:var(--gold);color:#3a2f00}
+  .badge.prep{background:var(--blue)}
+  .badge.ok{background:var(--green)}
+  .item .acts{display:flex;gap:6px;margin-left:6px}
+  .iconbtn{border:1px solid var(--line);background:#fff;border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:1rem}
+  .iconbtn:hover{background:#f0f3f9}
+  .empty{text-align:center;color:var(--muted);padding:40px}
+
+  .section-title{font-weight:700;color:var(--navy);margin:18px 0 8px;font-size:1rem}
+
+  /* Modal */
+  .overlay{position:fixed;inset:0;background:rgba(20,30,55,.5);display:none;align-items:flex-start;justify-content:center;padding:24px;overflow:auto;z-index:50}
+  .overlay.show{display:flex}
+  .modal{background:#fff;border-radius:14px;width:100%;max-width:520px;padding:22px}
+  .modal h2{color:var(--navy);font-size:1.15rem;margin-bottom:14px}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:.86rem;font-weight:600;margin-bottom:4px;color:#334}
+  .field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-family:inherit;font-size:.95rem}
+  .field .hint{font-size:.76rem;color:var(--muted);margin-top:3px}
+  .modal .row{display:flex;gap:10px}
+  .modal .row .field{flex:1}
+  .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+  .hide{display:none!important}
+
+  /* Alert popup */
+  .modal.pop{max-width:680px;padding:28px 30px}
+  .pop-head{display:flex;gap:18px;align-items:center;margin-bottom:20px}
+  .pop-icon{font-size:2.8rem;background:#fff4d6;width:78px;height:78px;border-radius:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;animation:ring 1.2s ease-in-out}
+  @keyframes ring{0%,100%{transform:rotate(0)}20%{transform:rotate(-12deg)}40%{transform:rotate(10deg)}60%{transform:rotate(-6deg)}80%{transform:rotate(4deg)}}
+  .pop-head h2{color:var(--navy);font-size:1.7rem;margin:0;font-weight:700}
+  .pop-sub{font-size:1.05rem;color:#444;margin-top:5px;font-weight:600}
+  .pop-list{display:flex;flex-direction:column;gap:12px;max-height:56vh;overflow:auto;margin-bottom:16px}
+  .pop-row{display:flex;align-items:center;gap:14px;padding:16px 18px;border-radius:12px;border-left:8px solid var(--line);background:#fafbfe}
+  .pop-row.overdue{border-left-color:var(--red);background:#fdf2f2}
+  .pop-row.urgent{border-left-color:#e06a00;background:#fff7ef}
+  .pop-row.soon{border-left-color:var(--gold);background:#fdfaef}
+  .pop-row .pr-body{flex:1;min-width:0}
+  .pop-row .pr-title{font-weight:700;font-size:1.2rem;line-height:1.3}
+  .pop-row .pr-meta{font-size:.95rem;color:var(--muted);margin-top:3px}
+  .pop-row .pr-days{font-weight:800;white-space:nowrap;font-size:1.5rem}
+  .pop-row.overdue .pr-days{color:var(--red)}
+  .pop-row.urgent .pr-days{color:#e06a00}
+  .pop-row.soon .pr-days{color:#a5872f}
+  .pop-snooze{display:flex;align-items:center;gap:8px;font-size:.95rem;color:var(--muted);margin-bottom:8px;cursor:pointer}
+  .pop-snooze input{width:18px;height:18px}
+  .modal.pop .modal-actions .btn{padding:12px 28px;font-size:1.05rem}
+
+  footer{text-align:center;color:var(--muted);font-size:.8rem;margin:24px 0 8px}
+  .backup-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;
+    background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin-top:22px}
+  .backup-note{font-size:.85rem;color:var(--muted);margin-right:4px}
+  .backup-bar .btn{padding:7px 13px;font-size:.86rem}
+
+  @media(max-width:640px){
+    .summary{grid-template-columns:repeat(2,1fr)}
+    .item{flex-wrap:wrap}
+    .item .right{width:100%;text-align:left;display:flex;justify-content:space-between;align-items:center}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span class="brand-dot"></span> ระบบเตือน Deadline HR</h1>
+    <div style="display:flex;align-items:center;gap:12px">
+      <span id="syncDot" class="sync off" title="สถานะการเชื่อมต่อ">● ...</span>
+      <button id="bellBtn" title="ดูงานด่วน" style="background:rgba(255,255,255,.12);border:none;color:#fff;border-radius:9px;padding:7px 12px;cursor:pointer;font-family:inherit;font-size:.95rem">🔔 งานด่วน</button>
+      <div class="date" id="todayLabel"></div>
+    </div>
+  </header>
+
+  <!-- Summary -->
+  <div class="summary" id="summary"></div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="filters" id="filters">
+      <button class="chip active" data-type="all">ทั้งหมด</button>
+      <button class="chip" data-type="probation">⏳ ทดลองงาน</button>
+      <button class="chip" data-type="maternity">👶 ลาคลอด</button>
+      <button class="chip" data-type="contract">📄 สัญญา</button>
+      <button class="chip" data-type="document">📁 เอกสาร</button>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn ghost" id="toggleDone">แสดงที่เสร็จแล้ว</button>
+    <button class="btn gold" id="importBtn">📥 นำเข้า Excel</button>
+    <button class="btn" id="addBtn">+ เพิ่มรายการ</button>
+    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" class="hide">
+  </div>
+
+  <!-- Active alerts -->
+  <div class="list" id="list"></div>
+
+  <!-- Done -->
+  <div id="doneWrap" class="hide">
+    <div class="section-title">✅ เสร็จแล้ว</div>
+    <div class="list" id="doneList"></div>
+  </div>
+
+  <div class="backup-bar">
+    <span class="backup-note">💾 ข้อมูลซิงค์บน Supabase — ปุ่มนี้ไว้สำรองเป็นไฟล์เพิ่มอีกชั้น:</span>
+    <button class="btn ghost" id="exportBtn">⬇️ ส่งออกข้อมูล (สำรอง)</button>
+    <button class="btn ghost" id="restoreBtn">⬆️ กู้คืนข้อมูล</button>
+    <input type="file" id="restoreInput" accept=".json" class="hide">
+  </div>
+
+  <footer>MASARU HR &middot; ข้อมูลซิงค์ผ่าน Supabase (ใช้ร่วมกันหลายเครื่อง) &middot; เหนือกว่า ทุกวัน</footer>
+</div>
+
+<!-- Modal -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2 id="modalTitle">เพิ่มรายการ</h2>
+    <input type="hidden" id="f_id">
+    <div class="field">
+      <label>ประเภท</label>
+      <select id="f_type">
+        <option value="probation">⏳ ทดลองงาน (30/60/90 วัน)</option>
+        <option value="maternity">👶 ลาคลอด + ประกันสังคม</option>
+        <option value="contract">📄 ต่อสัญญา / หมดสัญญา</option>
+        <option value="document">📁 ครบกำหนดเอกสาร</option>
+      </select>
+    </div>
+    <div class="field">
+      <label id="lbl_name">ชื่อพนักงาน</label>
+      <input id="f_name" placeholder="เช่น ปอ (ณัฐสินี เอกณรงค์พันธ์)">
+    </div>
+
+    <!-- probation / maternity ref date -->
+    <div class="field" id="grp_ref">
+      <label id="lbl_ref">วันเริ่มงาน</label>
+      <input type="date" id="f_ref">
+      <div class="hint" id="hint_ref">ระบบจะคำนวณ 30/60/90 วันให้อัตโนมัติ</div>
+    </div>
+
+    <!-- maternity threshold -->
+    <div class="field hide" id="grp_threshold">
+      <label>จำนวนวันเกณฑ์ (ค่าจ้างนายจ้างจ่าย)</label>
+      <input type="number" id="f_threshold" value="45" min="1">
+      <div class="hint">ค่าเริ่มต้น 45 วัน (ปรับเป็น 60 หรือค่าอื่นได้ตามเคส)</div>
+    </div>
+
+    <!-- contract / document due date -->
+    <div class="field hide" id="grp_due">
+      <label id="lbl_due">วันครบกำหนด</label>
+      <input type="date" id="f_due">
+    </div>
+
+    <div class="field">
+      <label>แผนก (ไม่บังคับ)</label>
+      <input id="f_dept" placeholder="เช่น คลังสินค้า, บัญชี, HR">
+    </div>
+
+    <div class="field">
+      <label>หมายเหตุ (ไม่บังคับ)</label>
+      <textarea id="f_note" rows="2" placeholder="รายละเอียดเพิ่มเติม / เอกสารที่ต้องเตรียม"></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn ghost" id="deleteBtn" style="margin-right:auto;color:var(--red)">ลบ</button>
+      <button class="btn ghost" id="cancelBtn">ยกเลิก</button>
+      <button class="btn" id="saveBtn">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- Alert popup -->
+<div class="overlay" id="alertPop">
+  <div class="modal pop">
+    <div class="pop-head">
+      <span class="pop-icon">🔔</span>
+      <div>
+        <h2 id="popTitle">งานด่วนที่ต้องจัดการ</h2>
+        <div class="pop-sub" id="popSub"></div>
+      </div>
+    </div>
+    <div class="pop-list" id="popList"></div>
+    <label class="pop-snooze"><input type="checkbox" id="popSnooze"> ไม่ต้องเตือนซ้ำวันนี้</label>
+    <div class="modal-actions">
+      <button class="btn" id="popClose">รับทราบ</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const KEY = "masaru_hr_deadline_v1";
+const THMONTH = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+
+let state = { records: [], done: [] };  // done = array of milestone ids
+let filter = "all";
+let showDone = false;
+let online = false;
+
+/* ---------- Supabase config ---------- */
+const SUPABASE_URL = "https://iyycyvnvfmerxkcfalea.supabase.co";
+const SUPABASE_KEY = "sb_publishable_ChkZClaeE6NCAxqyTqE4Yw_aTsz4zqi";
+const _sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+
+/* ---------- local cache (offline fallback) ---------- */
+function cacheLoad(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(raw){ state = JSON.parse(raw); }
+  }catch(e){}
+  if(!state.records) state.records = [];
+  if(!state.done) state.done = [];
+}
+function cacheSave(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+
+/* ---------- Supabase data layer ---------- */
+function recToRow(r){
+  return { id:r.id, type:r.type, name:r.name, dept:r.dept||null, note:r.note||null,
+    ref:r.ref||null, due:r.due||null, threshold:r.threshold||null, updated_at:new Date().toISOString() };
+}
+function rowToRec(r){
+  const rec={ id:r.id, type:r.type, name:r.name, dept:r.dept||"", note:r.note||"" };
+  if(r.ref) rec.ref=r.ref;
+  if(r.due) rec.due=r.due;
+  if(r.threshold!=null) rec.threshold=r.threshold;
+  return rec;
+}
+function setStatus(ok){
+  online=ok;
+  const el=document.getElementById("syncDot");
+  if(el){ el.className="sync "+(ok?"ok":"off"); el.textContent = ok ? "● ซิงค์แล้ว" : "● ออฟไลน์"; }
+}
+async function sbLoad(){
+  if(!_sb){ cacheLoad(); setStatus(false); render(); return; }
+  try{
+    const [r1,r2]=await Promise.all([
+      _sb.from("hr_deadlines").select("*"),
+      _sb.from("hr_deadline_done").select("milestone_id")
+    ]);
+    if(r1.error) throw r1.error;
+    if(r2.error) throw r2.error;
+    state.records=(r1.data||[]).map(rowToRec);
+    state.done=(r2.data||[]).map(x=>x.milestone_id);
+    cacheSave(); setStatus(true);
+  }catch(err){
+    console.warn("Supabase load failed → cache", err);
+    cacheLoad(); setStatus(false);
+  }
+  render();
+}
+async function sbUpsertRecord(rec){
+  if(!_sb) return;
+  const {error}=await _sb.from("hr_deadlines").upsert(recToRow(rec));
+  if(error) throw error;
+}
+async function sbDeleteRecord(id){
+  if(!_sb) return;
+  await _sb.from("hr_deadline_done").delete().like("milestone_id", id+"-%");
+  const {error}=await _sb.from("hr_deadlines").delete().eq("id", id);
+  if(error) throw error;
+}
+async function sbSetDone(mid, done){
+  if(!_sb) return;
+  if(done){ const {error}=await _sb.from("hr_deadline_done").upsert({milestone_id:mid}); if(error) throw error; }
+  else { const {error}=await _sb.from("hr_deadline_done").delete().eq("milestone_id", mid); if(error) throw error; }
+}
+// push entire local state to Supabase (used by import / restore)
+async function sbSyncAll(){
+  if(!_sb) return;
+  if(state.records.length){
+    const {error}=await _sb.from("hr_deadlines").upsert(state.records.map(recToRow));
+    if(error) throw error;
+  }
+  const {data:dbRecs}=await _sb.from("hr_deadlines").select("id");
+  const keep=new Set(state.records.map(r=>r.id));
+  const del=(dbRecs||[]).map(r=>r.id).filter(id=>!keep.has(id));
+  if(del.length) await _sb.from("hr_deadlines").delete().in("id", del);
+  // reconcile done: clear then insert current
+  await _sb.from("hr_deadline_done").delete().neq("milestone_id","__none__");
+  if(state.done.length) await _sb.from("hr_deadline_done").upsert(state.done.map(m=>({milestone_id:m})));
+}
+async function guard(fn){
+  try{ await fn(); setStatus(true); }
+  catch(err){ console.warn(err); setStatus(false); alert("⚠️ บันทึกขึ้น Supabase ไม่สำเร็จ (ออฟไลน์?)\nข้อมูลถูกเก็บในเครื่องไว้ก่อน จะซิงค์เมื่อออนไลน์"); }
+}
+
+/* ---------- date helpers ---------- */
+function parseD(s){ const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); }
+function addDays(dstr,n){ const d=parseD(dstr); d.setDate(d.getDate()+n); return d; }
+function toISO(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function thDate(d){ return d.getDate()+" "+THMONTH[d.getMonth()]+" "+(d.getFullYear()+543); }
+function daysUntil(d){
+  const now=new Date(); now.setHours(0,0,0,0);
+  const t=new Date(d); t.setHours(0,0,0,0);
+  return Math.round((t-now)/86400000);
+}
+
+/* ---------- status ---------- */
+function statusOf(days){
+  if(days<0) return {k:"overdue", label:"เลยกำหนด", icon:"🔴"};
+  if(days<=3) return {k:"urgent", label:"ด่วนมาก", icon:"🟠"};
+  if(days<=7) return {k:"soon", label:"ใกล้ถึง", icon:"🟡"};
+  if(days<=14) return {k:"prep", label:"เตรียมตัว", icon:"🔵"};
+  return {k:"ok", label:"ปกติ", icon:"🟢"};
+}
+function daysText(days){
+  if(days<0) return "เลยมา "+Math.abs(days)+" วัน";
+  if(days===0) return "วันนี้!";
+  return "อีก "+days+" วัน";
+}
+
+/* ---------- build milestones from records ---------- */
+function milestones(){
+  const out=[];
+  state.records.forEach(r=>{
+    if(r.type==="probation" && r.ref){
+      [30,60,90].forEach(n=>{
+        const d=addDays(r.ref,n);
+        out.push({ id:r.id+"-p"+n, rid:r.id, type:r.type, name:r.name,
+          label:"ประเมินทดลองงาน "+n+" วัน", date:d, note:r.note });
+      });
+    } else if(r.type==="maternity" && r.ref){
+      const th=Number(r.threshold||45);
+      const d=addDays(r.ref, th);
+      const elapsed=daysUntil(parseD(r.ref))*-1; // days since start
+      out.push({ id:r.id+"-m", rid:r.id, type:r.type, name:r.name,
+        label:"ครบเกณฑ์ค่าจ้างนายจ้าง ("+th+" วัน)", date:d,
+        note:(r.note?r.note+" · ":"")+"ลามาแล้ว "+elapsed+" วัน" });
+    } else if((r.type==="contract"||r.type==="document") && r.due){
+      const d=parseD(r.due);
+      out.push({ id:r.id+"-d", rid:r.id, type:r.type, name:r.name,
+        label: r.type==="contract" ? "หมดสัญญา / ต่อสัญญา" : "ครบกำหนดเอกสาร",
+        date:d, note:r.note });
+    }
+  });
+  out.forEach(m=>{ m.days=daysUntil(m.date); m.st=statusOf(m.days); m.done=state.done.includes(m.id);
+    const r=state.records.find(x=>x.id===m.rid); m.dept=r&&r.dept?r.dept:""; });
+  return out;
+}
+
+/* ---------- render ---------- */
+function typeIcon(t){ return {probation:"⏳",maternity:"👶",contract:"📄",document:"📁"}[t]||"📌"; }
+function typeName(t){ return {probation:"ทดลองงาน",maternity:"ลาคลอด",contract:"สัญญา",document:"เอกสาร"}[t]||t; }
+
+function render(){
+  const all = milestones();
+  const active = all.filter(m=>!m.done).sort((a,b)=>a.days-b.days);
+  const done = all.filter(m=>m.done).sort((a,b)=>b.date-a.date);
+
+  // summary counts (active only)
+  const c={overdue:0,urgent:0,soon:0,ok:0};
+  active.forEach(m=>{
+    if(m.st.k==="overdue")c.overdue++;
+    else if(m.st.k==="urgent")c.urgent++;
+    else if(m.st.k==="soon")c.soon++;
+    else c.ok++;
+  });
+  document.getElementById("summary").innerHTML = `
+    <div class="scard overdue"><div class="num">${c.overdue}</div><div class="lbl">🔴 เลยกำหนด</div></div>
+    <div class="scard urgent"><div class="num">${c.urgent}</div><div class="lbl">🟠 ด่วน (≤3 วัน)</div></div>
+    <div class="scard soon"><div class="num">${c.soon}</div><div class="lbl">🟡 ใกล้ถึง (≤7 วัน)</div></div>
+    <div class="scard ok"><div class="num">${c.ok}</div><div class="lbl">🟢 ปกติ</div></div>`;
+
+  // active list
+  const shown = filter==="all" ? active : active.filter(m=>m.type===filter);
+  const listEl=document.getElementById("list");
+  if(shown.length===0){
+    listEl.innerHTML=`<div class="empty">🎉 ไม่มีรายการที่ต้องเตือนในหมวดนี้</div>`;
+  }else{
+    listEl.innerHTML=shown.map(m=>itemHTML(m)).join("");
+  }
+
+  // done list
+  const doneWrap=document.getElementById("doneWrap");
+  const doneShown = filter==="all"?done:done.filter(m=>m.type===filter);
+  if(showDone && doneShown.length){
+    doneWrap.classList.remove("hide");
+    document.getElementById("doneList").innerHTML=doneShown.map(m=>itemHTML(m)).join("");
+  }else{
+    doneWrap.classList.add("hide");
+  }
+  document.getElementById("toggleDone").textContent = showDone ? "ซ่อนที่เสร็จแล้ว" : "แสดงที่เสร็จแล้ว";
+}
+
+function itemHTML(m){
+  return `<div class="item ${m.done?'done':m.st.k}">
+    <div class="icon">${typeIcon(m.type)}</div>
+    <div class="body">
+      <div class="title"><span class="tag">${typeName(m.type)}</span>${escapeH(m.name)}${m.dept?' <span class="tag">'+escapeH(m.dept)+'</span>':''}</div>
+      <div class="meta">${escapeH(m.label)} · ${thDate(m.date)}${m.note?" · "+escapeH(m.note):""}</div>
+    </div>
+    <div class="right">
+      <div class="days">${daysText(m.days)}</div>
+      <span class="badge ${m.st.k}">${m.st.label}</span>
+    </div>
+    <div class="acts">
+      <button class="iconbtn" title="${m.done?'ยกเลิกเสร็จ':'ทำเสร็จแล้ว'}" onclick="toggleDone('${m.id}')">${m.done?'↩':'✓'}</button>
+      <button class="iconbtn" title="แก้ไข" onclick="editRec('${m.rid}')">✎</button>
+    </div>
+  </div>`;
+}
+function escapeH(s){ return String(s||"").replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ---------- actions ---------- */
+window.toggleDone=function(mid){
+  const i=state.done.indexOf(mid);
+  const nowDone = i<0;
+  if(i>=0) state.done.splice(i,1); else state.done.push(mid);
+  cacheSave(); render();
+  guard(()=>sbSetDone(mid, nowDone));
+};
+window.editRec=function(rid){
+  const r=state.records.find(x=>x.id===rid);
+  if(r) openModal(r);
+};
+
+/* ---------- modal ---------- */
+function openModal(rec){
+  document.getElementById("modalTitle").textContent = rec ? "แก้ไขรายการ" : "เพิ่มรายการ";
+  document.getElementById("f_id").value = rec?rec.id:"";
+  document.getElementById("f_type").value = rec?rec.type:"probation";
+  document.getElementById("f_name").value = rec?rec.name:"";
+  document.getElementById("f_ref").value = rec&&rec.ref?rec.ref:"";
+  document.getElementById("f_threshold").value = rec&&rec.threshold?rec.threshold:45;
+  document.getElementById("f_due").value = rec&&rec.due?rec.due:"";
+  document.getElementById("f_dept").value = rec&&rec.dept?rec.dept:"";
+  document.getElementById("f_note").value = rec&&rec.note?rec.note:"";
+  document.getElementById("deleteBtn").style.display = rec?"block":"none";
+  syncFields();
+  document.getElementById("overlay").classList.add("show");
+}
+function closeModal(){ document.getElementById("overlay").classList.remove("show"); }
+
+function syncFields(){
+  const t=document.getElementById("f_type").value;
+  const show=(id,on)=>document.getElementById(id).classList.toggle("hide",!on);
+  show("grp_ref", t==="probation"||t==="maternity");
+  show("grp_threshold", t==="maternity");
+  show("grp_due", t==="contract"||t==="document");
+  const lblName=document.getElementById("lbl_name");
+  const lblRef=document.getElementById("lbl_ref");
+  const hintRef=document.getElementById("hint_ref");
+  const lblDue=document.getElementById("lbl_due");
+  if(t==="probation"){ lblName.textContent="ชื่อพนักงาน"; lblRef.textContent="วันเริ่มงาน"; hintRef.textContent="ระบบจะคำนวณ 30/60/90 วันให้อัตโนมัติ"; }
+  else if(t==="maternity"){ lblName.textContent="ชื่อพนักงาน"; lblRef.textContent="วันเริ่มลาคลอด"; hintRef.textContent="ระบบจะนับวันที่ลามาแล้ว + วันครบเกณฑ์"; }
+  else if(t==="contract"){ lblName.textContent="ชื่อพนักงาน / สัญญา"; lblDue.textContent="วันหมดสัญญา"; }
+  else { lblName.textContent="ชื่อ / เรื่องเอกสาร"; lblDue.textContent="วันครบกำหนด"; }
+}
+
+function saveRec(){
+  const id=document.getElementById("f_id").value || ("r"+Date.now());
+  const type=document.getElementById("f_type").value;
+  const name=document.getElementById("f_name").value.trim();
+  if(!name){ alert("กรุณากรอกชื่อ"); return; }
+  const rec={ id, type, name, dept:document.getElementById("f_dept").value.trim(), note:document.getElementById("f_note").value.trim() };
+  if(type==="probation"||type==="maternity"){
+    rec.ref=document.getElementById("f_ref").value;
+    if(!rec.ref){ alert("กรุณาเลือกวันที่"); return; }
+    if(type==="maternity") rec.threshold=Number(document.getElementById("f_threshold").value)||45;
+  }else{
+    rec.due=document.getElementById("f_due").value;
+    if(!rec.due){ alert("กรุณาเลือกวันครบกำหนด"); return; }
+  }
+  const idx=state.records.findIndex(x=>x.id===id);
+  if(idx>=0) state.records[idx]=rec; else state.records.push(rec);
+  cacheSave(); closeModal(); render();
+  guard(()=>sbUpsertRecord(rec));
+}
+
+function deleteRec(){
+  const id=document.getElementById("f_id").value;
+  if(!id) return;
+  if(!confirm("ลบรายการนี้?")) return;
+  state.records=state.records.filter(x=>x.id!==id);
+  state.done=state.done.filter(m=>!m.startsWith(id+"-"));
+  cacheSave(); closeModal(); render();
+  guard(()=>sbDeleteRecord(id));
+}
+
+/* ---------- Excel import ---------- */
+function normDate(v){
+  if(v==null||v==="") return "";
+  if(v instanceof Date && !isNaN(v)) return toISO(v);
+  if(typeof v==="number"){ // Excel serial
+    const d=new Date(Math.round((v-25569)*86400000));
+    return isNaN(d)?"":toISO(d);
+  }
+  const s=String(v).trim();
+  let m=s.match(/^(\d{1,4})[\/\-.](\d{1,2})[\/\-.](\d{1,4})$/);
+  if(m){
+    let a=+m[1], b=+m[2], c=+m[3], y, mo, da;
+    if(a>31){ y=a; mo=b; da=c; }      // yyyy-mm-dd
+    else { da=a; mo=b; y=c; }         // dd/mm/yyyy
+    if(y>2400) y-=543;                // พ.ศ. -> ค.ศ.
+    if(y<100) y+=2000;
+    if(mo<1||mo>12||da<1||da>31) return "";
+    return y+"-"+String(mo).padStart(2,"0")+"-"+String(da).padStart(2,"0");
+  }
+  const d=new Date(s);
+  return isNaN(d)?"":toISO(d);
+}
+function mapType(v){
+  const s=String(v||"");
+  if(s.indexOf("ทดลอง")>=0) return "probation";
+  if(s.indexOf("คลอด")>=0) return "maternity";
+  if(s.indexOf("สัญญา")>=0) return "contract";
+  if(s.indexOf("เอกสาร")>=0) return "document";
+  return "";
+}
+function handleFile(file){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result), {type:"array", cellDates:true});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(ws, {header:1, defval:""});
+      importRows(rows);
+    }catch(err){ alert("อ่านไฟล์ไม่สำเร็จ: "+err.message); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+function importRows(rows){
+  // find header row: contains "ชื่อ" and "ประเภท"
+  let hi=-1;
+  for(let i=0;i<Math.min(rows.length,6);i++){
+    const line=rows[i].map(x=>String(x)).join("|");
+    if(line.indexOf("ชื่อ")>=0 && line.indexOf("ประเภท")>=0){ hi=i; break; }
+  }
+  if(hi<0){ alert("ไม่พบหัวตาราง (ต้องมีคอลัมน์ 'ชื่อ' และ 'ประเภท') — ใช้ไฟล์แม่แบบนะครับ"); return; }
+  const data=rows.slice(hi+1);
+  let added=0, skipped=0;
+  const existKeys=new Set(state.records.map(r=>r.name+"|"+r.type+"|"+(r.ref||r.due||"")));
+  data.forEach(row=>{
+    const name=String(row[0]||"").trim();
+    const type=mapType(row[1]);
+    if(!name || !type) return;                       // skip empty/invalid
+    const dstr=normDate(row[2]);
+    if(!dstr){ skipped++; return; }                  // needs a valid date
+    const rec={ id:"r"+Date.now()+Math.floor(Math.random()*1000), type, name,
+      dept:String(row[4]||"").trim(), note:String(row[5]||"").trim() };
+    if(type==="probation"||type==="maternity"){
+      rec.ref=dstr;
+      if(type==="maternity") rec.threshold=Number(row[3])||45;
+    }else{ rec.due=dstr; }
+    const key=name+"|"+type+"|"+dstr;
+    if(existKeys.has(key)){ skipped++; return; }      // dedup
+    existKeys.add(key);
+    state.records.push(rec); added++;
+  });
+  cacheSave(); render();
+  guard(()=>sbSyncAll());
+  alert("นำเข้าสำเร็จ ✅\nเพิ่มใหม่ "+added+" รายการ"+(skipped?"\nข้าม "+skipped+" รายการ (ซ้ำ/วันที่ไม่ถูกต้อง)":""));
+}
+
+/* ---------- backup / restore ---------- */
+function exportData(){
+  const payload={ app:"masaru_hr_deadline", version:1,
+    exportedAt:new Date().toISOString(),
+    records:state.records, done:state.done };
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob);
+  const now=new Date();
+  const stamp=now.getFullYear()+String(now.getMonth()+1).padStart(2,"0")+String(now.getDate()).padStart(2,"0");
+  const a=document.createElement("a");
+  a.href=url; a.download="HR_Deadline_Backup_"+stamp+".json";
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+function restoreData(file){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    let data;
+    try{ data=JSON.parse(e.target.result); }
+    catch(err){ alert("ไฟล์ไม่ถูกต้อง (ต้องเป็นไฟล์สำรองที่ส่งออกจากระบบนี้)"); return; }
+    if(!data || !Array.isArray(data.records)){ alert("ไฟล์นี้ไม่ใช่ไฟล์สำรองของระบบเตือน Deadline HR"); return; }
+    const cnt=data.records.length;
+    const replace=confirm("พบข้อมูลสำรอง "+cnt+" รายการ\n\n[ตกลง] = แทนที่ข้อมูลปัจจุบันทั้งหมด\n[ยกเลิก] = รวมเข้ากับข้อมูลเดิม (ไม่เพิ่มที่ซ้ำ)");
+    if(replace){
+      state.records=data.records;
+      state.done=Array.isArray(data.done)?data.done:[];
+      cacheSave(); render();
+      guard(()=>sbSyncAll());
+      alert("กู้คืนข้อมูลสำเร็จ ✅ ("+cnt+" รายการ)");
+    }else{
+      const key=r=>r.name+"|"+r.type+"|"+(r.ref||r.due||"");
+      const exist=new Set(state.records.map(key));
+      let added=0;
+      data.records.forEach(r=>{ if(!exist.has(key(r))){ state.records.push(r); exist.add(key(r)); added++; } });
+      const doneSet=new Set(state.done);
+      (data.done||[]).forEach(d=>doneSet.add(d));
+      state.done=[...doneSet];
+      cacheSave(); render();
+      guard(()=>sbSyncAll());
+      alert("รวมข้อมูลแล้ว ✅ เพิ่มใหม่ "+added+" รายการ");
+    }
+  };
+  reader.readAsText(file);
+}
+
+/* ---------- alert popup ---------- */
+const SNOOZE_KEY="masaru_hr_deadline_snooze";
+function urgentMilestones(){
+  return milestones().filter(m=>!m.done && m.days<=7).sort((a,b)=>a.days-b.days);
+}
+function showAlertPop(force){
+  const items=urgentMilestones();
+  if(items.length===0){
+    if(force) alert("ไม่มีงานด่วน ✅ (ภายใน 7 วันข้างหน้า)");
+    return;
+  }
+  // snooze check (skip auto-open if dismissed today)
+  if(!force){
+    const today=toISO(new Date());
+    if(localStorage.getItem(SNOOZE_KEY)===today) return;
+  }
+  const od=items.filter(m=>m.days<0).length;
+  const ur=items.filter(m=>m.days>=0&&m.days<=3).length;
+  const parts=[];
+  if(od) parts.push("🔴 เลยกำหนด "+od);
+  if(ur) parts.push("🟠 ด่วน "+ur);
+  parts.push("รวม "+items.length+" รายการภายใน 7 วัน");
+  document.getElementById("popSub").textContent=parts.join(" · ");
+  document.getElementById("popList").innerHTML=items.map(m=>`
+    <div class="pop-row ${m.st.k}">
+      <div class="pr-body">
+        <div class="pr-title">${typeIcon(m.type)} ${escapeH(m.name)}${m.dept?" · "+escapeH(m.dept):""}</div>
+        <div class="pr-meta">${escapeH(m.label)} · ${thDate(m.date)}</div>
+      </div>
+      <div class="pr-days">${daysText(m.days)}</div>
+    </div>`).join("");
+  document.getElementById("popSnooze").checked=false;
+  document.getElementById("alertPop").classList.add("show");
+}
+function closeAlertPop(){
+  if(document.getElementById("popSnooze").checked){
+    localStorage.setItem(SNOOZE_KEY, toISO(new Date()));
+  }
+  document.getElementById("alertPop").classList.remove("show");
+}
+
+async function init(){
+  const now=new Date();
+  document.getElementById("todayLabel").textContent = "วันนี้ "+thDate(now);
+  cacheLoad();     // instant render from cache
+  render();
+  await sbLoad();  // then fetch fresh from Supabase
+
+  document.getElementById("addBtn").onclick=()=>openModal(null);
+  document.getElementById("importBtn").onclick=()=>document.getElementById("fileInput").click();
+  document.getElementById("fileInput").onchange=e=>{
+    if(e.target.files[0]) handleFile(e.target.files[0]);
+    e.target.value="";
+  };
+  document.getElementById("cancelBtn").onclick=closeModal;
+  document.getElementById("saveBtn").onclick=saveRec;
+  document.getElementById("deleteBtn").onclick=deleteRec;
+  document.getElementById("f_type").onchange=syncFields;
+  document.getElementById("toggleDone").onclick=()=>{ showDone=!showDone; render(); };
+  document.getElementById("exportBtn").onclick=exportData;
+  document.getElementById("restoreBtn").onclick=()=>document.getElementById("restoreInput").click();
+  document.getElementById("restoreInput").onchange=e=>{
+    if(e.target.files[0]) restoreData(e.target.files[0]);
+    e.target.value="";
+  };
+  document.getElementById("overlay").onclick=(e)=>{ if(e.target.id==="overlay") closeModal(); };
+
+  document.getElementById("bellBtn").onclick=()=>showAlertPop(true);
+  document.getElementById("popClose").onclick=closeAlertPop;
+  document.getElementById("alertPop").onclick=(e)=>{ if(e.target.id==="alertPop") closeAlertPop(); };
+
+  document.querySelectorAll("#filters .chip").forEach(ch=>{
+    ch.onclick=()=>{
+      document.querySelectorAll("#filters .chip").forEach(c=>c.classList.remove("active"));
+      ch.classList.add("active");
+      filter=ch.dataset.type; render();
+    };
+  });
+
+  showAlertPop(false); // auto-open on load if there are urgent items
+
+  // realtime: refresh when anyone changes data
+  if(_sb){
+    try{
+      _sb.channel("hr_deadline_rt")
+        .on("postgres_changes",{event:"*",schema:"public",table:"hr_deadlines"},()=>sbLoad())
+        .on("postgres_changes",{event:"*",schema:"public",table:"hr_deadline_done"},()=>sbLoad())
+        .subscribe();
+    }catch(e){ console.warn("realtime off", e); }
+  }
+}
+document.addEventListener("DOMContentLoaded", init);
+</script>
+</body>
+</html>
