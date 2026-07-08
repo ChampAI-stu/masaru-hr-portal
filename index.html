@@ -11,10 +11,10 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
-    --green:#16785d; --green-dark:#0e5b45; --green-deep:#0a4535;
-    --green-soft:#e2f3ec; --green-line:#c6e6d7; --gold:#C9A84C;
-    --bg:#f1f5f2; --card:#ffffff; --line:#e3e9e4; --line-soft:#eef2ee;
-    --ink:#16241f; --muted:#6b756f; --faint:#9aa39e; --red:#b23a48; --amber:#8a5a12;
+    --green:#16294d; --green-dark:#0e1c38; --green-deep:#0a1428;
+    --green-soft:#e7ecf5; --green-line:#cdd6e6; --gold:#d62030;
+    --bg:#f2f4f8; --card:#ffffff; --line:#e2e7ef; --line-soft:#eef1f7;
+    --ink:#16233f; --muted:#64708a; --faint:#97a1b5; --red:#b23a48; --amber:#8a5a12;
     --radius:16px; --shadow:0 1px 2px rgba(16,60,45,.05),0 8px 28px rgba(16,60,45,.07);
     --shadow-lg:0 20px 60px rgba(10,60,45,.28);
   }
@@ -34,19 +34,19 @@
 
   /* ===== LOGIN ===== */
   .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;
-    background:linear-gradient(140deg,#0e5b45 0%,#16785d 55%,#1f9e78 100%);padding:20px;position:relative;overflow:hidden}
+    background:linear-gradient(140deg,#0e1c38 0%,#16294d 55%,#2a4a7a 100%);padding:20px;position:relative;overflow:hidden}
   .login-wrap::before{content:"";position:absolute;width:520px;height:520px;border-radius:50%;
     background:rgba(255,255,255,.06);top:-160px;right:-120px}
   .login-wrap::after{content:"";position:absolute;width:360px;height:360px;border-radius:50%;
     background:rgba(255,255,255,.05);bottom:-140px;left:-100px}
   .auth-card{background:#fff;border-radius:22px;padding:32px 30px;width:392px;box-shadow:var(--shadow-lg);position:relative;z-index:1}
-  .logo-plate{background:linear-gradient(135deg,#0e5b45,#16785d);border-radius:16px;padding:20px 24px;display:flex;justify-content:center;margin-bottom:18px}
+  .logo-plate{background:linear-gradient(135deg,#0e1c38,#16294d);border-radius:16px;padding:20px 24px;display:flex;justify-content:center;margin-bottom:18px}
   .logo-plate .masaru-logo{height:42px;width:210px}
   .sub-brand{text-align:center;color:var(--green-dark);font-weight:700;letter-spacing:3px;font-size:13px;margin-bottom:3px}
   .sub-desc{text-align:center;color:var(--muted);font-size:14px;margin-bottom:22px}
   .fld{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
   .fld label{font-size:13px;color:var(--muted);font-weight:600}
-  .fld input,.fld select{padding:11px 13px;border:1px solid var(--line);border-radius:10px;background:#fbfdfc;transition:.15s}
+  .fld input,.fld select{padding:11px 13px;border:1px solid var(--line);border-radius:10px;background:#fbfcfe;transition:.15s}
   .fld input:focus,.fld select:focus{outline:none;border-color:var(--green);background:#fff;box-shadow:0 0 0 3px var(--green-soft)}
   .btn-primary{background:var(--green);color:#fff;border:none;border-radius:11px;padding:13px;font-weight:700;font-size:15px;width:100%;transition:.15s}
   .btn-primary:hover{background:var(--green-dark)}
@@ -57,7 +57,7 @@
   .msg.err{color:var(--red)} .msg.ok{color:var(--green-dark)}
 
   /* ===== HUB ===== */
-  header.top{background:linear-gradient(120deg,#0e5b45,#16785d);color:#fff;padding:15px 26px;
+  header.top{background:linear-gradient(120deg,#0e1c38,#16294d);color:#fff;padding:15px 26px;
     display:flex;align-items:center;gap:14px;border-bottom:4px solid var(--gold)}
   header.top .masaru-logo{height:28px;width:140px}
   header.top .hdr-label{font-weight:600;font-size:15px;opacity:.95}
@@ -80,7 +80,7 @@
   .app-name{font-size:18px;font-weight:700;color:var(--green-dark)}
   .app-desc{font-size:13.5px;color:var(--muted);line-height:1.55;flex:1}
   .app-go{color:var(--green);font-weight:700;font-size:14px;margin-top:2px;display:flex;align-items:center;justify-content:space-between;gap:8px}
-  .app-newtab{color:var(--muted);font-weight:600;font-size:12px;border:1px solid var(--line);border-radius:8px;padding:5px 10px;background:#f8faf9;transition:.15s}
+  .app-newtab{color:var(--muted);font-weight:600;font-size:12px;border:1px solid var(--line);border-radius:8px;padding:5px 10px;background:#f7f9fc;transition:.15s}
   .app-newtab:hover{background:var(--green-soft);border-color:var(--green-line);color:var(--green-dark)}
   .empty-apps{grid-column:1/-1;text-align:center;color:var(--muted);padding:44px;
     background:#fff;border:1px dashed var(--line);border-radius:14px}
