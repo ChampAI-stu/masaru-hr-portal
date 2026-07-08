@@ -18,6 +18,13 @@
     const SUPABASE_ANON_KEY = 'sb_publishable_vh-qLGPFmlSZ0VWxQIG3CA_CMHDAZKv';
 
     const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // ===== AUTH ร่วมกับ Portal =====
+    // ยืนยันตัวตนกับ project เดียวกับ Portal เพื่อให้ล็อกอินครั้งเดียวใช้ได้ทุกระบบ
+    // (ข้อมูลยังอ่าน/เขียนที่ project เดิมผ่าน _sb)
+    const AUTH_URL = 'https://iyycyvnvfmerxkcfalea.supabase.co';
+    const AUTH_KEY = 'sb_publishable_ChkZClaeE6NCAxqyTqE4Yw_aTsz4zqi';
+    const _sbAuth = window.supabase.createClient(AUTH_URL, AUTH_KEY);
     const SUPABASE_READY = SUPABASE_URL !== 'https://YOUR_PROJECT_ID.supabase.co';
 
     // ===================== SUPABASE HELPERS =====================
@@ -2364,7 +2371,7 @@
       if (!email || !pass) { errEl.textContent = '❌ กรุณากรอกอีเมลและรหัสผ่าน'; return; }
       var btn = document.getElementById('login-btn');
       btn.disabled = true; btn.textContent = 'กำลังเข้าสู่ระบบ...';
-      var { data, error } = await _sb.auth.signInWithPassword({ email, password: pass });
+      var { data, error } = await _sbAuth.auth.signInWithPassword({ email, password: pass });
       btn.disabled = false; btn.textContent = 'เข้าสู่ระบบ';
       if (error) {
         errEl.textContent = '❌ ' + (error.message === 'Invalid login credentials' ? 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' : error.message);
@@ -2384,7 +2391,7 @@
       if (pass.length < 6) { msgEl.textContent = '❌ รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร'; return; }
       if (pass !== pass2) { msgEl.textContent = '❌ รหัสผ่านไม่ตรงกัน'; return; }
       var btn = event.target; btn.disabled = true; btn.textContent = 'กำลังสมัคร...';
-      var { error } = await _sb.auth.signUp({ email, password: pass });
+      var { error } = await _sbAuth.auth.signUp({ email, password: pass });
       btn.disabled = false; btn.textContent = 'สมัครสมาชิก';
       if (error) {
         msgEl.textContent = '❌ ' + error.message;
@@ -2400,7 +2407,7 @@
       msgEl.style.color = '#dc2626'; msgEl.textContent = '';
       if (!email) { msgEl.textContent = '❌ กรุณากรอกอีเมล'; return; }
       var btn = event.target; btn.disabled = true; btn.textContent = 'กำลังส่ง...';
-      var { error } = await _sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.href });
+      var { error } = await _sbAuth.auth.resetPasswordForEmail(email, { redirectTo: window.location.href });
       btn.disabled = false; btn.textContent = 'ส่งลิงก์รีเซ็ต';
       if (error) {
         msgEl.textContent = '❌ ' + error.message;
@@ -2412,7 +2419,7 @@
 
     async function doLogout() {
       if (!confirm('ต้องการออกจากระบบหรือไม่?')) return;
-      await _sb.auth.signOut();
+      await _sbAuth.auth.signOut();
       currentUserRole = 'viewer';
       document.getElementById('login-overlay').style.display = 'flex';
       document.getElementById('user-badge').style.display = 'none';
@@ -2421,7 +2428,7 @@
     }
 
     async function checkSession() {
-      var { data: { session } } = await _sb.auth.getSession();
+      var { data: { session } } = await _sbAuth.auth.getSession();
       if (session && session.user) {
         await showApp(session.user);
         return true;
@@ -2431,7 +2438,7 @@
 
     // ฟัง auth state change (รองรับ OAuth redirect callback)
     var _authInitDone = false;
-    _sb.auth.onAuthStateChange(async function(event, session) {
+    _sbAuth.auth.onAuthStateChange(async function(event, session) {
       if (event === 'SIGNED_IN' && session) {
         var overlayHidden = document.getElementById('login-overlay').style.display === 'none';
         await showApp(session.user);
