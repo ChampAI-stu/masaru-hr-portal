@@ -614,6 +614,7 @@
           <button class="btn" style="background:#eef1f7;color:#0e1c38;border-color:#bfdbfe" onclick="document.getElementById('emp-import-file').click()" title="นำเข้ารายชื่อพนักงานจากไฟล์ Excel (Working_Details ของ HR Cloud) หรือ CSV รูปแบบ Export">📤 นำเข้า Excel/CSV</button>
           <input type="file" id="emp-import-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importEmpCSV(this)">
           <button class="btn" style="background:#fff7ed;color:#c2410c;border-color:#fed7aa" onclick="openExcludeModal()" title="รายชื่อที่จะไม่นำเข้าระบบ (ข้ามทุกครั้งที่ import/ซิง)">🚫 รายชื่อยกเว้น</button>
+          <button class="btn" style="background:#eff6ff;color:#0369a1;border-color:#bae6fd" onclick="openWfhModal()" title="รายชื่อพนักงาน WFH — เวลานำเข้าจะบังคับสถานะเป็น WFH ให้ชื่อเหล่านี้เสมอ">🏠 รายชื่อ WFH</button>
           <button class="btn" style="background:#fef2f2;color:#b91c1c;border-color:#fecaca" onclick="deleteAllEmps()" title="ลบรายชื่อพนักงานทั้งหมดในฐานข้อมูล (ล้างทั้งฐาน)">🗑 ลบทั้งหมด</button>
           <button class="btn btn-blue" onclick="showModal('add-modal')">+ เพิ่มข้อมูลพนักงาน</button>
         </div>
@@ -737,6 +738,26 @@
       <div class="mac">
         <button class="btn" onclick="closeModal('exclude-modal')" style="background:#f8f9fc;border-color:#e2e8f0">ยกเลิก</button>
         <button class="btn btn-red" onclick="saveExcludeList()">บันทึก + นำออกจากระบบ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: รายชื่อ WFH -->
+  <div class="modal-bg" id="wfh-modal">
+    <div class="modal" style="width:460px">
+      <h3>🏠 รายชื่อ WFH (ทำงานที่บ้าน)</h3>
+      <div style="font-size:13px;color:#64748b;margin-bottom:12px;line-height:1.6">
+        พิมพ์ชื่อ-นามสกุล <strong>บรรทัดละ 1 คน</strong><br>
+        เวลานำเข้าไฟล์ ระบบจะบังคับสถานะของคนเหล่านี้เป็น <strong style="color:#0369a1">WFH</strong> เสมอ (ไม่นับเป็นขาด/ลืมสแกน แม้ไม่ได้สแกนเข้า)<br>
+        <span style="color:#94a3b8;font-size:12px">* วันที่มี "ลาป่วย/ลาพักร้อน/ลากิจ" ในไฟล์ จะยังถือเป็นลาตามจริง</span>
+      </div>
+      <div class="mf">
+        <label>รายชื่อ WFH (ปัจจุบัน <span id="wfh-count">0</span> รายชื่อ)</label>
+        <textarea id="wfh-text" style="height:220px;font-family:inherit;line-height:1.7" placeholder="นายสมชาย ใจดี&#10;นางสาวสมหญิง รักงาน&#10;..."></textarea>
+      </div>
+      <div class="mac">
+        <button class="btn" onclick="closeModal('wfh-modal')" style="background:#f8f9fc;border-color:#e2e8f0">ยกเลิก</button>
+        <button class="btn" style="background:#0369a1;color:#fff;border-color:#0369a1" onclick="saveWfhList()">บันทึกรายชื่อ WFH</button>
       </div>
     </div>
   </div>
@@ -1952,6 +1973,10 @@
                     code = 'ป'; note = 'ลาป่วย | ' + shift;
                   } else if (remark.indexOf('ลากิจ') >= 0) {
                     code = 'ก'; note = 'ลากิจ | ' + shift;
+                  } else if (isWFH(csvEmpName)) {
+                    // อยู่ในรายชื่อ WFH → บังคับเป็น WFH เสมอ (ไม่นับขาด/ลืมสแกน แม้ไม่ได้สแกน)
+                    code = 'f';
+                    note = 'WFH | ' + shift + (checkin ? ' | เข้า ' + checkin.split(/\s+/).pop() : '');
                   } else if (remark.indexOf('ขาด') >= 0 && !checkin) {
                     // ขาดจริงเฉพาะเมื่อไม่มีเวลาสแกนเข้า — ถ้ามีสแกนเข้าถือว่ามาทำงาน
                     code = 'ข'; note = 'ขาดงาน | ' + shift;
@@ -2113,6 +2138,28 @@
       closeModal('exclude-modal');
       renderEmp(); fillFilters(); render();
       alert('✅ บันทึกรายชื่อยกเว้นแล้ว: ' + excludeList.length + ' รายชื่อ\n🗑 นำออกจากฐานข้อมูล: ' + removed.length + ' คน\n\nรายชื่อเหล่านี้จะไม่ถูกนำเข้าระบบจากการ import/ซิงอีกต่อไป');
+    }
+
+    // ============ รายชื่อ WFH (บังคับสถานะเป็น WFH ตอนนำเข้า) ============
+    var wfhList = sload('wfh_list') || [];
+    function isWFH(name) {
+      if (!wfhList || !wfhList.length) return false;
+      var k = gStrip(name), c = gClean(name);
+      return wfhList.some(function (x) { return gStrip(x) === k || gClean(x) === c; });
+    }
+    function openWfhModal() {
+      document.getElementById('wfh-text').value = (wfhList || []).join('\n');
+      document.getElementById('wfh-count').textContent = (wfhList || []).length;
+      showModal('wfh-modal');
+    }
+    function saveWfhList() {
+      var raw = document.getElementById('wfh-text').value.split('\n')
+        .map(function (s) { return gClean(s); }).filter(function (s) { return s; });
+      var seen = {}, list = [];
+      raw.forEach(function (n) { var k = gStrip(n); if (!seen[k]) { seen[k] = true; list.push(n); } });
+      wfhList = list; ssave('wfh_list', wfhList);
+      closeModal('wfh-modal');
+      alert('✅ บันทึกรายชื่อ WFH แล้ว: ' + wfhList.length + ' รายชื่อ\n\nการนำเข้าครั้งต่อไป รายชื่อเหล่านี้จะถูกตั้งเป็น WFH ให้อัตโนมัติ');
     }
 
     // เทียบรายชื่อจาก "ไฟล์รายวันล่าสุดที่นำเข้ามา" กับฐานข้อมูล (ไม่ต้องเลือกไฟล์ใหม่)
