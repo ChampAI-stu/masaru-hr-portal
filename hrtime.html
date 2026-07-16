@@ -2758,9 +2758,12 @@
           if (r.error) throw r.error;
         }
         // 2) ดันการลงเวลาขึ้น (bulk)
-        var aRows = [];
+        // 2) ดันการลงเวลาขึ้น (bulk) — ข้ามรายการที่ไม่มีพนักงานอยู่จริง (กัน foreign key error)
+        var validIds = {}; eRows.forEach(function (e) { validIds[e.id] = true; });
+        var aRows = [], orphan = 0;
         Object.keys(att).forEach(function (d) {
           Object.keys(att[d]).forEach(function (eid) {
+            if (!validIds[eid]) { orphan++; return; }
             var c = att[d][eid]; aRows.push({ employee_id: eid, date: d, code: c.code || '', note: c.note || '' });
           });
         });
@@ -2781,7 +2784,7 @@
         await loadSharedSettings();
         render(); fillFilters(); try { renderEmp(); } catch (e) {}
         ov.remove();
-        alert('✅ ซิงก์เรียบร้อย!\n\n👥 พนักงาน: ' + eRows.length + ' คน\n🕐 ลงเวลา: ' + aRows.length + ' รายการ\n🔁 การเคลื่อนไหว: ' + mRows.length + '\n\n👉 ให้เครื่องอื่นกด "ซิงก์ให้ตรงกัน" หรือรีเฟรช เพื่อได้ข้อมูลชุดเดียวกัน');
+        alert('✅ ซิงก์เรียบร้อย!\n\n👥 พนักงาน: ' + eRows.length + ' คน\n🕐 ลงเวลา: ' + aRows.length + ' รายการ' + (orphan ? ' (ข้าม ' + orphan + ' รายการที่ไม่มีพนักงานอยู่จริง)' : '') + '\n🔁 การเคลื่อนไหว: ' + mRows.length + '\n\n👉 ให้เครื่องอื่นกด "ซิงก์ให้ตรงกัน" หรือรีเฟรช เพื่อได้ข้อมูลชุดเดียวกัน');
       } catch (err) {
         ov.remove();
         alert('❌ ซิงก์ไม่สำเร็จ: ' + (err.message || err));
