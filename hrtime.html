@@ -2130,7 +2130,7 @@
         .map(function (s) { return gClean(s); }).filter(function (s) { return s; });
       var seen = {}, list = [];
       raw.forEach(function (n) { var k = gStrip(n); if (!seen[k]) { seen[k] = true; list.push(n); } });
-      excludeList = list; ssave('exclude_list', excludeList);
+      excludeList = list; ssave('exclude_list', excludeList); sbSaveSetting('exclude_list', excludeList);
       // นำคนที่อยู่ในระบบและตรงกับรายชื่อยกเว้น ออกจากฐานข้อมูล
       var removed = [];
       emps = emps.filter(function (e) {
@@ -2160,7 +2160,7 @@
         .map(function (s) { return gClean(s); }).filter(function (s) { return s; });
       var seen = {}, list = [];
       raw.forEach(function (n) { var k = gStrip(n); if (!seen[k]) { seen[k] = true; list.push(n); } });
-      wfhList = list; ssave('wfh_list', wfhList);
+      wfhList = list; ssave('wfh_list', wfhList); sbSaveSetting('wfh_list', wfhList);
       closeModal('wfh-modal');
       alert('✅ บันทึกรายชื่อ WFH แล้ว: ' + wfhList.length + ' รายชื่อ\n\nการนำเข้าครั้งต่อไป รายชื่อเหล่านี้จะถูกตั้งเป็น WFH ให้อัตโนมัติ');
     }
@@ -2663,8 +2663,78 @@
         }
         if (overlay) overlay.remove();
       }
+      await loadSharedSettings();
       render();
       fillFilters();
+      startRealtime();
+    }
+
+    // ============ SHARED SETTINGS (wfh_list / exclude_list ผ่าน Supabase — แชร์ทุกคน) ============
+    async function sbFetchSettings() {
+      if (!SUPABASE_READY) return null;
+      try {
+        const { data, error } = await _sb.from('app_settings').select('key,value');
+        if (error) throw error;
+        var out = {}; (data || []).forEach(function (r) { out[r.key] = r.value; });
+        return out;
+      } catch (err) { console.warn('[Supabase] fetchSettings:', err.message); return null; }
+    }
+    async function sbSaveSetting(key, value) {
+      if (!SUPABASE_READY) return;
+      try {
+        const { error } = await _sb.from('app_settings')
+          .upsert({ key: key, value: value, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+        if (error) throw error;
+      } catch (err) { console.warn('[Supabase] saveSetting:', err.message); }
+    }
+    function applySettings(st) {
+      if (!st) return;
+      if (Array.isArray(st.wfh_list)) { wfhList = st.wfh_list; ssave('wfh_list', wfhList); }
+      if (Array.isArray(st.exclude_list)) { excludeList = st.exclude_list; ssave('exclude_list', excludeList); }
+    }
+    async function loadSharedSettings() {
+      var st = await sbFetchSettings();
+      if (st) applySettings(st);
+    }
+
+    // ============ REALTIME (ทำงานร่วมกันหลายคน — เห็นการแก้ไขสด ๆ) ============
+    var _rtTimer = null, _rtChannel = null;
+    function flashLive(msg) {
+      var el = document.getElementById('rt-badge');
+      if (!el) {
+        el = document.createElement('div'); el.id = 'rt-badge';
+        el.style.cssText = 'position:fixed;bottom:16px;right:16px;z-index:9998;background:#16a34a;color:#fff;font-size:12px;font-weight:700;padding:7px 13px;border-radius:20px;box-shadow:0 4px 14px rgba(0,0,0,.18);opacity:0;transition:opacity .25s;font-family:inherit;pointer-events:none';
+        document.body.appendChild(el);
+      }
+      el.textContent = '🟢 ' + (msg || 'อัปเดตจากเพื่อนร่วมงาน');
+      el.style.opacity = '1';
+      clearTimeout(el._t); el._t = setTimeout(function () { el.style.opacity = '0'; }, 1800);
+    }
+    function scheduleRefresh() {
+      clearTimeout(_rtTimer);
+      _rtTimer = setTimeout(async function () {
+        var ce = await sbFetchEmployees(); if (ce) { emps = ce; ssave('employees', emps); }
+        var cm = await sbFetchMovements(); if (cm) { mvs = cm; ssave('movements', mvs); }
+        var st = await sbFetchSettings(); if (st) applySettings(st);
+        render(); fillFilters();
+        try { renderEmp(); } catch (e) {}
+      }, 800);
+    }
+    function startRealtime() {
+      if (!SUPABASE_READY || _rtChannel) return;
+      _rtChannel = _sb.channel('hrtime-shared')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, function (p) {
+          var r = p.new || p.old; if (!r) return;
+          if (p.eventType === 'DELETE') { if (att[r.date]) delete att[r.date][r.employee_id]; }
+          else { if (!att[r.date]) att[r.date] = {}; att[r.date][r.employee_id] = { code: r.code || '', note: r.note || '' }; }
+          ssave('attendance', att);
+          try { if (typeof cur !== 'undefined' && dk(cur) === r.date) { renderTable(); renderSumBar(); } } catch (e) {}
+          flashLive('อัปเดตการลงเวลา');
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'employees' }, function () { scheduleRefresh(); flashLive('อัปเดตข้อมูลพนักงาน'); })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'movements' }, function () { scheduleRefresh(); })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, function () { scheduleRefresh(); flashLive('อัปเดตรายชื่อ WFH/ยกเว้น'); })
+        .subscribe();
     }
 
     (async function() {
