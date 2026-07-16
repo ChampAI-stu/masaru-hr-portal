@@ -250,6 +250,7 @@
     .ci.vf { background: #ccfbf1; border-color: #14b8a6; color: #0f766e }
     .ci.vx { background: #fecaca; border-color: #dc2626; color: #991b1b }
     .ci.vb { background: #fce7f3; border-color: #ec4899; color: #be185d }
+    .ci.vps { background: #94a3b8; border-color: #475569; color: #ffffff }
     /* Status dropdown (uses .ci color classes, but wider + left-aligned for Thai labels) */
     .cs { width: 100%; max-width: 168px; min-width: 130px; text-align: left; text-align-last: left; padding: 8px 10px; font-size: 13px; font-weight: 600; cursor: pointer; border-radius: 8px; border-width: 1.5px; }
     .cs:hover { border-color: #94a3b8; }
@@ -768,17 +769,18 @@
       { c: '1', l: 'มาทำงาน', cl: 'v1' }, { c: 'w', l: 'หยุดสัปดาห์', cl: 'vw' }, { c: 'h', l: 'วันหยุด', cl: 'vh' },
       { c: 'ป', l: 'ลาป่วย', cl: 'vp' }, { c: 'ร', l: 'พักร้อน', cl: 'vr' }, { c: 'ก', l: 'ลากิจ', cl: 'vk' },
       { c: 'พ', l: 'หยุดพิเศษ', cl: 'vph' }, { c: 'ส', l: 'มาสาย', cl: 'vs' }, { c: 'f', l: 'WFH', cl: 'vf' },
-      { c: 'b', l: 'วันเกิด', cl: 'vb' }, { c: 'ข', l: 'ขาดงาน', cl: 'vx' }, { c: 's', l: 'ลืมสแกน', cl: 'vw' }
+      { c: 'b', l: 'วันเกิด', cl: 'vb' }, { c: 'ข', l: 'ขาดงาน', cl: 'vx' }, { c: 's', l: 'ลืมสแกน', cl: 'vw' },
+      { c: 'x', l: 'พ้นสภาพ', cl: 'vps' }
     ];
     var CL = {}; CODES.forEach(function (x) { CL[x.c] = x.cl; });
     var STATUS_LABELS = {}; CODES.forEach(function (x) { STATUS_LABELS[x.c] = x.l; });
     var STATUS_SHORT_LABELS = {
       '1': 'มา', 'ส': 'สาย', 'f': 'WFH', 's': 'ลืมสแกน', 'ป': 'ป่วย', 'ร': 'พักร้อน',
-      'ก': 'ลากิจ', 'ข': 'ขาด', 'w': 'หยุดสัปดาห์', 'h': 'วันหยุด', 'พ': 'หยุดพิเศษ', 'b': 'วันเกิด'
+      'ก': 'ลากิจ', 'ข': 'ขาด', 'w': 'หยุดสัปดาห์', 'h': 'วันหยุด', 'พ': 'หยุดพิเศษ', 'b': 'วันเกิด', 'x': 'พ้นสภาพ'
     };
     var STATUS_COLORS = {
       '1': '#10b981', 'ส': '#f59e0b', 'f': '#0ea5e9', 's': '#94a3b8', 'ป': '#ef4444', 'ร': '#8b5cf6',
-      'ก': '#6366f1', 'ข': '#dc2626', 'w': '#cbd5e1', 'h': '#a3e635', 'พ': '#fb923c', 'b': '#ec4899'
+      'ก': '#6366f1', 'ข': '#dc2626', 'w': '#cbd5e1', 'h': '#a3e635', 'พ': '#fb923c', 'b': '#ec4899', 'x': '#64748b'
     };
     function normalizeCode(code) {
       code = (code || '').trim();
@@ -848,7 +850,7 @@
       dates.forEach(function (date) {
         var ent = ge(empId, date);
         var c = normalizeCode(ent.code);
-        if (!c || isCodeIn(c, ['w', 'h', 'b', 'พ', 'พร'])) return;
+        if (!c || isCodeIn(c, ['w', 'h', 'b', 'พ', 'พร', 'x'])) return;
         if (c === '1') work++;
         else if (c === 'ส') {
           work++; late++;
@@ -913,6 +915,7 @@
         else if (isCodeIn(c, ['ร', 'ก', 'พ', 'พร', 'h', 'อ'])) leave++;
         else if (c === 'ข') absent++;
         else if (c === 'w') wk++;
+        else if (c === 'x') { /* พ้นสภาพ: ไม่นับในสรุปรายวัน */ }
         else em++;
       });
       document.getElementById('sum-bar').innerHTML =
