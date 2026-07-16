@@ -611,8 +611,8 @@
         <div style="margin-left:auto;display:flex;gap:8px">
           <button class="btn" style="background:#f5f3ff;color:#6d28d9;border-color:#c4b5fd" onclick="syncRosterWithDaily()" title="เทียบรายชื่อจากไฟล์รายวันล่าสุดที่นำเข้ามา กับฐานข้อมูล เพื่อหาพนักงานใหม่/พนักงานที่ออก">&#x1F504; ซิงกับไฟล์รายวัน</button>
           <button class="btn" style="background:#ecfdf5;color:#047857;border-color:#a7f3d0" onclick="exportEmpCSV()">📥 Export CSV</button>
-          <button class="btn" style="background:#eef1f7;color:#0e1c38;border-color:#bfdbfe" onclick="document.getElementById('emp-import-file').click()" title="นำเข้าไฟล์ CSV รายชื่อพนักงาน (รูปแบบเดียวกับ Export: ชื่อ-นามสกุล, ชื่อเล่น, ตำแหน่ง, วันที่เริ่มงาน)">📤 นำเข้า CSV</button>
-          <input type="file" id="emp-import-file" accept=".csv" style="display:none" onchange="importEmpCSV(this)">
+          <button class="btn" style="background:#eef1f7;color:#0e1c38;border-color:#bfdbfe" onclick="document.getElementById('emp-import-file').click()" title="นำเข้ารายชื่อพนักงานจากไฟล์ Excel (Working_Details ของ HR Cloud) หรือ CSV รูปแบบ Export">📤 นำเข้า Excel/CSV</button>
+          <input type="file" id="emp-import-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importEmpCSV(this)">
           <button class="btn" style="background:#fff7ed;color:#c2410c;border-color:#fed7aa" onclick="openExcludeModal()" title="รายชื่อที่จะไม่นำเข้าระบบ (ข้ามทุกครั้งที่ import/ซิง)">🚫 รายชื่อยกเว้น</button>
           <button class="btn" style="background:#fef2f2;color:#b91c1c;border-color:#fecaca" onclick="deleteAllEmps()" title="ลบรายชื่อพนักงานทั้งหมดในฐานข้อมูล (ล้างทั้งฐาน)">🗑 ลบทั้งหมด</button>
           <button class="btn btn-blue" onclick="showModal('add-modal')">+ เพิ่มข้อมูลพนักงาน</button>
@@ -1273,18 +1273,26 @@
       var reader = new FileReader();
       reader.onload = function (e) {
         try {
-          // อ่านไฟล์ (รองรับ utf-8 มี BOM / windows-874 / tis-620)
-          var raw = e.target.result, text = '';
-          var encs = ['utf-8', 'windows-874', 'tis-620'];
-          for (var ei = 0; ei < encs.length; ei++) {
-            try {
-              var t = new TextDecoder(encs[ei]).decode(raw);
-              if (t.indexOf('\uFFFD') < 0) { text = t; break; }
-              if (!text) text = t;
-            } catch (ex) {}
+          // อ่านไฟล์ (Excel .xlsx/.xls หรือ CSV utf-8/windows-874/tis-620)
+          var raw = e.target.result, text = '', xlsxRows = null;
+          var fname = (file.name || '').toLowerCase();
+          if (fname.slice(-5) === '.xlsx' || fname.slice(-4) === '.xls') {
+            var wb = XLSX.read(raw, { type: 'array', cellDates: true });
+            var ws = wb.Sheets[wb.SheetNames[0]];
+            xlsxRows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' })
+              .map(function (r) { return (r || []).map(function (c) { return c == null ? '' : String(c); }); });
+          } else {
+            var encs = ['utf-8', 'windows-874', 'tis-620'];
+            for (var ei = 0; ei < encs.length; ei++) {
+              try {
+                var t = new TextDecoder(encs[ei]).decode(raw);
+                if (t.indexOf('\uFFFD') < 0) { text = t; break; }
+                if (!text) text = t;
+              } catch (ex) {}
+            }
+            text = text.replace(/^\uFEFF/, '');
           }
-          text = text.replace(/^\uFEFF/, '');
-          if (!text) { alert('❌ ไม่สามารถอ่านไฟล์ได้'); input.value = ''; return; }
+          if (!text && !xlsxRows) { alert('❌ ไม่สามารถอ่านไฟล์ได้'); input.value = ''; return; }
 
           function cleanName(s) { return (s || '').replace(/\s+/g, ' ').trim(); }
           function stripPrefix(s) { return cleanName(s).replace(/^(นาย|นาง|นางสาว)\s*/, ''); }
@@ -1316,7 +1324,37 @@
 
           // ===== 2) อ่านรายชื่อจากไฟล์ (รองรับทั้งไฟล์ HR Cloud และไฟล์ Export) =====
           var fileEmps = [];
-          if (text.indexOf('\t') >= 0) {
+          if (xlsxRows) {
+            // ---- Excel: ดึงรายชื่อจาก identity row (col B มี \t) แบบไฟล์ Working_Details ----
+            var seenX = {};
+            xlsxRows.forEach(function (r) {
+              var b = String(r && r[1] != null ? r[1] : '');
+              if (b.indexOf('\t') >= 0) {
+                var tp = b.split('\t');
+                var idm = tp[0].trim().match(/^(\S+)\s+(.+)/);
+                var nm = cleanName(idm ? idm[2] : tp[0]);
+                var dp = (tp[1] || '').trim().split(/\s{2,}/);
+                var ps = dp.length > 1 ? dp[dp.length - 1].trim() : (dp[0] || '').trim();
+                if (nm && !seenX[nm]) { seenX[nm] = true; fileEmps.push({ name: nm, nickname: '', position: ps, startDate: '' }); }
+              }
+            });
+            // ถ้าไม่เจอแบบ HR Cloud → ลองอ่านเป็นตารางรายชื่อ (หัวคอลัมน์ ชื่อ/เล่น/ตำแหน่ง/เริ่มงาน)
+            if (!fileEmps.length) {
+              var hdr = (xlsxRows[0] || []).map(function (c) { return String(c || '').trim(); });
+              var xi = { name: 0, nick: 1, pos: 2, start: 3 };
+              hdr.forEach(function (h, i) {
+                if (h.indexOf('นามสกุล') >= 0 || (h.indexOf('ชื่อ') >= 0 && h.indexOf('เล่น') < 0)) xi.name = i;
+                else if (h.indexOf('เล่น') >= 0) xi.nick = i;
+                else if (h.indexOf('ตำแหน่ง') >= 0 || h.indexOf('แผนก') >= 0) xi.pos = i;
+                else if (h.indexOf('เริ่ม') >= 0) xi.start = i;
+              });
+              var seenX2 = {};
+              xlsxRows.slice(1).forEach(function (r) {
+                var nm = cleanName(r[xi.name]);
+                if (nm && !seenX2[nm]) { seenX2[nm] = true; fileEmps.push({ name: nm, nickname: String(r[xi.nick] || '').trim(), position: String(r[xi.pos] || '').trim(), startDate: String(r[xi.start] || '').trim() }); }
+              });
+            }
+          } else if (text.indexOf('\t') >= 0) {
             // ---- ไฟล์ HR Cloud รายวัน: identity row = col[1] มี \t ----
             var lines = text.split(/\r?\n/), seenF = {};
             lines.forEach(function (ln) {
@@ -2489,15 +2527,24 @@
       console.log('[Sync] Cloud employees:', cloudEmps ? cloudEmps.length : 'null');
       console.log('[Sync] Local employees:', emps.length);
       if (cloudEmps && cloudEmps.length > 0) {
-        // ใช้ cloud เป็นหลัก แต่เพิ่ม local ที่ cloud ไม่มี
-        var cloudIds = new Set(cloudEmps.map(function(e) { return e.id; }));
-        var localOnly = emps.filter(function(e) { return !cloudIds.has(e.id); });
-        if (localOnly.length > 0) {
-          console.log('[Sync] Local-only employees:', localOnly.length, localOnly.map(function(e){return e.nickname;}).join(', '));
-          emps = cloudEmps.concat(localOnly);
-        } else {
-          emps = cloudEmps;
-        }
+        // จับคู่ด้วย "ชื่อ" ไม่ใช่ id (เพราะ id คนใหม่สุ่มจาก Date.now() → local/cloud ไม่ตรงกัน = เพิ่มซ้ำ)
+        var nk = function (s) { return (s || '').replace(/\s+/g, ' ').trim().replace(/^(นาย|นาง|นางสาว)\s*/, ''); };
+
+        // 1) ยุบพนักงานใน Cloud ที่ "ชื่อซ้ำ" — เก็บตัวแรก, ลบที่เหลือออกจากฐานข้อมูล (แก้ข้อมูลซ้ำที่มีอยู่แล้ว)
+        var seenName = {}, uniqueCloud = [], removedCloudDupes = 0;
+        cloudEmps.forEach(function (e) {
+          var key = nk(e.name);
+          if (!key) { uniqueCloud.push(e); return; }
+          if (!seenName[key]) { seenName[key] = true; uniqueCloud.push(e); }
+          else { sbDeleteEmployee(e.id); removedCloudDupes++; }
+        });
+        if (removedCloudDupes > 0) console.log('[Sync] ลบพนักงานซ้ำใน Cloud:', removedCloudDupes);
+        cloudEmps = uniqueCloud;
+
+        // 2) เพิ่มเฉพาะ local ที่ "ชื่อ" ยังไม่มีใน Cloud (คนใหม่จริง ๆ)
+        var cloudNames = {}; cloudEmps.forEach(function (e) { cloudNames[nk(e.name)] = true; });
+        var localOnly = emps.filter(function (e) { return e.name && !cloudNames[nk(e.name)]; });
+        emps = cloudEmps.concat(localOnly);
       }
       ssave('employees', emps);
 
