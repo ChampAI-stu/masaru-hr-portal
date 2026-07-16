@@ -403,21 +403,21 @@
     <button class="btn" id="today-btn" onclick="goToday()" style="padding:4px 10px;font-size:12px;border-radius:6px">วันนี้</button>
     
     <div class="tbr">
-      <button class="btn btn-orange" onclick="pickDateThenImport()">&#x2191; HR Cloud(CSV)</button>
-      <input type="file" id="hrc-file" accept=".csv" style="display:none" onchange="importHRCloud(this)">
+      <button class="btn btn-orange" onclick="pickDateThenImport()">&#x2191; HR Cloud (Excel)</button>
+      <input type="file" id="hrc-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importHRCloud(this)">
       <div id="hrc-date-modal" class="modal-bg">
         <div class="modal" style="width:360px">
-          <h3>⬆️ นำเข้าจาก HR Cloud (CSV)</h3>
+          <h3>⬆️ นำเข้าจาก HR Cloud (Excel)</h3>
           <div style="font-size:13px;color:#64748b;margin-bottom:16px;line-height:1.7">
-            รองรับไฟล์ CSV จากระบบ HR Cloud<br>
+            รองรับไฟล์ Excel (.xlsx) จากระบบ HR Cloud <span style="color:#94a3b8">(ไฟล์ CSV เดิมก็ยังใช้ได้)</span><br>
             <span style="color:#16233f;font-weight:600">รูปแบบ:</span> รายงานรายละเอียดการทำงาน แบบแจกแจง ตามพนักงาน<br>
             <span style="color:#10b981;font-size:12px">✓ อ่านวันที่จากไฟล์อัตโนมัติ</span><br>
             <span style="color:#10b981;font-size:12px">✓ คำนวณสาย/มาตรงเวลาจากเวลาเข้างาน</span><br>
-            <span style="color:#10b981;font-size:12px">✓ รองรับ encoding TIS-620</span>
+            <span style="color:#10b981;font-size:12px">✓ อ่านหลายชีต/ภาษาไทยอัตโนมัติ</span>
           </div>
           <div class="mac" style="margin-top:0">
             <button class="btn" onclick="document.getElementById('hrc-date-modal').classList.remove('open')">ยกเลิก</button>
-            <button class="btn btn-orange" onclick="confirmHrcDate()">📂 เลือกไฟล์ CSV</button>
+            <button class="btn btn-orange" onclick="confirmHrcDate()">📂 เลือกไฟล์ Excel</button>
           </div>
         </div>
       </div>
@@ -1798,18 +1798,28 @@
 
       reader.onload = function(e) {
         try {
-          // ---- ตรวจ encoding: tis-620 / windows-874 / utf-8 ----
           var raw = e.target.result;
           var text = '';
-          var encodings = ['tis-620', 'windows-874', 'utf-8'];
-          for (var ei = 0; ei < encodings.length; ei++) {
-            try {
-              var dec = new TextDecoder(encodings[ei]);
-              text = dec.decode(raw);
-              if (text.indexOf('วัน') >= 0 || text.indexOf('กะ') >= 0) break;
-            } catch(ex) {}
+          var fname = (file.name || '').toLowerCase();
+
+          if (fname.slice(-5) === '.xlsx' || fname.slice(-4) === '.xls') {
+            // ---- อ่าน Excel ด้วย SheetJS แล้วแปลงเป็นตาราง CSV เพื่อใช้ parser เดิม ----
+            var wb = XLSX.read(raw, { type: 'array' });
+            var ws = wb.Sheets[wb.SheetNames[0]];
+            // rawNumbers:false = ใช้ค่าที่แสดงผล (เวลา 06:30 / วันที่ DD/MM/YYYY) ไม่ใช่ตัวเลข serial
+            text = XLSX.utils.sheet_to_csv(ws, { FS: ',', blankrows: true, rawNumbers: false });
+          } else {
+            // ---- CSV: ตรวจ encoding tis-620 / windows-874 / utf-8 ----
+            var encodings = ['tis-620', 'windows-874', 'utf-8'];
+            for (var ei = 0; ei < encodings.length; ei++) {
+              try {
+                var dec = new TextDecoder(encodings[ei]);
+                text = dec.decode(raw);
+                if (text.indexOf('วัน') >= 0 || text.indexOf('กะ') >= 0) break;
+              } catch(ex) {}
+            }
           }
-          if (!text) { alert('❌ ไม่สามารถอ่านไฟล์ได้ กรุณาตรวจสอบ encoding'); return; }
+          if (!text) { alert('❌ ไม่สามารถอ่านไฟล์ได้ กรุณาตรวจสอบไฟล์/encoding'); return; }
 
           var lines = text.split(/\r?\n/);
 
