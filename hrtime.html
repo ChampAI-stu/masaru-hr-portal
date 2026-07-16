@@ -1799,29 +1799,35 @@
       reader.onload = function(e) {
         try {
           var raw = e.target.result;
-          var text = '';
           var fname = (file.name || '').toLowerCase();
+          var rows = [];  // ตาราง: แต่ละแถวเป็น array ของค่าตามคอลัมน์ (A=0, B=1, C=2, ...)
 
           if (fname.slice(-5) === '.xlsx' || fname.slice(-4) === '.xls') {
-            // ---- อ่าน Excel ด้วย SheetJS แล้วแปลงเป็นตาราง CSV เพื่อใช้ parser เดิม ----
-            var wb = XLSX.read(raw, { type: 'array' });
+            // ---- Excel: อ่านเป็นตาราง (array) ตรง ๆ — แม่นกว่าแปลง CSV และกัน comma ในเซลล์ทำคอลัมน์เพี้ยน ----
+            var wb = XLSX.read(raw, { type: 'array', cellDates: true });
             var ws = wb.Sheets[wb.SheetNames[0]];
-            // rawNumbers:false = ใช้ค่าที่แสดงผล (เวลา 06:30 / วันที่ DD/MM/YYYY) ไม่ใช่ตัวเลข serial
-            text = XLSX.utils.sheet_to_csv(ws, { FS: ',', blankrows: true, rawNumbers: false });
+            var aoa = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, dateNF: 'dd/mm/yyyy', defval: '' });
+            rows = aoa.map(function (r) {
+              return (r || []).map(function (c) { return c == null ? '' : String(c); });
+            });
           } else {
-            // ---- CSV: ตรวจ encoding tis-620 / windows-874 / utf-8 ----
+            // ---- CSV (รูปแบบเดิม): ตรวจ encoding แล้วแยกเป็นตาราง ----
+            var text = '';
             var encodings = ['tis-620', 'windows-874', 'utf-8'];
             for (var ei = 0; ei < encodings.length; ei++) {
               try {
                 var dec = new TextDecoder(encodings[ei]);
                 text = dec.decode(raw);
                 if (text.indexOf('วัน') >= 0 || text.indexOf('กะ') >= 0) break;
-              } catch(ex) {}
+              } catch (ex) {}
             }
+            if (!text) { alert('❌ ไม่สามารถอ่านไฟล์ได้ กรุณาตรวจสอบไฟล์/encoding'); return; }
+            rows = text.split(/\r?\n/).map(function (ln) { return ln.split(','); });
           }
-          if (!text) { alert('❌ ไม่สามารถอ่านไฟล์ได้ กรุณาตรวจสอบไฟล์/encoding'); return; }
+          if (!rows.length) { alert('❌ ไฟล์ว่างหรืออ่านไม่ได้'); return; }
 
-          var lines = text.split(/\r?\n/);
+          // อ่านค่าเซลล์แบบปลอดภัย
+          function cell(row, idx) { return String(row && row[idx] != null ? row[idx] : '').trim(); }
 
           // ---- เวลาเริ่มกะ สำหรับคำนวณสาย (ดึงจาก SHIFT_TIMES อัตโนมัติ ครบทุกกะ) ----
           var SHIFT_START = {};
@@ -1845,9 +1851,9 @@
           function stripPrefix(s) { return cleanName(s).replace(/^(นาย|นาง|นางสาว)\s*/, ''); }
 
           // ---- Parse แต่ละ Employee Block ----
-          // Identity row: col[1] = 'EmpID   FullName\tDept   Position'
-          // Daily row(s): col[2]=date, col[4]=shift, col[5]=checkin, col[20]=status
-          // Block เริ่มเมื่อ col[1] มี \t (identity marker)
+          // Identity row: col B(1) = 'EmpID   FullName\tDept   Position'
+          // Daily row(s): col C(2)=วันที่, E(4)=ชื่อกะ, G(6)=เวลาเข้า, H(7)=เวลาออก, Y(24)=สถานะ
+          // Block เริ่มเมื่อ col B(1) มี \t (identity marker)
 
           var results = [];       // { empName, csvId, position, date, code, note }
           var csvEmployees = [];   // { id, name, position } — รายชื่อทั้งหมดในไฟล์
@@ -1855,12 +1861,12 @@
           var unmatched = [];      // ชื่อที่ลงเวลาไม่ได้
 
           var i = 0;
-          while (i < lines.length) {
-            var cols = lines[i].split(',');
+          while (i < rows.length) {
+            var cols = rows[i];
 
-            // ตรวจหา Identity row: col[1] มีค่า และมี \t
-            if (cols.length > 1 && cols[1].indexOf('\t') >= 0) {
-              var raw1 = cols[1].trim();
+            // ตรวจหา Identity row: col B(1) มีค่า และมี \t
+            if (cols && cell(cols, 1).indexOf('\t') >= 0) {
+              var raw1 = cell(cols, 1);
               var tabParts = raw1.split('\t');
               var idName = tabParts[0].trim();   // 'DK-231    นางสาววิภารัตน์  ศรีคำนพ'
               var deptPos = (tabParts[1] || '').trim(); // 'คลังสินค้า LikeShop    เจ้าหน้าที่คลังสินค้า'
@@ -1880,63 +1886,60 @@
                 csvEmployees.push({ id: csvEmpId, name: csvEmpName, position: csvPosition });
               }
 
-              // หา daily rows ถัดไป (row ที่ col[2] เป็นวันที่)
+              // หา daily rows ถัดไป (row ที่ col C(2) เป็นวันที่)
               var j = i + 1;
-              while (j < lines.length) {
-                var dcols = lines[j].split(',');
-                // Daily row: col[0]='', col[1]='', col[2]=date 'DD/MM/YYYY'
-                if (dcols.length > 4 && dcols[0].trim() === '' && dcols[1].trim() === '' &&
-                    dcols[2].trim() && dcols[2].trim().match(/^\d{2}\/\d{2}\/\d{4}/)) {
+              while (j < rows.length) {
+                var dcols = rows[j];
+                var c2 = cell(dcols, 2);
+                // Daily row: col A(0)='', B(1)='', C(2)=วันที่ 'DD/MM/YYYY'
+                if (cell(dcols, 0) === '' && cell(dcols, 1) === '' && c2 && c2.match(/^\d{2}\/\d{2}\/\d{4}/)) {
 
-                  var dateStr = dcols[2].trim().split(/\s/)[0]; // 'DD/MM/YYYY'
+                  var dateStr = c2.split(/\s/)[0]; // 'DD/MM/YYYY'
                   var isoDate = convertDate(dateStr);
-                  var shift   = (dcols[4] || '').trim();
-                  var checkin = (dcols[5] || '').trim();
-                  var checkout = (dcols[6] || '').trim();
-                  var remark  = (dcols[20] || '').trim().replace(/^"/, '');
+                  var shift    = cell(dcols, 4);   // E
+                  var checkin  = cell(dcols, 6);   // G  เวลาเข้า
+                  var checkout = cell(dcols, 7);   // H  เวลาออก
+                  var remark   = cell(dcols, 24);  // Y  สถานะ (อาจมีหลายค่าคั่นด้วย , เช่น 'ประเทศจีน,ขาด')
 
                   if (!isoDate) { j++; continue; }
 
-                  // ---- Map สถานะ ----
+                  // ---- Map สถานะ (จับแบบ substring เพราะ Y อาจมีหลายค่ารวมกัน) ----
                   var code = '';
                   var note = shift;
-
                   var isHolidayShift = shift.indexOf('วันหยุด') >= 0;
 
-                  if (remark === 'ลาพักร้อน') {
-                    code = 'ร';
-                    note = 'ลาพักร้อน | ' + shift;
-                  } else if (remark === 'ลาป่วย' || remark === 'ลา') {
-                    code = 'ป';
-                    note = remark + ' | ' + shift;
-                  } else if (remark === 'ขาด' && !checkin) {
-                    // ขาดจริงเฉพาะเมื่อ "ไม่มีเวลาสแกนเข้า" — ถ้ามีสแกนเข้าถือว่ามาทำงาน
-                    // (กันเคส HR Cloud ใส่ remark ว่าขาดทั้งที่คนมาสแกนจริง เพราะยังไม่ได้ล็อกกะ)
-                    code = 'ข';
-                    note = 'ขาดงาน | ' + shift;
+                  if (remark.indexOf('ลาพักร้อน') >= 0) {
+                    code = 'ร'; note = 'ลาพักร้อน | ' + shift;
+                  } else if (remark.indexOf('ลาป่วย') >= 0) {
+                    code = 'ป'; note = 'ลาป่วย | ' + shift;
+                  } else if (remark.indexOf('ลากิจ') >= 0) {
+                    code = 'ก'; note = 'ลากิจ | ' + shift;
+                  } else if (remark.indexOf('ขาด') >= 0 && !checkin) {
+                    // ขาดจริงเฉพาะเมื่อไม่มีเวลาสแกนเข้า — ถ้ามีสแกนเข้าถือว่ามาทำงาน
+                    code = 'ข'; note = 'ขาดงาน | ' + shift;
                   } else if (isHolidayShift) {
-                    code = 'h';
-                    note = shift;
+                    code = 'h'; note = shift;
                   } else if (checkin) {
-                    // มีเวลาเข้า = มา → ตรวจสาย
+                    // มีเวลาเข้า = มา → ตรวจสาย (แม้สถานะจะเป็น 'ผิดพลาด' ที่แปลว่าลืมสแกนออก ก็ยังถือว่ามา)
                     var shiftStartMins = parseHHMM(SHIFT_START[shift]);
                     var actualMins     = parseHHMM(checkin);
-                    var GRACE = 1; // grace period 1 นาที
-                    if (shiftStartMins !== null && actualMins !== null &&
-                        actualMins > shiftStartMins + GRACE) {
+                    var GRACE = 1; // ผ่อนผัน 1 นาที
+                    var inTime = checkin.split(/\s+/).pop();
+                    if (shiftStartMins !== null && actualMins !== null && actualMins > shiftStartMins + GRACE) {
                       var lateMins = actualMins - shiftStartMins;
                       code = 'ส';
-                      note = shift + ' | เข้า ' + checkin.split(/\s+/).pop() + ' | สาย ' + lateMins + ' นาที';
+                      note = shift + ' | เข้า ' + inTime + ' | สาย ' + lateMins + ' นาที';
                     } else {
                       code = '1';
-                      note = shift + ' | เข้า ' + checkin.split(/\s+/).pop();
+                      note = shift + ' | เข้า ' + inTime;
                     }
-                  } else if (remark === 'ผิดพลาด' || remark === '"ผิดพลาด') {
-                    // ผิดพลาด แต่ไม่มีเวลาเข้า = ลืมสแกน
-                    code = 's';
-                    note = 'ลืมสแกน | ' + shift;
+                  } else if (remark.indexOf('ลา') >= 0) {
+                    // ลาแบบอื่น (ไม่มีเวลาเข้า)
+                    code = 'ป'; note = remark + ' | ' + shift;
+                  } else if (remark.indexOf('ผิดพลาด') >= 0) {
+                    // ผิดพลาด + ไม่มีเวลาเข้า = ลืมสแกน
+                    code = 's'; note = 'ลืมสแกน | ' + shift;
                   } else {
-                    // ไม่มีข้อมูล ข้ามไป
                     j++;
                     continue;
                   }
@@ -1950,8 +1953,8 @@
                     note: note
                   });
                   j++;
-                } else if (dcols[1].indexOf('\t') >= 0 || (dcols[0].trim() && dcols[0].trim() !== '' && dcols[1].trim() === '')) {
-                  // Identity row ถัดไป หรือ summary row = สิ้นสุด block นี้
+                } else if (cell(dcols, 1).indexOf('\t') >= 0) {
+                  // เจอ Identity row ของคนถัดไป = จบ block นี้
                   break;
                 } else {
                   j++;
