@@ -239,18 +239,18 @@
     /* Code inputs */
     .ci { width: 56px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px; text-align: center; font-size: 14px; font-weight: 700; font-family: inherit; background: #ffffff; cursor: text; transition: all 0.2s }
     .ci:focus { outline: none; border-color: #16294d; background: #eef1f7; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) }
-    .ci.v1 { background: #d1fae5; border-color: #10b981; color: #047857 }
-    .ci.vw { background: #e2e8f0; border-color: #94a3b8; color: #334155 }
-    .ci.vh { background: #fef08a; border-color: #eab308; color: #854d0e }
-    .ci.vp { background: #fee2e2; border-color: #ef4444; color: #b91c1c }
-    .ci.vr { background: #f3e8ff; border-color: #a855f7; color: #7e22ce }
-    .ci.vk { background: #dbe3f0; border-color: #24406e; color: #0e1c38 }
-    .ci.vph { background: #fef3c7; border-color: #f59e0b; color: #b45309 }
-    .ci.vs { background: #ffedd5; border-color: #f97316; color: #c2410c }
-    .ci.vf { background: #ccfbf1; border-color: #14b8a6; color: #0f766e }
-    .ci.vx { background: #fecaca; border-color: #dc2626; color: #991b1b }
-    .ci.vb { background: #fce7f3; border-color: #ec4899; color: #be185d }
-    .ci.vps { background: #94a3b8; border-color: #475569; color: #ffffff }
+    .ci.v1 { background: #16a34a; border-color: #15803d; color: #ffffff }
+    .ci.vw { background: #64748b; border-color: #475569; color: #ffffff }
+    .ci.vh { background: #eab308; border-color: #ca8a04; color: #422006 }
+    .ci.vp { background: #ef4444; border-color: #dc2626; color: #ffffff }
+    .ci.vr { background: #a855f7; border-color: #9333ea; color: #ffffff }
+    .ci.vk { background: #3b5bdb; border-color: #24406e; color: #ffffff }
+    .ci.vph { background: #f59e0b; border-color: #d97706; color: #422006 }
+    .ci.vs { background: #f97316; border-color: #ea580c; color: #ffffff }
+    .ci.vf { background: #0891b2; border-color: #0e7490; color: #ffffff }
+    .ci.vx { background: #dc2626; border-color: #991b1b; color: #ffffff }
+    .ci.vb { background: #ec4899; border-color: #db2777; color: #ffffff }
+    .ci.vps { background: #334155; border-color: #1e293b; color: #ffffff }
     /* Status dropdown (uses .ci color classes, but wider + left-aligned for Thai labels) */
     .cs { width: 100%; max-width: 168px; min-width: 130px; text-align: left; text-align-last: left; padding: 8px 10px; font-size: 13px; font-weight: 600; cursor: pointer; border-radius: 8px; border-width: 1.5px; }
     .cs:hover { border-color: #94a3b8; }
@@ -779,8 +779,8 @@
       'ก': 'ลากิจ', 'ข': 'ขาด', 'w': 'หยุดสัปดาห์', 'h': 'วันหยุด', 'พ': 'หยุดพิเศษ', 'b': 'วันเกิด', 'x': 'พ้นสภาพ'
     };
     var STATUS_COLORS = {
-      '1': '#10b981', 'ส': '#f59e0b', 'f': '#0ea5e9', 's': '#94a3b8', 'ป': '#ef4444', 'ร': '#8b5cf6',
-      'ก': '#6366f1', 'ข': '#dc2626', 'w': '#cbd5e1', 'h': '#a3e635', 'พ': '#fb923c', 'b': '#ec4899', 'x': '#64748b'
+      '1': '#16a34a', 'ส': '#f97316', 'f': '#0891b2', 's': '#94a3b8', 'ป': '#ef4444', 'ร': '#a855f7',
+      'ก': '#3b5bdb', 'ข': '#dc2626', 'w': '#64748b', 'h': '#eab308', 'พ': '#f59e0b', 'b': '#ec4899', 'x': '#334155'
     };
     function normalizeCode(code) {
       code = (code || '').trim();
