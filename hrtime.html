@@ -613,6 +613,7 @@
         <select class="filt" id="epf" onchange="renderEmp()" style="background:#fff;border-color:#e2e8f0;box-shadow:0 1px 2px rgba(0,0,0,0.02)"><option value="">ทุกแผนก</option></select>
         <div style="margin-left:auto;display:flex;gap:8px">
           <button class="btn" style="background:#f5f3ff;color:#6d28d9;border-color:#c4b5fd" onclick="syncRosterWithDaily()" title="เทียบรายชื่อจากไฟล์รายวันล่าสุดที่นำเข้ามา กับฐานข้อมูล เพื่อหาพนักงานใหม่/พนักงานที่ออก">&#x1F504; ซิงกับไฟล์รายวัน</button>
+          <button class="btn" style="background:#ecfeff;color:#0e7490;border-color:#a5f3fc" onclick="forceFullSync()" title="ดันข้อมูลในเครื่องนี้ขึ้น Cloud แล้วดึง Cloud ลงมาให้ตรงกันทุกเครื่อง (ใช้เมื่อข้อมูลแต่ละเครื่องไม่ตรงกัน)">&#x2601;&#xFE0F; ซิงก์ให้ตรงกัน</button>
           <button class="btn" style="background:#ecfdf5;color:#047857;border-color:#a7f3d0" onclick="exportEmpCSV()">📥 Export CSV</button>
           <button class="btn" style="background:#eef1f7;color:#0e1c38;border-color:#bfdbfe" onclick="document.getElementById('emp-import-file').click()" title="นำเข้ารายชื่อพนักงานจากไฟล์ Excel (Working_Details ของ HR Cloud) หรือ CSV รูปแบบ Export">📤 นำเข้า Excel/CSV</button>
           <input type="file" id="emp-import-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importEmpCSV(this)">
@@ -2737,6 +2738,54 @@
         .on('postgres_changes', { event: '*', schema: 'public', table: 'movements' }, function () { scheduleRefresh(); })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, function () { scheduleRefresh(); flashLive('อัปเดตรายชื่อ WFH/ยกเว้น'); })
         .subscribe();
+    }
+
+    // ============ ซิงก์ให้ตรงกันทุกเครื่อง (ดัน local → cloud → ดึง cloud ลงมาเป็นหลัก) ============
+    async function forceFullSync() {
+      if (!SUPABASE_READY) { alert('❌ Supabase ไม่พร้อมใช้งาน'); return; }
+      if (!confirm('☁️ ซิงก์ให้ตรงกันทุกเครื่อง?\n\n• ดันข้อมูลในเครื่องนี้ขึ้น Cloud\n• แล้วดึง Cloud ลงมาเป็นข้อมูลหลัก\n\n👉 แนะนำ: ทำจากเครื่องที่ข้อมูล "ถูกต้อง/ครบที่สุด" ก่อน\nจากนั้นเครื่องอื่นแค่รีเฟรช (หรือกดปุ่มนี้) ก็จะได้ข้อมูลชุดเดียวกัน')) return;
+
+      var ov = document.createElement('div');
+      ov.style.cssText = 'position:fixed;inset:0;background:rgba(244,246,248,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;gap:12px';
+      ov.innerHTML = '<div style="font-size:32px">☁️</div><div style="font-size:15px;font-weight:700;color:#16233f">กำลังซิงก์ข้อมูลขึ้น Cloud...</div>';
+      document.body.appendChild(ov);
+      try {
+        // 1) ดันพนักงานขึ้น (bulk)
+        var eRows = (emps || []).filter(function (e) { return e.id && e.name; })
+          .map(function (e) { return { id: e.id, name: e.name, nickname: e.nickname || null, position: e.position || null, start_date: e.startDate || null }; });
+        for (var i = 0; i < eRows.length; i += 500) {
+          var r = await _sb.from('employees').upsert(eRows.slice(i, i + 500), { onConflict: 'id' });
+          if (r.error) throw r.error;
+        }
+        // 2) ดันการลงเวลาขึ้น (bulk)
+        var aRows = [];
+        Object.keys(att).forEach(function (d) {
+          Object.keys(att[d]).forEach(function (eid) {
+            var c = att[d][eid]; aRows.push({ employee_id: eid, date: d, code: c.code || '', note: c.note || '' });
+          });
+        });
+        for (var i = 0; i < aRows.length; i += 500) {
+          var r2 = await _sb.from('attendance').upsert(aRows.slice(i, i + 500), { onConflict: 'employee_id,date' });
+          if (r2.error) throw r2.error;
+        }
+        // 3) ดันการเคลื่อนไหวขึ้น (bulk)
+        var mRows = (mvs || []).map(function (m) { return { id: m.id, type: m.type, name: m.name, nick: m.nick || '', pos: m.pos || '', date: m.date, note: m.note || '' }; });
+        for (var i = 0; i < mRows.length; i += 500) {
+          if (mRows.length) { var r3 = await _sb.from('movements').upsert(mRows.slice(i, i + 500), { onConflict: 'id' }); if (r3.error) throw r3.error; }
+        }
+        // 4) ดันรายชื่อ WFH/ยกเว้น (settings) ขึ้น
+        await sbSaveSetting('wfh_list', wfhList);
+        await sbSaveSetting('exclude_list', excludeList);
+        // 5) ดึง Cloud ลงมาเป็นหลัก
+        await mergeFromCloud();
+        await loadSharedSettings();
+        render(); fillFilters(); try { renderEmp(); } catch (e) {}
+        ov.remove();
+        alert('✅ ซิงก์เรียบร้อย!\n\n👥 พนักงาน: ' + eRows.length + ' คน\n🕐 ลงเวลา: ' + aRows.length + ' รายการ\n🔁 การเคลื่อนไหว: ' + mRows.length + '\n\n👉 ให้เครื่องอื่นกด "ซิงก์ให้ตรงกัน" หรือรีเฟรช เพื่อได้ข้อมูลชุดเดียวกัน');
+      } catch (err) {
+        ov.remove();
+        alert('❌ ซิงก์ไม่สำเร็จ: ' + (err.message || err));
+      }
     }
 
     (async function() {
