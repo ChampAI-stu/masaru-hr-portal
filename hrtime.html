@@ -999,7 +999,7 @@
       var pf = document.getElementById('pf').value;
       var sf = document.getElementById('sf').value;
       visEmps = emps.filter(function (e) {
-        if (q && e.name.toLowerCase().indexOf(q) < 0 && e.nickname.toLowerCase().indexOf(q) < 0) return false;
+        if (q && (e.name||"").toLowerCase().indexOf(q) < 0 && (e.nickname||"").toLowerCase().indexOf(q) < 0) return false;
         if (pf && e.position !== pf) return false;
         var c = normalizeCode(ge(e.id, date).code);
         if (sf === '__empty__') return !c;
@@ -1079,7 +1079,7 @@
       var pf = document.getElementById('epf').value;
       var list = emps.filter(function(e) {
         if (pf && e.position !== pf) return false;
-        if (q && e.name.toLowerCase().indexOf(q) < 0 && (e.nickname||'').toLowerCase().indexOf(q) < 0) return false;
+        if (q && (e.name||"").toLowerCase().indexOf(q) < 0 && (e.nickname||'').toLowerCase().indexOf(q) < 0) return false;
         return true;
       });
       fillFilters();
@@ -1480,7 +1480,7 @@
       var q = document.getElementById('qs').value.toLowerCase().trim();
       var dr = document.getElementById('qdrop');
       if (!q) { dr.style.display = 'none'; return; }
-      var res = emps.filter(function (e) { return e.nickname.toLowerCase().indexOf(q) >= 0 || e.name.toLowerCase().indexOf(q) >= 0; }).slice(0, 8);
+      var res = emps.filter(function (e) { return (e.nickname||"").toLowerCase().indexOf(q) >= 0 || (e.name||"").toLowerCase().indexOf(q) >= 0; }).slice(0, 8);
       if (!res.length) { dr.style.display = 'none'; return; }
       dr.innerHTML = res.map(function (e) {
         return '<div class="qdi" onclick="selectEmp(\'' + e.id + '\')">' +
@@ -1570,7 +1570,7 @@
       
       var list = emps.filter(function (e) {
         if (pf && e.position !== pf) return false;
-        if (q && e.name.toLowerCase().indexOf(q) < 0 && e.nickname.toLowerCase().indexOf(q) < 0) return false;
+        if (q && (e.name||"").toLowerCase().indexOf(q) < 0 && (e.nickname||"").toLowerCase().indexOf(q) < 0) return false;
         return true;
       });
       var ws = list.map(function (e) { return { e: e, s: getStats(e.id, dates) }; });
