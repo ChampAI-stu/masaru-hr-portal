@@ -879,6 +879,18 @@
       }
       return '';
     }
+    // แยกหมายเหตุออกเป็น 2 ส่วน: auto = ข้อมูลกะ/เวลาที่ระบบสร้าง, remark = หมายเหตุที่ผู้ใช้พิมพ์เอง
+    // ใช้ตัวคั่น ' ¦ ' (ไม่ชนกับ ' | ' ที่ใช้ในส่วน auto)
+    function splitNote(note) {
+      note = note || '';
+      var idx = note.indexOf(' ¦ ');
+      if (idx >= 0) return { auto: note.slice(0, idx), remark: note.slice(idx + 3) };
+      return { auto: note, remark: '' };
+    }
+    function joinNote(auto, remark) {
+      auto = (auto || '').trim(); remark = (remark || '').trim();
+      return remark ? (auto ? auto + ' ¦ ' + remark : remark) : auto;
+    }
 
     // ===================== MODAL HANDLERS =====================
     function showModal(id) {
@@ -1010,12 +1022,15 @@
       if (!visEmps.length) { tb.innerHTML = '<tr><td colspan="5" class="empty">ไม่มีข้อมูลพนักงานที่ตรงกับเงื่อนไข</td></tr>'; return; }
       tb.innerHTML = visEmps.map(function (e, i) {
         var ent = ge(e.id, date), code = normalizeCode(ent.code), cc = CL[code] || '', note = ent.note || '';
-        var st = getShiftTime(note), isEmpty = !code;
+        var parts = splitNote(note);
+        var st = getShiftTime(parts.auto), isEmpty = !code;
         var isLate = code === 'ส';
         var lateMins = '';
-        var mLate = note.match(/สาย (\d+) นาที/);
+        var mLate = parts.auto.match(/สาย (\d+) นาที/);
         if (mLate) lateMins = mLate[1];
-        var noteDisplay = note.replace(/สาย \d+ นาที\s*/, '').trim();
+        var mIn = parts.auto.match(/เข้า\s*([0-9:]+)/);
+        var inTime = mIn ? mIn[1] : '';
+        var noteDisplay = parts.remark;
         return '<tr style="' + (isEmpty ? 'opacity:.65' : '') + '">' +
           '<td style="color:#94a3b8;font-size:12px;text-align:center">' + (i + 1) + '</td>' +
           '<td><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;min-width:0"><span class="nick">' + e.nickname + '</span> <span style="font-size:13px;color:#475569;margin-left:4px">' + e.name + '</span><span class="pos">' + e.position + '</span></div>' +
@@ -1025,6 +1040,7 @@
           ' onchange="onCC(this)">' + statusOptions(code) + '</select>' +
           '</td>' +
           '<td class="shift-cell">' + st +
+          (inTime ? '<div style="font-size:11px;color:#64748b;margin-top:2px">เข้า ' + inTime + '</div>' : '') +
           (isLate ? '<div style="margin-top:4px;display:flex;align-items:center;gap:4px">' +
             '<input type="number" min="0" max="480" value="' + lateMins + '" data-eid="' + e.id + '"' +
             ' onchange="onMinsChange(this)"' +
@@ -1044,10 +1060,10 @@
       var date = dk(cur), eid = inp.dataset.eid;
       var prev = ge(eid, date);
       var mins = parseInt(inp.value) || 0;
-      var oldNote = prev.note || '';
-      var baseNote = oldNote.replace(/สาย \d+ นาที\s*/, '').trim();
-      var newNote = mins > 0 ? (baseNote ? baseNote + ' สาย ' + mins + ' นาที' : 'สาย ' + mins + ' นาที') : baseNote;
-      se(eid, date, prev.code || 'ส', newNote);
+      var parts = splitNote(prev.note || '');
+      var baseAuto = parts.auto.replace(/สาย \d+ นาที\s*/, '').trim();
+      var newAuto = mins > 0 ? (baseAuto ? baseAuto + ' สาย ' + mins + ' นาที' : 'สาย ' + mins + ' นาที') : baseAuto;
+      se(eid, date, prev.code || 'ส', joinNote(newAuto, parts.remark));
     }
     // สร้าง <option> สำหรับ dropdown สถานะ พร้อมเลือกค่าปัจจุบัน
     function statusOptions(selected) {
@@ -1067,7 +1083,9 @@
     }
     function onNC(inp) {
       var date = dk(cur), eid = inp.dataset.eid, prev = ge(eid, date);
-      se(eid, date, prev.code || '', inp.value.trim());
+      var parts = splitNote(prev.note || '');
+      // แก้/ลบเฉพาะหมายเหตุที่พิมพ์เอง — ส่วนข้อมูลกะ/เวลา (auto) คงไว้เสมอ
+      se(eid, date, prev.code || '', joinNote(parts.auto, inp.value.trim()));
     }
     function onNK(e, inp) {
       if (e.key === 'Enter') { e.preventDefault(); var n = inp.closest('tr').nextElementSibling; if (n) { var ci = n.querySelector('.ci'); if (ci) ci.focus(); } }
