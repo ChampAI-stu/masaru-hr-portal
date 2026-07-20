@@ -616,6 +616,7 @@
           <button class="btn" style="background:#ecfeff;color:#0e7490;border-color:#a5f3fc" onclick="forceFullSync()" title="ดันข้อมูลในเครื่องนี้ขึ้น Cloud แล้วดึง Cloud ลงมาให้ตรงกันทุกเครื่อง (ใช้เมื่อข้อมูลแต่ละเครื่องไม่ตรงกัน)">&#x2601;&#xFE0F; ซิงก์ให้ตรงกัน</button>
           <button class="btn" style="background:#ecfdf5;color:#047857;border-color:#a7f3d0" onclick="exportEmpCSV()">📥 Export CSV</button>
           <button class="btn" style="background:#eef1f7;color:#0e1c38;border-color:#bfdbfe" onclick="document.getElementById('emp-import-file').click()" title="นำเข้ารายชื่อพนักงานจากไฟล์ Excel (Working_Details ของ HR Cloud) หรือ CSV รูปแบบ Export">📤 นำเข้า Excel/CSV</button>
+          <button class="btn" id="pending-btn" style="background:#eff6ff;color:#0369a1;border-color:#7dd3fc;display:none" onclick="openNewEmpReview()" title="พนักงานใหม่จากไฟล์ที่ยังไม่ได้ยืนยันเพิ่มเข้าฐานข้อมูล">🆕 รอยืนยัน <span id="pending-n"></span></button>
           <input type="file" id="emp-import-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importEmpCSV(this)">
           <button class="btn" style="background:#fff7ed;color:#c2410c;border-color:#fed7aa" onclick="openExcludeModal()" title="รายชื่อที่จะไม่นำเข้าระบบ (ข้ามทุกครั้งที่ import/ซิง)">🚫 รายชื่อยกเว้น</button>
           <button class="btn" style="background:#eff6ff;color:#0369a1;border-color:#bae6fd" onclick="openWfhModal()" title="รายชื่อพนักงาน WFH — เวลานำเข้าจะบังคับสถานะเป็น WFH ให้ชื่อเหล่านี้เสมอ">🏠 รายชื่อ WFH</button>
@@ -832,12 +833,12 @@
     function sload(k) { try { var v = localStorage.getItem('hr4_' + k); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
     function ssave(k, v) { try { localStorage.setItem('hr4_' + k, JSON.stringify(v)); } catch (e) { } }
     function ge(eid, date) { return (att[date] || {})[eid] || { code: '', note: '' }; }
-    function se(eid, date, code, note) {
+    function se(eid, date, code, note, skipCloud) {
       code = normalizeCode(code);
       if (!att[date]) att[date] = {};
       att[date][eid] = { code: code, note: note };
       ssave('attendance', att);
-      sbUpsertAttendance(eid, date, code, note); 
+      if (!skipCloud) sbUpsertAttendance(eid, date, code, note);
     }
     function getDateRange(period) {
       var today = new Date(cur), start, end;
@@ -1093,6 +1094,13 @@
 
     // ===================== EMPLOYEE TAB =====================
     function renderEmp() {
+      // อัปเดตปุ่ม "รอยืนยัน" ตามจำนวนพนักงานใหม่ที่ยังไม่ได้บันทึกลงฐานข้อมูล
+      var pendingCnt = emps.filter(function (e) { return e.pending; }).length;
+      var pbtn = document.getElementById('pending-btn');
+      if (pbtn) {
+        pbtn.style.display = pendingCnt > 0 ? '' : 'none';
+        var pn = document.getElementById('pending-n'); if (pn) pn.textContent = '(' + pendingCnt + ')';
+      }
       var q = (document.getElementById('esrch').value || '').toLowerCase();
       var pf = document.getElementById('epf').value;
       var list = emps.filter(function(e) {
@@ -2068,23 +2076,30 @@
           }
 
           // =========================================================
-          //  ลงเวลาอย่างเดียว — จับคู่กับพนักงานในระบบ ไม่สร้างคนใหม่
-          //  (การอัพเดทรายชื่อ ให้ทำที่หน้า "จัดการข้อมูลพนักงาน")
+          //  ลงเวลาในหน้ารายวันเลย — แต่ "พนักงานใหม่" ที่ไม่มีใน DB
+          //  จะยังไม่บันทึกลงฐานข้อมูล รอผู้ใช้ตรวจ+กดยืนยันก่อน
           // =========================================================
-          var imported = 0, skipped = 0, updated = {};
+          var imported = 0, skipped = 0, updated = {}, addedByKey = {}, addSeq = 0;
+          var pendingNew = [];  // พนักงานใหม่ที่รอยืนยันเพิ่มเข้าฐานข้อมูล
 
           results.forEach(function(r) {
-            if (isExcluded(r.empName)) return; // ข้ามรายชื่อยกเว้น
+            if (isExcluded(r.empName)) { skipped++; return; } // ข้ามรายชื่อยกเว้น
             var found = findEmp(r.empName);
             if (found) {
-              se(found.id, r.date, r.code, r.note);
-              imported++;
-              updated[r.date] = (updated[r.date] || 0) + 1;
+              se(found.id, r.date, r.code, r.note);          // มีใน DB → ลงเวลาขึ้น cloud ปกติ
             } else {
-              if (unmatched.indexOf(r.empName) < 0) unmatched.push(r.empName);
-              skipped++;
+              var key = cleanName(r.empName);
+              if (!addedByKey[key]) {
+                var ne = { id: 'EMP-' + Date.now() + '-' + (addSeq++), name: r.empName, nickname: '', position: r.position || '', startDate: '', pending: true };
+                emps.push(ne); addedByKey[key] = ne; pendingNew.push(ne);
+              }
+              // ลงเวลาแบบ local เท่านั้น (ยังไม่ push cloud จนกว่าจะยืนยันพนักงาน — กัน foreign key)
+              se(addedByKey[key].id, r.date, r.code, r.note, true);
             }
+            imported++;
+            updated[r.date] = (updated[r.date] || 0) + 1;
           });
+          ssave('employees', emps); // เก็บ local เพื่อให้หน้ารายวันแสดงครบ
 
           // ---- สรุปผล ----
           var dates = Object.keys(updated).sort();
@@ -2100,14 +2115,10 @@
           var msg = '✅ ลงเวลาจาก HR Cloud สำเร็จ!\n\n';
           msg += '🕐 ลงเวลาเข้า: ' + imported + ' รายการ\n';
           msg += '📅 วันที่: ' + dates.join(', ') + '\n';
+          if (pendingNew.length > 0) msg += '🆕 พบพนักงานใหม่ ' + pendingNew.length + ' คน (รอยืนยันเพิ่มเข้าฐานข้อมูล)\n';
+          if (skipped > 0) msg += '🚫 ข้ามรายชื่อยกเว้น: ' + skipped + ' รายการ\n';
           if (dates.length && dk(cur) !== dates[dates.length - 1]) {
             msg += '\n📌 ระบบเลื่อนหน้าจอไปที่วันที่ ' + dates[dates.length - 1] + ' ให้แล้ว';
-          }
-          if (unmatched.length > 0) {
-            msg += '\n\n⚠️ ไม่พบในระบบ ' + unmatched.length + ' คน (ลงเวลาให้ไม่ได้)\n';
-            msg += '👉 ไปที่แท็บ "จัดการข้อมูลพนักงาน" → "ซิงกับไฟล์รายวัน" ก่อน\n\n';
-            msg += unmatched.slice(0,10).join('\n');
-            if (unmatched.length > 10) msg += '\n... และอีก ' + (unmatched.length-10) + ' คน';
           }
           alert(msg);
           // เลื่อนหน้าจอไปยังวันที่ในไฟล์ เพื่อให้เห็นสถานะที่เพิ่งลงทันที
@@ -2118,6 +2129,8 @@
           render();
           fillFilters();
           if (document.getElementById('view-emp').style.display !== 'none') renderEmp();
+          // โชว์รายชื่อพนักงานใหม่ให้ตรวจก่อน แล้วผู้ใช้กดยืนยันเอง
+          if (pendingNew.length > 0) openNewEmpReview(pendingNew);
 
         } catch(err) {
           alert('❌ เกิดข้อผิดพลาด: ' + err.message + '\n\nStack: ' + err.stack);
@@ -2807,6 +2820,66 @@
         ov.remove();
         alert('❌ ซิงก์ไม่สำเร็จ: ' + (err.message || err));
       }
+    }
+
+    // ============ รีวิว "พนักงานใหม่" ก่อนบันทึกลงฐานข้อมูล ============
+    var __pendingNew = [];
+    function openNewEmpReview(list) {
+      __pendingNew = (list && list.length) ? list : emps.filter(function (e) { return e.pending; });
+      if (!__pendingNew.length) { alert('ไม่มีพนักงานใหม่ที่รอยืนยัน'); return; }
+      var old = document.getElementById('newemp-review'); if (old) old.remove();
+      var rows = __pendingNew.map(function (e, i) {
+        return '<tr>' +
+          '<td style="padding:6px 8px;color:#94a3b8;font-size:12px">' + (i + 1) + '</td>' +
+          '<td style="padding:6px 8px;font-weight:600;color:#16233f">' + e.name + '</td>' +
+          '<td style="padding:6px 8px;color:#475569;font-size:13px">' + (e.position || '—') + '</td></tr>';
+      }).join('');
+      var ov = document.createElement('div');
+      ov.id = 'newemp-review'; ov.className = 'modal-bg'; ov.style.display = 'flex';
+      ov.onclick = function (ev) { if (ev.target === ov) closeNewEmpReview(); }; // คลิกนอกกรอบ = ปิดไว้ก่อน
+      ov.innerHTML =
+        '<div class="modal" style="width:540px;max-height:82vh;overflow:auto;position:relative">' +
+        '<button onclick="closeNewEmpReview()" title="ปิดไว้ก่อน" style="position:absolute;top:12px;right:14px;background:none;border:none;font-size:20px;color:#94a3b8;cursor:pointer;line-height:1">✕</button>' +
+        '<h3>🆕 พบพนักงานใหม่จากไฟล์ ' + __pendingNew.length + ' คน</h3>' +
+        '<div style="font-size:13px;color:#64748b;margin-bottom:12px;line-height:1.6">ลงเวลาในหน้ารายวันให้แล้ว แต่<strong>ยังไม่ได้บันทึกลงฐานข้อมูล</strong> — ตรวจรายชื่อก่อน แล้วกดยืนยัน<br><span style="color:#94a3b8;font-size:12px">* ยังไม่ต้องตัดสินใจตอนนี้ก็ได้ กด ✕ ปิดไว้ก่อน แล้วมากดที่ปุ่ม "🆕 รอยืนยัน" ในแท็บจัดการข้อมูลพนักงานทีหลังได้</span></div>' +
+        '<table style="width:100%;border-collapse:collapse;font-size:13px">' +
+        '<thead><tr style="background:#f1f5f9;text-align:left">' +
+        '<th style="padding:6px 8px">#</th><th style="padding:6px 8px">ชื่อ-นามสกุล</th><th style="padding:6px 8px">ตำแหน่ง</th></tr></thead>' +
+        '<tbody>' + rows + '</tbody></table>' +
+        '<div class="mac" style="margin-top:16px;gap:8px">' +
+        '<button class="btn" style="background:#f8f9fc;color:#64748b;border-color:#e2e8f0" onclick="closeNewEmpReview()">ไว้ทีหลัง</button>' +
+        '<button class="btn" style="background:#fef2f2;color:#b91c1c;border-color:#fecaca" onclick="rejectNewEmps()">❌ ไม่เพิ่ม (เอาออก)</button>' +
+        '<button class="btn" style="background:#16a34a;color:#fff;border-color:#15803d" onclick="confirmAddNewEmps()">✅ เพิ่มเข้าฐานข้อมูล (' + __pendingNew.length + ')</button>' +
+        '</div></div>';
+      document.body.appendChild(ov);
+    }
+    function closeNewEmpReview() {
+      var ov = document.getElementById('newemp-review'); if (ov) ov.remove();
+      // ไม่ลบ pending — ยังค้างไว้ให้มากดยืนยันทีหลังได้
+      try { renderEmp(); } catch (e) {}
+    }
+    async function confirmAddNewEmps() {
+      var n = __pendingNew.length;
+      for (var i = 0; i < __pendingNew.length; i++) {
+        var e = __pendingNew[i]; delete e.pending;
+        await sbUpsertEmployee(e); // เพิ่มพนักงานก่อน (กัน foreign key)
+        // แล้วดันเวลาที่ลงไว้ (local) ขึ้น cloud
+        Object.keys(att).forEach(function (d) {
+          if (att[d][e.id]) sbUpsertAttendance(e.id, d, att[d][e.id].code, att[d][e.id].note);
+        });
+      }
+      ssave('employees', emps);
+      var ov = document.getElementById('newemp-review'); if (ov) ov.remove();
+      __pendingNew = []; render(); fillFilters(); try { renderEmp(); } catch (e) {}
+      alert('✅ เพิ่มพนักงานเข้าฐานข้อมูลเรียบร้อย ' + n + ' คน');
+    }
+    function rejectNewEmps() {
+      var ids = {}; __pendingNew.forEach(function (e) { ids[e.id] = true; });
+      emps = emps.filter(function (e) { return !ids[e.id]; });
+      Object.keys(att).forEach(function (d) { Object.keys(att[d]).forEach(function (id) { if (ids[id]) delete att[d][id]; }); });
+      ssave('employees', emps); ssave('attendance', att);
+      var ov = document.getElementById('newemp-review'); if (ov) ov.remove();
+      __pendingNew = []; render(); fillFilters(); try { renderEmp(); } catch (e) {}
     }
 
     (async function() {
