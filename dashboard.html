@@ -150,6 +150,15 @@
     <input id="l-pass" type="password" placeholder="••••••••" autocomplete="current-password">
     <button class="btn" id="login-btn">เข้าสู่ระบบ</button>
     <div class="lerr" id="login-err">อีเมลหรือรหัสผ่านไม่ถูกต้อง</div>
+    <div style="text-align:right;margin-top:8px"><a href="#" id="to-signup" style="font-size:12px;color:#64748b;text-decoration:none;cursor:pointer">สมัครสมาชิก (HR) →</a></div>
+    <div id="signup-sec" style="display:none;border-top:1px solid #e2e8f0;margin-top:12px;padding-top:12px">
+      <div class="lsub">สมัครสมาชิก · ต้องมีโค้ดเชิญ</div>
+      <label>โค้ดเชิญ</label><input id="su-invite" placeholder="ขอจาก HR" autocomplete="off">
+      <label>อีเมล</label><input id="su-email" type="email" placeholder="you@masaru.com">
+      <label>รหัสผ่าน (อย่างน้อย 6 ตัว)</label><input id="su-pass" type="password">
+      <button class="btn" id="signup-btn">สมัครสมาชิก</button>
+      <div class="lerr" id="su-msg" style="display:none"></div>
+    </div>
   </div>
 </div>
 
@@ -211,6 +220,24 @@ let radarChart = null, bosiChart = null;
 // ---------- auth ----------
 $("login-btn").onclick = doLogin;
 $("l-pass").addEventListener("keydown", e => { if(e.key==="Enter") doLogin(); });
+$("to-signup").addEventListener("click", e => { e.preventDefault(); $("signup-sec").style.display="block"; e.target.style.display="none"; });
+$("signup-btn").onclick = doSignup;
+async function doSignup(){
+  const invite = $("su-invite").value.trim(), email = $("su-email").value.trim(), pass = $("su-pass").value;
+  const msg = $("su-msg");
+  const showMsg = (t, ok) => { msg.textContent = t; msg.style.color = ok ? "#059669" : "#dc2626"; msg.style.display = "block"; };
+  if(!invite){ showMsg("กรุณากรอกโค้ดเชิญ"); return; }
+  if(!email){ showMsg("กรุณากรอกอีเมล"); return; }
+  if(pass.length < 6){ showMsg("รหัสผ่านต้องอย่างน้อย 6 ตัว"); return; }
+  let validCode = "MASARU-HR";
+  try { const { data } = await sb.from("app_settings").select("value").eq("key","signup_code").single(); if(data && data.value) validCode = data.value; } catch(e){}
+  if(invite !== validCode){ showMsg("โค้ดเชิญไม่ถูกต้อง — กรุณาขอจาก HR"); return; }
+  const btn = $("signup-btn"); btn.disabled = true; btn.textContent = "กำลังสมัคร...";
+  const { error } = await sb.auth.signUp({ email, password: pass });
+  btn.disabled = false; btn.textContent = "สมัครสมาชิก";
+  if(error){ showMsg("สมัครไม่สำเร็จ: " + error.message); return; }
+  showMsg("✅ สมัครสำเร็จ! ยืนยันอีเมลแล้วเข้าสู่ระบบได้เลย", true);
+}
 
 async function doLogin(){
   const email = $("l-email").value.trim();
