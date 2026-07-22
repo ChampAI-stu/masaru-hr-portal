@@ -481,10 +481,11 @@
     </nav>
     <div class="su">
       <div class="av" id="su-av">--</div>
-      <div class="su-info">
+      <div class="su-info" onclick="openProfile()" style="cursor:pointer" title="แก้ไขโปรไฟล์ (ตั้งชื่อ)">
         <div class="su-name" id="su-name">-</div>
         <div class="su-role" id="su-role">ฝ่ายบุคคล</div>
       </div>
+      <div class="logout-btn" onclick="openProfile()" title="แก้ไขโปรไฟล์"><i class="ti ti-user-edit"></i></div>
       <div class="logout-btn" onclick="doLogout()" title="ออกจากระบบ"><i class="ti ti-logout"></i></div>
     </div>
   </div>
@@ -795,6 +796,20 @@
       }
       await dbLoad();
     }
+    async function openProfile() {
+      const cur = currentUser?.name || '';
+      const name = prompt('👤 โปรไฟล์ของคุณ\n\nตั้งชื่อ-นามสกุลที่จะใช้เป็น "ผู้ตรวจ/ผู้บันทึก" อัตโนมัติเวลาทำงาน:', cur);
+      if (name === null) return;
+      const nm = name.trim();
+      if (!nm) { showToast('กรุณากรอกชื่อ', true); return; }
+      const { error } = await _sb.auth.updateUser({ data: { name: nm } });
+      if (error) { showToast('บันทึกไม่สำเร็จ: ' + error.message, true); return; }
+      currentUser.name = nm;
+      document.getElementById('su-name').textContent = nm;
+      document.getElementById('su-av').textContent = ini(nm);
+      showToast('บันทึกโปรไฟล์แล้ว ✓');
+      const a = getA(selId); if (a) renderDetail(a); // อัปเดตช่อง "ผู้ตรวจ" ให้เป็นชื่อใหม่
+    }
     async function doLogout() {
       await _sb.auth.signOut();
       currentUser = null; selId = null; DATA = [];
@@ -977,7 +992,7 @@
           <div class="grid-3">
             <div class="field"><label>วันที่</label><input type="date" id="f-intd"></div>
             <div class="field"><label>เวลา</label><input type="time" class="inp" id="f-inttime" value="09:00"></div>
-            <div class="field"><label>ผู้สัมภาษณ์</label><input class="inp" id="f-intby" placeholder="ชื่อผู้สัมภาษณ์"></div>
+            <div class="field"><label>ผู้สัมภาษณ์</label><input class="inp" id="f-intby" value="${esc(currentUser?.name || '')}" placeholder="ชื่อผู้สัมภาษณ์"></div>
           </div>
           <div class="btn-row">
             <button class="btn btn-danger btn-ghost" onclick="actReject('${a.id}','ไม่ผ่านการคัดกรอง')"><i class="ti ti-x"></i>ไม่ผ่าน</button>
