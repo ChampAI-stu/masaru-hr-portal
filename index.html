@@ -300,7 +300,7 @@ async function doSignup(){
     options: { data: { user_role_preset: preset, invite_code: invite } } });
   $('signupBtn').disabled = false; $('signupBtn').textContent = 'สมัครสมาชิก';
   if(error){
-    err.textContent = 'สมัครไม่สำเร็จ — รหัสเชิญอาจไม่ถูกต้อง หรืออีเมลนี้ถูกใช้แล้ว';
+    var m = error.message || ''; if(/signups? not allowed|signup is disabled/i.test(m)) m='โปรเจกต์ปิดการสมัครอยู่ — เปิดที่ Supabase → Authentication → Providers → Allow new users to sign up'; else if(/already registered|already been registered|user already/i.test(m)) m='อีเมลนี้ถูกใช้สมัครแล้ว'; err.textContent = 'สมัครไม่สำเร็จ: ' + m;
     err.classList.remove('hide'); return;
   }
   $('suEmail').value=''; $('suPassword').value=''; $('suInvite').value='';
