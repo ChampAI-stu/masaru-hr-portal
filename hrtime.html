@@ -34,7 +34,7 @@
         const { data, error } = await _sb.from('employees').select('*').order('id');
         if (error) throw error;
         return data.map(function (e) {
-          return { id: e.id, name: e.name, nickname: e.nickname, position: e.position, startDate: e.start_date || '' };
+          return { id: e.id, name: e.name, nickname: e.nickname, position: e.position, startDate: e.start_date || '', empId: e.emp_code || '' };
         });
       } catch (err) { console.warn('[Supabase] fetchEmployees:', err.message); return null; }
     }
@@ -43,7 +43,7 @@
       if (!SUPABASE_READY) return { success: false, error: 'Supabase not ready' };
       try {
         const { error } = await _sb.from('employees').upsert(
-          { id: emp.id, name: emp.name, nickname: emp.nickname, position: emp.position, start_date: emp.startDate || null },
+          { id: emp.id, name: emp.name, nickname: emp.nickname, position: emp.position, start_date: emp.startDate || null, emp_code: emp.empId || null },
           { onConflict: 'id' }
         );
         if (error) throw error;
@@ -376,7 +376,8 @@
     <div id="signup-box" style="display:none" class="login-box-alt">
       <div class="login-logo">✨</div>
       <h2>สมัครสมาชิก</h2>
-      <p class="login-sub">สร้างบัญชีใหม่ด้วยอีเมล</p>
+      <p class="login-sub">สร้างบัญชีใหม่ด้วยอีเมล (ต้องมีโค้ดเชิญจาก HR)</p>
+      <input type="text" id="signup-code" placeholder="โค้ดเชิญ (ขอจาก HR)" autocomplete="off" />
       <input type="email" id="signup-email" placeholder="อีเมล" />
       <input type="password" id="signup-password" placeholder="รหัสผ่าน (อย่างน้อย 6 ตัว)" />
       <input type="password" id="signup-password2" placeholder="ยืนยันรหัสผ่าน" onkeydown="if(event.key==='Enter')doSignUp()" />
@@ -620,6 +621,7 @@
           <input type="file" id="emp-import-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importEmpCSV(this)">
           <button class="btn" style="background:#fff7ed;color:#c2410c;border-color:#fed7aa" onclick="openExcludeModal()" title="รายชื่อที่จะไม่นำเข้าระบบ (ข้ามทุกครั้งที่ import/ซิง)">🚫 รายชื่อยกเว้น</button>
           <button class="btn" style="background:#eff6ff;color:#0369a1;border-color:#bae6fd" onclick="openWfhModal()" title="รายชื่อพนักงาน WFH — เวลานำเข้าจะบังคับสถานะเป็น WFH ให้ชื่อเหล่านี้เสมอ">🏠 รายชื่อ WFH</button>
+          <button class="btn" style="background:#f0fdf4;color:#15803d;border-color:#bbf7d0" onclick="manageInviteCode()" title="ตั้ง/ดูโค้ดเชิญสำหรับให้ HR คนใหม่สมัครเข้าใช้ระบบ">🎫 โค้ดเชิญ</button>
           <button class="btn" style="background:#fef2f2;color:#b91c1c;border-color:#fecaca" onclick="deleteAllEmps()" title="ลบรายชื่อพนักงานทั้งหมดในฐานข้อมูล (ล้างทั้งฐาน)">🗑 ลบทั้งหมด</button>
           <button class="btn btn-blue" onclick="showModal('add-modal')">+ เพิ่มข้อมูลพนักงาน</button>
         </div>
@@ -691,6 +693,7 @@
     <div class="modal">
       <h3>แก้ไขข้อมูลพนักงาน</h3>
       <input type="hidden" id="ee-id">
+      <div class="mf"><label>รหัสพนักงาน</label><input id="ee-empid" placeholder="เช่น DK-231"></div>
       <div class="mf"><label>ชื่อ-นามสกุล</label><input id="ee-name"></div>
       <div class="mf"><label>ชื่อเล่น</label><input id="ee-nick"></div>
       <div class="mf"><label>ตำแหน่ง</label><input id="ee-pos" list="pos-dl"></div>
@@ -1012,7 +1015,7 @@
       var pf = document.getElementById('pf').value;
       var sf = document.getElementById('sf').value;
       visEmps = emps.filter(function (e) {
-        if (q && (e.name||"").toLowerCase().indexOf(q) < 0 && (e.nickname||"").toLowerCase().indexOf(q) < 0) return false;
+        if (q && (e.name||"").toLowerCase().indexOf(q) < 0 && (e.nickname||"").toLowerCase().indexOf(q) < 0 && (e.empId||"").toLowerCase().indexOf(q) < 0) return false;
         if (pf && e.position !== pf) return false;
         var c = normalizeCode(ge(e.id, date).code);
         if (sf === '__empty__') return !c;
@@ -1105,7 +1108,7 @@
       var pf = document.getElementById('epf').value;
       var list = emps.filter(function(e) {
         if (pf && e.position !== pf) return false;
-        if (q && (e.name||"").toLowerCase().indexOf(q) < 0 && (e.nickname||'').toLowerCase().indexOf(q) < 0) return false;
+        if (q && (e.name||"").toLowerCase().indexOf(q) < 0 && (e.nickname||'').toLowerCase().indexOf(q) < 0 && (e.empId||'').toLowerCase().indexOf(q) < 0) return false;
         return true;
       });
       fillFilters();
@@ -1140,7 +1143,7 @@
           else if (att_today.code === 'ป') badge = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444;margin-left:6px" title="ลาป่วย"></span>';
           return '<tr>' +
             '<td style="color:#94a3b8;font-size:12px;text-align:center">' + (i+1) + '</td>' +
-            '<td><span style="font-weight:700;color:#16233f">' + e.name + '</span>' + badge + '</td>' +
+            '<td>' + (e.empId ? '<span style="display:inline-block;background:#eef2ff;color:#4338ca;border-radius:5px;padding:1px 7px;font-size:11px;font-weight:700;margin-right:6px;font-family:monospace">' + e.empId + '</span>' : '') + '<span style="font-weight:700;color:#16233f">' + e.name + '</span>' + badge + '</td>' +
             '<td style="color:#16294d;font-weight:600">' + (e.nickname || '—') + '</td>' +
             '<td><span style="background:#e0f2fe;color:#0369a1;border-radius:6px;padding:3px 10px;font-size:12px;font-weight:600">' + (e.position || '—') + '</span></td>' +
           '<td style="color:#64748b;font-size:13px">' + start + '</td>' +
@@ -1196,6 +1199,7 @@
       var e = emps.find(function(x) { return x.id === id; });
       if (!e) return;
       document.getElementById('ee-id').value = e.id;
+      document.getElementById('ee-empid').value = e.empId || '';
       document.getElementById('ee-name').value = e.name || '';
       document.getElementById('ee-nick').value = e.nickname || '';
       document.getElementById('ee-pos').value = e.position || '';
@@ -1207,6 +1211,7 @@
       var id = document.getElementById('ee-id').value;
       var idx = emps.findIndex(function(x) { return x.id === id; });
       if (idx < 0) return;
+      emps[idx].empId = document.getElementById('ee-empid').value.trim();
       emps[idx].name = document.getElementById('ee-name').value.trim();
       emps[idx].nickname = document.getElementById('ee-nick').value.trim();
       emps[idx].position = document.getElementById('ee-pos').value.trim();
@@ -1385,10 +1390,11 @@
               if (b.indexOf('\t') >= 0) {
                 var tp = b.split('\t');
                 var idm = tp[0].trim().match(/^(\S+)\s+(.+)/);
+                var eid = idm ? idm[1].trim() : '';
                 var nm = cleanName(idm ? idm[2] : tp[0]);
                 var dp = (tp[1] || '').trim().split(/\s{2,}/);
                 var ps = dp.length > 1 ? dp[dp.length - 1].trim() : (dp[0] || '').trim();
-                if (nm && !seenX[nm]) { seenX[nm] = true; fileEmps.push({ name: nm, nickname: '', position: ps, startDate: '' }); }
+                if (nm && !seenX[nm]) { seenX[nm] = true; fileEmps.push({ empId: eid, name: nm, nickname: '', position: ps, startDate: '' }); }
               }
             });
             // ถ้าไม่เจอแบบ HR Cloud → ลองอ่านเป็นตารางรายชื่อ (หัวคอลัมน์ ชื่อ/เล่น/ตำแหน่ง/เริ่มงาน)
@@ -1469,12 +1475,13 @@
             var found = findEmp(fe.name);
             if (found) {
               var changed = false;
+              if (fe.empId && found.empId !== fe.empId) { found.empId = fe.empId; changed = true; }
               if (fe.nickname && found.nickname !== fe.nickname) { found.nickname = fe.nickname; changed = true; }
               if (fe.position && found.position !== fe.position) { found.position = fe.position; changed = true; }
               if (fe.startDate && found.startDate !== fe.startDate) { found.startDate = fe.startDate; changed = true; }
               if (changed) { sbUpsertEmployee(found); updated++; }
             } else {
-              var ne = { id: 'EMP-' + Date.now() + '-' + k, name: fe.name, nickname: fe.nickname, position: fe.position, startDate: fe.startDate };
+              var ne = { id: 'EMP-' + Date.now() + '-' + k, empId: fe.empId || '', name: fe.name, nickname: fe.nickname, position: fe.position, startDate: fe.startDate };
               emps.push(ne); sbUpsertEmployee(ne);
               added++;
               if (addedNames.length < 15) addedNames.push(fe.name);
@@ -1596,7 +1603,7 @@
       
       var list = emps.filter(function (e) {
         if (pf && e.position !== pf) return false;
-        if (q && (e.name||"").toLowerCase().indexOf(q) < 0 && (e.nickname||"").toLowerCase().indexOf(q) < 0) return false;
+        if (q && (e.name||"").toLowerCase().indexOf(q) < 0 && (e.nickname||"").toLowerCase().indexOf(q) < 0 && (e.empId||"").toLowerCase().indexOf(q) < 0) return false;
         return true;
       });
       var ws = list.map(function (e) { return { e: e, s: getStats(e.id, dates) }; });
@@ -2062,7 +2069,13 @@
           }
 
           // ---- ฟังก์ชันค้นหาพนักงานในระบบด้วยชื่อ ----
-          function findEmp(name) {
+          function findEmp(name, empId) {
+            // 1) จับคู่ด้วยรหัสพนักงานก่อน (แม่นสุด ไม่ต้องพึ่งการสะกดชื่อ)
+            if (empId) {
+              var byId = emps.find(function (e) { return e.empId && e.empId === empId; });
+              if (byId) return byId;
+            }
+            // 2) fallback: จับคู่ด้วยชื่อ
             var rName = cleanName(name);
             var found = emps.find(function(e) { return cleanName(e.name) === rName; });
             if (!found) {
@@ -2084,13 +2097,14 @@
 
           results.forEach(function(r) {
             if (isExcluded(r.empName)) { skipped++; return; } // ข้ามรายชื่อยกเว้น
-            var found = findEmp(r.empName);
+            var found = findEmp(r.empName, r.csvId);
             if (found) {
+              if (r.csvId && !found.empId) { found.empId = r.csvId; sbUpsertEmployee(found); } // เติมรหัสให้คนเดิม
               se(found.id, r.date, r.code, r.note);          // มีใน DB → ลงเวลาขึ้น cloud ปกติ
             } else {
-              var key = cleanName(r.empName);
+              var key = r.csvId ? ('#' + r.csvId) : cleanName(r.empName);
               if (!addedByKey[key]) {
-                var ne = { id: 'EMP-' + Date.now() + '-' + (addSeq++), name: r.empName, nickname: '', position: r.position || '', startDate: '', pending: true };
+                var ne = { id: 'EMP-' + Date.now() + '-' + (addSeq++), empId: r.csvId || '', name: r.empName, nickname: '', position: r.position || '', startDate: '', pending: true };
                 emps.push(ne); addedByKey[key] = ne; pendingNew.push(ne);
               }
               // ลงเวลาแบบ local เท่านั้น (ยังไม่ push cloud จนกว่าจะยืนยันพนักงาน — กัน foreign key)
@@ -2175,6 +2189,24 @@
       closeModal('exclude-modal');
       renderEmp(); fillFilters(); render();
       alert('✅ บันทึกรายชื่อยกเว้นแล้ว: ' + excludeList.length + ' รายชื่อ\n🗑 นำออกจากฐานข้อมูล: ' + removed.length + ' คน\n\nรายชื่อเหล่านี้จะไม่ถูกนำเข้าระบบจากการ import/ซิงอีกต่อไป');
+    }
+
+    // ============ โค้ดเชิญ (ให้ HR ใหม่ใช้สมัครเข้าระบบ — เก็บใน HR project ใช้ร่วมทุกแอป) ============
+    async function getHrInvite() {
+      try { var r = await _sbAuth.from('app_settings').select('value').eq('key', 'signup_code').single(); return (r.data && r.data.value) ? r.data.value : DEFAULT_SIGNUP_CODE; }
+      catch (e) { return DEFAULT_SIGNUP_CODE; }
+    }
+    async function setHrInvite(code) {
+      try { await _sbAuth.from('app_settings').upsert({ key: 'signup_code', value: code, updated_at: new Date().toISOString() }, { onConflict: 'key' }); } catch (e) {}
+    }
+    async function manageInviteCode() {
+      var cur = await getHrInvite();
+      var nw = prompt('🎫 โค้ดเชิญสำหรับสมัครสมาชิก\n\nให้ HR คนใหม่กรอกโค้ดนี้ตอนสมัคร (หน้า "สมัครสมาชิก")\nแก้ไขได้แล้วกด OK เพื่อบันทึก:', cur);
+      if (nw === null) return;
+      nw = nw.trim();
+      if (!nw) { alert('❌ โค้ดต้องไม่ว่าง'); return; }
+      await setHrInvite(nw);
+      alert('✅ บันทึกโค้ดเชิญแล้ว: ' + nw + '\n\nแจกโค้ดนี้ให้ HR คนใหม่ใช้สมัครได้เลย');
     }
 
     // ============ รายชื่อ WFH (บังคับสถานะเป็น WFH ตอนนำเข้า) ============
@@ -2394,13 +2426,17 @@
         var ent = ge(e.id, date);
         var code = normalizeCode(ent.code);
         var stat = code ? (STATUS_LABELS[code] || code) : 'ยังไม่ลงเวลา';
+        // แยกหมายเหตุ: โชว์เฉพาะที่พิมพ์เอง (+ สายกี่นาทีถ้ามี) ไม่เอาชื่อกะ/ตัวคั่นมาปน
+        var np = splitNote(ent.note || '');
+        var mLateEx = np.auto.match(/สาย \d+ นาที/);
+        var noteCell = [mLateEx ? mLateEx[0] : '', np.remark].filter(Boolean).join(' — ') || '-';
         html += "<tr>";
         html += "<td style='text-align:center; width:40px;'>" + i++ + "</td>";
         html += "<td>" + e.name + "</td>";
         html += "<td>" + (e.nickname || '-') + "</td>";
         html += "<td>" + (e.position || '-') + "</td>";
         html += "<td><strong>" + stat + "</strong></td>";
-        html += "<td>" + (ent.note || '-') + "</td>";
+        html += "<td>" + noteCell + "</td>";
         html += "</tr>";
       });
 
@@ -2529,15 +2565,21 @@
       }
     }
 
+    var DEFAULT_SIGNUP_CODE = 'MASARU-HR';
     async function doSignUp() {
       var email = document.getElementById('signup-email').value.trim();
       var pass  = document.getElementById('signup-password').value;
       var pass2 = document.getElementById('signup-password2').value;
+      var code  = document.getElementById('signup-code').value.trim();
       var msgEl = document.getElementById('signup-msg');
       msgEl.style.color = '#dc2626'; msgEl.textContent = '';
+      if (!code) { msgEl.textContent = '❌ กรุณากรอกโค้ดเชิญ'; return; }
       if (!email) { msgEl.textContent = '❌ กรุณากรอกอีเมล'; return; }
       if (pass.length < 6) { msgEl.textContent = '❌ รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร'; return; }
       if (pass !== pass2) { msgEl.textContent = '❌ รหัสผ่านไม่ตรงกัน'; return; }
+      // ตรวจโค้ดเชิญกับค่ากลางใน HR project (ใช้ร่วมทุกแอป)
+      var validCode = await getHrInvite();
+      if (code !== validCode) { msgEl.textContent = '❌ โค้ดเชิญไม่ถูกต้อง — กรุณาขอโค้ดจาก HR'; return; }
       var btn = event.target; btn.disabled = true; btn.textContent = 'กำลังสมัคร...';
       var { error } = await _sbAuth.auth.signUp({ email, password: pass });
       btn.disabled = false; btn.textContent = 'สมัครสมาชิก';
@@ -2783,7 +2825,7 @@
       try {
         // 1) ดันพนักงานขึ้น (bulk)
         var eRows = (emps || []).filter(function (e) { return e.id && e.name; })
-          .map(function (e) { return { id: e.id, name: e.name, nickname: e.nickname || null, position: e.position || null, start_date: e.startDate || null }; });
+          .map(function (e) { return { id: e.id, name: e.name, nickname: e.nickname || null, position: e.position || null, start_date: e.startDate || null, emp_code: e.empId || null }; });
         for (var i = 0; i < eRows.length; i += 500) {
           var r = await _sb.from('employees').upsert(eRows.slice(i, i + 500), { onConflict: 'id' });
           if (r.error) throw r.error;
@@ -2829,22 +2871,25 @@
       if (!__pendingNew.length) { alert('ไม่มีพนักงานใหม่ที่รอยืนยัน'); return; }
       var old = document.getElementById('newemp-review'); if (old) old.remove();
       var rows = __pendingNew.map(function (e, i) {
+        var ip = 'style="width:100%;box-sizing:border-box;padding:5px 7px;border:1px solid #cbd5e1;border-radius:6px;font-family:inherit;font-size:13px"';
         return '<tr>' +
-          '<td style="padding:6px 8px;color:#94a3b8;font-size:12px">' + (i + 1) + '</td>' +
-          '<td style="padding:6px 8px;font-weight:600;color:#16233f">' + e.name + '</td>' +
-          '<td style="padding:6px 8px;color:#475569;font-size:13px">' + (e.position || '—') + '</td></tr>';
+          '<td style="padding:4px 6px;color:#94a3b8;font-size:12px">' + (i + 1) + '</td>' +
+          '<td style="padding:4px 6px"><input data-nr="' + i + '" data-f="empId" value="' + (e.empId || '').replace(/"/g, '&quot;') + '" placeholder="รหัส" ' + ip + '></td>' +
+          '<td style="padding:4px 6px"><input data-nr="' + i + '" data-f="name" value="' + (e.name || '').replace(/"/g, '&quot;') + '" ' + ip + '></td>' +
+          '<td style="padding:4px 6px"><input data-nr="' + i + '" data-f="nickname" value="' + (e.nickname || '').replace(/"/g, '&quot;') + '" placeholder="ชื่อเล่น" ' + ip + '></td>' +
+          '<td style="padding:4px 6px"><input data-nr="' + i + '" data-f="position" value="' + (e.position || '').replace(/"/g, '&quot;') + '" placeholder="ตำแหน่ง" ' + ip + '></td></tr>';
       }).join('');
       var ov = document.createElement('div');
       ov.id = 'newemp-review'; ov.className = 'modal-bg'; ov.style.display = 'flex';
       ov.onclick = function (ev) { if (ev.target === ov) closeNewEmpReview(); }; // คลิกนอกกรอบ = ปิดไว้ก่อน
       ov.innerHTML =
-        '<div class="modal" style="width:540px;max-height:82vh;overflow:auto;position:relative">' +
+        '<div class="modal" style="width:640px;max-height:82vh;overflow:auto;position:relative">' +
         '<button onclick="closeNewEmpReview()" title="ปิดไว้ก่อน" style="position:absolute;top:12px;right:14px;background:none;border:none;font-size:20px;color:#94a3b8;cursor:pointer;line-height:1">✕</button>' +
         '<h3>🆕 พบพนักงานใหม่จากไฟล์ ' + __pendingNew.length + ' คน</h3>' +
-        '<div style="font-size:13px;color:#64748b;margin-bottom:12px;line-height:1.6">ลงเวลาในหน้ารายวันให้แล้ว แต่<strong>ยังไม่ได้บันทึกลงฐานข้อมูล</strong> — ตรวจรายชื่อก่อน แล้วกดยืนยัน<br><span style="color:#94a3b8;font-size:12px">* ยังไม่ต้องตัดสินใจตอนนี้ก็ได้ กด ✕ ปิดไว้ก่อน แล้วมากดที่ปุ่ม "🆕 รอยืนยัน" ในแท็บจัดการข้อมูลพนักงานทีหลังได้</span></div>' +
+        '<div style="font-size:13px;color:#64748b;margin-bottom:12px;line-height:1.6">ลงเวลาในหน้ารายวันให้แล้ว แต่<strong>ยังไม่ได้บันทึกลงฐานข้อมูล</strong> — <strong style="color:#0369a1">แก้ไขชื่อ/รหัส/ตำแหน่งได้เลย</strong> แล้วกดยืนยัน<br><span style="color:#94a3b8;font-size:12px">* ยังไม่ต้องตัดสินใจตอนนี้ก็ได้ กด ✕ ปิดไว้ก่อน แล้วมากดปุ่ม "🆕 รอยืนยัน" ในแท็บจัดการข้อมูลพนักงานทีหลังได้</span></div>' +
         '<table style="width:100%;border-collapse:collapse;font-size:13px">' +
         '<thead><tr style="background:#f1f5f9;text-align:left">' +
-        '<th style="padding:6px 8px">#</th><th style="padding:6px 8px">ชื่อ-นามสกุล</th><th style="padding:6px 8px">ตำแหน่ง</th></tr></thead>' +
+        '<th style="padding:6px 8px;width:28px">#</th><th style="padding:6px 8px;width:90px">รหัส</th><th style="padding:6px 8px">ชื่อ-นามสกุล</th><th style="padding:6px 8px;width:110px">ชื่อเล่น</th><th style="padding:6px 8px">ตำแหน่ง</th></tr></thead>' +
         '<tbody>' + rows + '</tbody></table>' +
         '<div class="mac" style="margin-top:16px;gap:8px">' +
         '<button class="btn" style="background:#f8f9fc;color:#64748b;border-color:#e2e8f0" onclick="closeNewEmpReview()">ไว้ทีหลัง</button>' +
@@ -2859,6 +2904,14 @@
       try { renderEmp(); } catch (e) {}
     }
     async function confirmAddNewEmps() {
+      // อ่านค่าที่ผู้ใช้แก้ไขในตารางกลับเข้า object ก่อนบันทึก
+      var ovEl = document.getElementById('newemp-review');
+      if (ovEl) {
+        ovEl.querySelectorAll('input[data-nr]').forEach(function (inp) {
+          var idx = parseInt(inp.dataset.nr), f = inp.dataset.f;
+          if (__pendingNew[idx]) __pendingNew[idx][f] = inp.value.trim();
+        });
+      }
       var n = __pendingNew.length;
       for (var i = 0; i < __pendingNew.length; i++) {
         var e = __pendingNew[i]; delete e.pending;
