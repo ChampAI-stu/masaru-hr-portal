@@ -290,6 +290,11 @@ async function doSignup(){
   if(password.length < 6){ err.textContent='รหัสผ่านต้องอย่างน้อย 6 ตัว'; err.classList.remove('hide'); return; }
   if(!invite){ err.textContent='กรุณากรอกรหัสเชิญ'; err.classList.remove('hide'); return; }
 
+  // ตรวจรหัสเชิญกับค่ากลางที่ HR ตั้งไว้ (เก็บใน app_settings, ค่าเริ่มต้น MASARU-HR)
+  let validCode = 'MASARU-HR';
+  try { const { data } = await sb.from('app_settings').select('value').eq('key','signup_code').single(); if(data && data.value) validCode = data.value; } catch(e){}
+  if(invite !== validCode){ err.textContent='รหัสเชิญไม่ถูกต้อง — กรุณาขอรหัสจาก HR'; err.classList.remove('hide'); return; }
+
   $('signupBtn').disabled = true; $('signupBtn').textContent = 'กำลังสมัคร...';
   const { error } = await sb.auth.signUp({ email, password,
     options: { data: { user_role_preset: preset, invite_code: invite } } });
