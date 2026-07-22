@@ -647,6 +647,7 @@
     let filter = 'all';
     let pendingFile = null;
     let editInt = null;
+    let editHr = null;
     const roleLabel = r => r === 'exec' ? 'ผู้บริหาร' : 'HR';
 
     // ═══════════════════ HELPERS ═══════════════════
@@ -891,9 +892,19 @@
       // history (completed steps summary)
       let hist = '';
       if (a.hrNote || ['interview','offer','hired'].includes(st)) {
-        hist += `<div class="card"><div class="card-title"><i class="ti ti-file-search"></i>ผลคัดกรอง</div>
-          <div class="note-box">${esc(a.hrNote || '(ไม่ได้บันทึกความเห็น)')}</div>
-          ${a.hrBy ? `<div class="note-by"><i class="ti ti-user-check"></i>โดย ${esc(a.hrBy)}</div>` : ''}</div>`;
+        if (editHr === a.id) {
+          hist += `<div class="card"><div class="card-title"><i class="ti ti-file-search"></i>ผลคัดกรอง</div>
+            <textarea class="inp" id="edit-hrnote" style="width:100%;box-sizing:border-box;min-height:80px;resize:vertical">${esc(a.hrNote || '')}</textarea>
+            <div class="field" style="margin-top:8px"><label>ชื่อผู้ตรวจ</label><input class="inp" id="edit-hrby" value="${esc(a.hrBy || currentUser?.name || '')}"></div>
+            <div style="display:flex;gap:8px;margin-top:10px">
+              <button class="btn" onclick="cancelEditHr('${a.id}')">ยกเลิก</button>
+              <button class="btn btn-primary" onclick="saveHrNote('${a.id}')"><i class="ti ti-check"></i>บันทึกความเห็น</button>
+            </div></div>`;
+        } else {
+          hist += `<div class="card"><div class="card-title"><i class="ti ti-file-search"></i>ผลคัดกรอง${isExec ? '' : `<button class="name-edit-btn" style="margin-left:auto" onclick="editHrNote('${a.id}')" title="แก้ไขความเห็น"><i class="ti ti-pencil"></i></button>`}</div>
+            <div class="note-box">${esc(a.hrNote || '(ไม่ได้บันทึกความเห็น)')}</div>
+            ${a.hrBy ? `<div class="note-by"><i class="ti ti-user-check"></i>โดย ${esc(a.hrBy)}</div>` : ''}</div>`;
+        }
       }
       if (a.intDate && ['interview','offer','hired'].includes(st)) {
         if (editInt === a.id) {
@@ -1092,6 +1103,13 @@
       if (await dbUpdate(id, { intDate: d, intTime: t, intBy: by, status: 'interview' })) { showToast('บันทึกนัดสัมภาษณ์แล้ว'); await refresh(); }
     }
     function editInterview(id) { editInt = id; const a = getA(id); if (a) renderDetail(a); }
+    function editHrNote(id) { editHr = id; const a = getA(id); if (a) renderDetail(a); }
+    function cancelEditHr(id) { editHr = null; const a = getA(id); if (a) renderDetail(a); }
+    async function saveHrNote(id) {
+      const note = document.getElementById('edit-hrnote')?.value || '';
+      const by = document.getElementById('edit-hrby')?.value.trim() || currentUser?.name || '';
+      if (await dbUpdate(id, { hrNote: note, hrBy: by })) { editHr = null; showToast('บันทึกความเห็นแล้ว'); await refresh(); }
+    }
     function cancelEditInt(id) { editInt = null; const a = getA(id); if (a) renderDetail(a); }
     function editName(id) {
       const el = document.getElementById('dh-name');
