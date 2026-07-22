@@ -2221,14 +2221,18 @@
       document.getElementById('wfh-count').textContent = (wfhList || []).length;
       showModal('wfh-modal');
     }
-    function saveWfhList() {
+    async function saveWfhList() {
       var raw = document.getElementById('wfh-text').value.split('\n')
         .map(function (s) { return gClean(s); }).filter(function (s) { return s; });
       var seen = {}, list = [];
       raw.forEach(function (n) { var k = gStrip(n); if (!seen[k]) { seen[k] = true; list.push(n); } });
-      wfhList = list; ssave('wfh_list', wfhList); sbSaveSetting('wfh_list', wfhList);
+      wfhList = list; ssave('wfh_list', wfhList);
+      var okCloud = await sbSaveSetting('wfh_list', wfhList);
       closeModal('wfh-modal');
-      alert('✅ บันทึกรายชื่อ WFH แล้ว: ' + wfhList.length + ' รายชื่อ\n\nการนำเข้าครั้งต่อไป รายชื่อเหล่านี้จะถูกตั้งเป็น WFH ให้อัตโนมัติ');
+      var msg = '✅ บันทึกรายชื่อ WFH แล้ว: ' + wfhList.length + ' รายชื่อ';
+      if (!okCloud) msg += '\n\n⚠️ ยังบันทึกขึ้น Cloud ไม่ได้ (บันทึกในเครื่องนี้แล้ว)\nกรุณารัน hrtime_shared_setup.sql ใน Supabase เพื่อให้แชร์ข้ามเครื่องได้';
+      else msg += '\n\nการนำเข้าครั้งต่อไป รายชื่อเหล่านี้จะถูกตั้งเป็น WFH ให้อัตโนมัติ';
+      alert(msg);
     }
 
     // เทียบรายชื่อจาก "ไฟล์รายวันล่าสุดที่นำเข้ามา" กับฐานข้อมูล (ไม่ต้องเลือกไฟล์ใหม่)
@@ -2756,12 +2760,13 @@
       } catch (err) { console.warn('[Supabase] fetchSettings:', err.message); return null; }
     }
     async function sbSaveSetting(key, value) {
-      if (!SUPABASE_READY) return;
+      if (!SUPABASE_READY) return false;
       try {
         const { error } = await _sb.from('app_settings')
           .upsert({ key: key, value: value, updated_at: new Date().toISOString() }, { onConflict: 'key' });
         if (error) throw error;
-      } catch (err) { console.warn('[Supabase] saveSetting:', err.message); }
+        return true;
+      } catch (err) { console.warn('[Supabase] saveSetting:', err.message); return false; }
     }
     function applySettings(st) {
       if (!st) return;
@@ -2791,11 +2796,13 @@
       _rtTimer = setTimeout(async function () {
         var ce = await sbFetchEmployees(); if (ce) { emps = ce; ssave('employees', emps); }
         var cm = await sbFetchMovements(); if (cm) { mvs = cm; ssave('movements', mvs); }
-        var st = await sbFetchSettings(); if (st) applySettings(st);
         render(); fillFilters();
         try { renderEmp(); } catch (e) {}
       }, 800);
     }
+    // อัปเดต "เฉพาะ" รายชื่อ WFH/ยกเว้น — เรียกเมื่อ app_settings เปลี่ยนจริงเท่านั้น
+    // (ไม่ให้ realtime ของพนักงาน/ลงเวลา มาทับรายชื่อที่เพิ่งบันทึก)
+    async function refreshSettings() { var st = await sbFetchSettings(); if (st) applySettings(st); }
     function startRealtime() {
       if (!SUPABASE_READY || _rtChannel) return;
       _rtChannel = _sb.channel('hrtime-shared')
@@ -2809,7 +2816,7 @@
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'employees' }, function () { scheduleRefresh(); flashLive('อัปเดตข้อมูลพนักงาน'); })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'movements' }, function () { scheduleRefresh(); })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, function () { scheduleRefresh(); flashLive('อัปเดตรายชื่อ WFH/ยกเว้น'); })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, function () { refreshSettings(); flashLive('อัปเดตรายชื่อ WFH/ยกเว้น'); })
         .subscribe();
     }
 
