@@ -454,6 +454,15 @@
       <div class="field"><label>อีเมล</label><input id="l-email" type="email" placeholder="hr@masaru.com" autocomplete="username"></div>
       <div class="field"><label>รหัสผ่าน</label><input id="l-pass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
       <button class="login-btn" id="login-btn" onclick="doLogin()">เข้าสู่ระบบ</button>
+      <div style="text-align:right;margin-top:8px"><a href="#" id="to-signup" onclick="document.getElementById('signup-panel').style.display='block';this.style.display='none';return false" style="font-size:12px;color:#64748b;text-decoration:none">สมัครสมาชิก (HR) →</a></div>
+    </div>
+    <div class="login-box" id="signup-panel" style="display:none;margin-top:14px">
+      <div class="login-sub">สมัครสมาชิก · ต้องมีโค้ดเชิญ</div>
+      <div class="field"><label>โค้ดเชิญ</label><input id="su-invite" placeholder="ขอจาก HR" autocomplete="off"></div>
+      <div class="field"><label>อีเมล</label><input id="su-email" type="email" placeholder="hr@masaru.com"></div>
+      <div class="field"><label>รหัสผ่าน (อย่างน้อย 6 ตัว)</label><input id="su-pass" type="password" onkeydown="if(event.key==='Enter')doSignup()"></div>
+      <button class="login-btn" id="signup-btn" onclick="doSignup()">สมัครสมาชิก</button>
+      <div id="su-msg" style="font-size:13px;margin-top:10px;text-align:center;min-height:18px"></div>
     </div>
   </div>
 
@@ -726,6 +735,23 @@
     }
 
     // ═══════════════════ AUTH ═══════════════════
+    async function doSignup() {
+      const invite = document.getElementById('su-invite').value.trim();
+      const email = document.getElementById('su-email').value.trim();
+      const pass = document.getElementById('su-pass').value;
+      const msg = document.getElementById('su-msg'); msg.style.color = '#dc2626'; msg.textContent = '';
+      if (!invite) { msg.textContent = 'กรุณากรอกโค้ดเชิญ'; return; }
+      if (!email) { msg.textContent = 'กรุณากรอกอีเมล'; return; }
+      if (pass.length < 6) { msg.textContent = 'รหัสผ่านต้องอย่างน้อย 6 ตัว'; return; }
+      let validCode = 'MASARU-HR';
+      try { const { data } = await _sb.from('app_settings').select('value').eq('key', 'signup_code').single(); if (data && data.value) validCode = data.value; } catch (e) {}
+      if (invite !== validCode) { msg.textContent = 'โค้ดเชิญไม่ถูกต้อง — กรุณาขอจาก HR'; return; }
+      const btn = document.getElementById('signup-btn'); btn.disabled = true; btn.textContent = 'กำลังสมัคร...';
+      const { error } = await _sb.auth.signUp({ email, password: pass });
+      btn.disabled = false; btn.textContent = 'สมัครสมาชิก';
+      if (error) { msg.textContent = 'สมัครไม่สำเร็จ: ' + error.message; return; }
+      msg.style.color = '#059669'; msg.textContent = '✅ สมัครสำเร็จ! ยืนยันอีเมลแล้วเข้าสู่ระบบได้เลย';
+    }
     async function doLogin() {
       const email = document.getElementById('l-email').value.trim();
       const pass = document.getElementById('l-pass').value;
