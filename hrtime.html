@@ -1730,7 +1730,7 @@
 
       // --- KPI Cards ---
       var today = dk(cur);
-      var kpiWork=0,kpiSick=0,kpiAbsent=0,kpiLate=0,kpiEmpty=0,kpiWfh=0,kpiVac=0,kpiPersonal=0;
+      var kpiWork=0,kpiSick=0,kpiAbsent=0,kpiLate=0,kpiEmpty=0,kpiWfh=0,kpiVac=0,kpiPersonal=0,kpiWeekOff=0;
       emps.forEach(function(e){
         var c = normalizeCode(ge(e.id, today).code);
         if(c==='1'||c==='b') kpiWork++;
@@ -1741,9 +1741,12 @@
         else if(c==='ข') kpiAbsent++;
         else if(c==='ร') kpiVac++;
         else if(c==='ก'||c==='อ') kpiPersonal++;
+        else if(c==='w') kpiWeekOff++;
         else if(!c) kpiEmpty++;
       });
-      var rate = emps.length ? ((kpiWork / emps.length)*100).toFixed(1) : 0;
+      // อัตราการมางาน: ไม่นับคนที่ "หยุดประจำสัปดาห์" ในตัวหาร (เพราะเป็นวันหยุดตามกะ)
+      var rateBase = emps.length - kpiWeekOff;
+      var rate = rateBase > 0 ? ((kpiWork / rateBase)*100).toFixed(1) : 0;
       var kpis = [
         {label:'พนักงานทั้งหมด', val:emps.length, color:'#0e1c38', bg:'#eef1f7'},
         {label:'มาวันนี้', val:kpiWork, color:'#047857', bg:'#ecfdf5'},
@@ -1754,6 +1757,7 @@
         {label:'WFH', val:kpiWfh, color:'#0369a1', bg:'#e0f2fe'},
         {label:'ลาพักร้อน', val:kpiVac, color:'#7c3aed', bg:'#f5f3ff'},
         {label:'ลากิจ', val:kpiPersonal, color:'#374151', bg:'#f9fafb'},
+        {label:'หยุดสัปดาห์', val:kpiWeekOff, color:'#475569', bg:'#f1f5f9'},
         {label:'ยังไม่กรอก', val:kpiEmpty, color:'#64748b', bg:'#f1f5f9'}
       ];
       var kpiEl = document.getElementById('dash-kpi');
