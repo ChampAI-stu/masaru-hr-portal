@@ -2822,45 +2822,66 @@
       ov.style.cssText = 'position:fixed;inset:0;background:rgba(244,246,248,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;gap:12px';
       ov.innerHTML = '<div style="font-size:32px">☁️</div><div style="font-size:15px;font-weight:700;color:#16233f">กำลังซิงก์ข้อมูลขึ้น Cloud...</div>';
       document.body.appendChild(ov);
+
+      var report = [], orphan = 0;
+      // อัปโหลดแบบไม่หยุดกลางคัน: ลองทีละตาราง เก็บผลไว้รายงาน
+      async function pushBulk(table, rows, conflict) {
+        if (!rows.length) { report.push('• ' + table + ': ไม่มีข้อมูล'); return; }
+        var okN = 0, errMsg = '';
+        for (var i = 0; i < rows.length; i += 500) {
+          try {
+            var r = await _sb.from(table).upsert(rows.slice(i, i + 500), { onConflict: conflict });
+            if (r.error) { errMsg = r.error.message; break; }
+            okN += Math.min(500, rows.length - i);
+          } catch (e) { errMsg = e.message || String(e); break; }
+        }
+        report.push((errMsg ? '❌ ' : '✅ ') + table + ': ' + (errMsg ? errMsg : okN + ' แถว'));
+      }
+
       try {
-        // 1) ดันพนักงานขึ้น (bulk)
+        // 1) พนักงาน
         var eRows = (emps || []).filter(function (e) { return e.id && e.name; })
           .map(function (e) { return { id: e.id, name: e.name, nickname: e.nickname || null, position: e.position || null, start_date: e.startDate || null }; });
-        for (var i = 0; i < eRows.length; i += 500) {
-          var r = await _sb.from('employees').upsert(eRows.slice(i, i + 500), { onConflict: 'id' });
-          if (r.error) throw r.error;
-        }
-        // 2) ดันการลงเวลาขึ้น (bulk)
-        // 2) ดันการลงเวลาขึ้น (bulk) — ข้ามรายการที่ไม่มีพนักงานอยู่จริง (กัน foreign key error)
+        await pushBulk('employees', eRows, 'id');
+
+        // 2) การลงเวลา — ข้ามรายการที่ไม่มีพนักงานอยู่จริง (กัน foreign key)
         var validIds = {}; eRows.forEach(function (e) { validIds[e.id] = true; });
-        var aRows = [], orphan = 0;
+        var aRows = [];
         Object.keys(att).forEach(function (d) {
           Object.keys(att[d]).forEach(function (eid) {
             if (!validIds[eid]) { orphan++; return; }
             var c = att[d][eid]; aRows.push({ employee_id: eid, date: d, code: c.code || '', note: c.note || '' });
           });
         });
-        for (var i = 0; i < aRows.length; i += 500) {
-          var r2 = await _sb.from('attendance').upsert(aRows.slice(i, i + 500), { onConflict: 'employee_id,date' });
-          if (r2.error) throw r2.error;
-        }
-        // 3) ดันการเคลื่อนไหวขึ้น (bulk)
+        await pushBulk('attendance', aRows, 'employee_id,date');
+
+        // 3) การเคลื่อนไหว
         var mRows = (mvs || []).map(function (m) { return { id: m.id, type: m.type, name: m.name, nick: m.nick || '', pos: m.pos || '', date: m.date, note: m.note || '' }; });
-        for (var i = 0; i < mRows.length; i += 500) {
-          if (mRows.length) { var r3 = await _sb.from('movements').upsert(mRows.slice(i, i + 500), { onConflict: 'id' }); if (r3.error) throw r3.error; }
-        }
-        // 4) ดันรายชื่อ WFH/ยกเว้น (settings) ขึ้น
-        await sbSaveSetting('wfh_list', wfhList);
-        await sbSaveSetting('exclude_list', excludeList);
+        await pushBulk('movements', mRows, 'id');
+
+        // 4) รายชื่อ WFH/ยกเว้น
+        var okW = await sbSaveSetting('wfh_list', wfhList);
+        var okE = await sbSaveSetting('exclude_list', excludeList);
+        report.push((okW && okE ? '✅ ' : '❌ ') + 'settings (WFH/ยกเว้น)' + (okW && okE ? '' : ': เขียนไม่ได้ (ตรวจ RLS/ตาราง app_settings)'));
+
         // 5) ดึง Cloud ลงมาเป็นหลัก
         await mergeFromCloud();
         await loadSharedSettings();
         render(); fillFilters(); try { renderEmp(); } catch (e) {}
         ov.remove();
-        alert('✅ ซิงก์เรียบร้อย!\n\n👥 พนักงาน: ' + eRows.length + ' คน\n🕐 ลงเวลา: ' + aRows.length + ' รายการ' + (orphan ? ' (ข้าม ' + orphan + ' รายการที่ไม่มีพนักงานอยู่จริง)' : '') + '\n🔁 การเคลื่อนไหว: ' + mRows.length + '\n\n👉 ให้เครื่องอื่นกด "ซิงก์ให้ตรงกัน" หรือรีเฟรช เพื่อได้ข้อมูลชุดเดียวกัน');
+
+        var hasErr = report.some(function (x) { return x.charAt(0) === '❌'; });
+        var msg = (hasErr ? '⚠️ ซิงก์เสร็จ แต่มีบางส่วนไม่สำเร็จ:\n\n' : '✅ ซิงก์เรียบร้อย!\n\n') + report.join('\n');
+        if (orphan) msg += '\n\n(ข้าม ' + orphan + ' รายการลงเวลาที่ไม่มีพนักงาน)';
+        if (hasErr) {
+          msg += '\n\n💡 วิธีแก้ตามข้อความ error:';
+          msg += '\n• "violates foreign key" = มีข้อมูลอ้างถึงพนักงานที่ไม่มีแล้ว (ระบบข้ามให้บางส่วน)';
+          msg += '\n• "row-level security"/"permission"/401-403 = ตารางนั้นยังไม่อนุญาตให้เขียน — ต้องตั้ง RLS policy ใน Supabase';
+        }
+        alert(msg);
       } catch (err) {
         ov.remove();
-        alert('❌ ซิงก์ไม่สำเร็จ: ' + (err.message || err));
+        alert('❌ ซิงก์ไม่สำเร็จ: ' + (err.message || err) + (report.length ? '\n\n' + report.join('\n') : ''));
       }
     }
 
