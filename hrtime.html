@@ -1073,6 +1073,8 @@
           '</tr>';
       }).join('');
     }
+    // พนักงานที่ยังไม่ยืนยันเข้าฐานข้อมูล (pending) ต้องเขียน local เท่านั้น — กัน foreign key
+    function isPending(eid) { var e = emps.find(function (x) { return x.id === eid; }); return !!(e && e.pending); }
     function onMinsChange(inp) {
       var date = dk(cur), eid = inp.dataset.eid;
       var prev = ge(eid, date);
@@ -1080,7 +1082,7 @@
       var parts = splitNote(prev.note || '');
       var baseAuto = parts.auto.replace(/สาย \d+ นาที\s*/, '').trim();
       var newAuto = mins > 0 ? (baseAuto ? baseAuto + ' สาย ' + mins + ' นาที' : 'สาย ' + mins + ' นาที') : baseAuto;
-      se(eid, date, prev.code || 'ส', joinNote(newAuto, parts.remark));
+      se(eid, date, prev.code || 'ส', joinNote(newAuto, parts.remark), isPending(eid));
     }
     // สร้าง <option> สำหรับ dropdown สถานะ พร้อมเลือกค่าปัจจุบัน
     function statusOptions(selected) {
@@ -1092,7 +1094,7 @@
     }
     function onCC(inp) {
       var date = dk(cur), eid = inp.dataset.eid, val = normalizeCode(inp.value);
-      var prev = ge(eid, date); se(eid, date, val, prev.note || '');
+      var prev = ge(eid, date); se(eid, date, val, prev.note || '', isPending(eid));
       inp.className = 'ci cs ' + (CL[val] || '');
       renderSumBar();
       // ถ้าเปลี่ยนเป็น "มาสาย" หรือกลับ ต้อง refresh แถวเพื่อโชว์/ซ่อนช่องนาที
@@ -1102,7 +1104,7 @@
       var date = dk(cur), eid = inp.dataset.eid, prev = ge(eid, date);
       var parts = splitNote(prev.note || '');
       // แก้/ลบเฉพาะหมายเหตุที่พิมพ์เอง — ส่วนข้อมูลกะ/เวลา (auto) คงไว้เสมอ
-      se(eid, date, prev.code || '', joinNote(parts.auto, inp.value.trim()));
+      se(eid, date, prev.code || '', joinNote(parts.auto, inp.value.trim()), isPending(eid));
     }
     function onNK(e, inp) {
       if (e.key === 'Enter') { e.preventDefault(); var n = inp.closest('tr').nextElementSibling; if (n) { var ci = n.querySelector('.ci'); if (ci) ci.focus(); } }
