@@ -2025,7 +2025,8 @@
                   // ---- Map สถานะ (จับแบบ substring เพราะ Y อาจมีหลายค่ารวมกัน) ----
                   var code = '';
                   var note = shift;
-                  var isHolidayShift = shift.indexOf('วันหยุด') >= 0;
+                  var isWeekOffShift = shift.indexOf('หยุดสัปดาห์') >= 0; // กะ "หยุดสัปดาห์" = หยุดประจำสัปดาห์
+                  var isHolidayShift = shift.indexOf('วันหยุด') >= 0;    // วันหยุด / วันหยุดชดเชย
 
                   if (remark.indexOf('ลาพักร้อน') >= 0) {
                     code = 'ร'; note = 'ลาพักร้อน | ' + shift;
@@ -2037,11 +2038,14 @@
                     // อยู่ในรายชื่อ WFH → บังคับเป็น WFH เสมอ (ไม่นับขาด/ลืมสแกน แม้ไม่ได้สแกน)
                     code = 'f';
                     note = 'WFH | ' + shift + (checkin ? ' | เข้า ' + checkin.split(/\s+/).pop() : '');
+                  } else if (isWeekOffShift) {
+                    // กะเป็น "หยุดสัปดาห์" → เข้าช่องหยุดประจำสัปดาห์ (มาก่อนการเช็กขาด)
+                    code = 'w'; note = shift;
+                  } else if (isHolidayShift) {
+                    code = 'h'; note = shift;
                   } else if (remark.indexOf('ขาด') >= 0 && !checkin) {
                     // ขาดจริงเฉพาะเมื่อไม่มีเวลาสแกนเข้า — ถ้ามีสแกนเข้าถือว่ามาทำงาน
                     code = 'ข'; note = 'ขาดงาน | ' + shift;
-                  } else if (isHolidayShift) {
-                    code = 'h'; note = shift;
                   } else if (checkin) {
                     // มีเวลาเข้า = มา → ตรวจสาย (แม้สถานะจะเป็น 'ผิดพลาด' ที่แปลว่าลืมสแกนออก ก็ยังถือว่ามา)
                     var shiftStartMins = parseHHMM(SHIFT_START[shift]);
