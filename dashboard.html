@@ -211,6 +211,18 @@ const DIMS = [["E","I"],["S","N"],["T","F"],["J","P"]];
 
 const $ = id => document.getElementById(id);
 const ini = n => (n||"?").trim().charAt(0).toUpperCase();
+function fmtDateTime(iso){
+  if(!iso) return "";
+  const d = new Date(iso); if(isNaN(d)) return "";
+  const day = d.toLocaleDateString('th-TH', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  const time = d.toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' });
+  return day + " " + time + " น.";
+}
+function fmtShort(iso){
+  if(!iso) return "";
+  const d=new Date(iso); if(isNaN(d)) return "";
+  return d.toLocaleDateString('th-TH',{day:'numeric',month:'short'}) + " " + d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}) + " น.";
+}
 const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
 let DATA = {};      // applicant_id -> {id,name,pos,mbti,bosi}
@@ -311,7 +323,8 @@ async function loadData(){
     const s = row.quiz_sessions; if(!s || !s.quiz_respondents) continue;
     const a = s.quiz_respondents;
     const type = s.quizzes ? s.quizzes.type : null;
-    if(!DATA[a.id]) DATA[a.id] = { id:a.id, name:a.name, pos:a.pos, mbti:null, bosi:null };
+    if(!DATA[a.id]) DATA[a.id] = { id:a.id, name:a.name, pos:a.pos, mbti:null, bosi:null, submittedAt:null };
+    if(row.computed_at && (!DATA[a.id].submittedAt || row.computed_at > DATA[a.id].submittedAt)) DATA[a.id].submittedAt = row.computed_at;
     if(type==="MBTI") DATA[a.id].mbti = { type:row.result_type, scores:row.scores };
     if(type==="BOSI") DATA[a.id].bosi = { type:row.result_type, scores:row.scores };
   }
@@ -331,6 +344,7 @@ function renderList(){
         ${a.mbti?`<span class="tag mbti">${esc(a.mbti.type)}</span>`:""}
         ${a.bosi?`<span class="tag bosi">${esc(BOSI[a.bosi.type]?BOSI[a.bosi.type][0]:a.bosi.type)}</span>`:""}
       </div>
+      ${a.submittedAt?`<div style="font-size:11px;color:#94a3b8;margin-top:6px"><i class="ti ti-clock"></i> ${esc(fmtShort(a.submittedAt))}</div>`:""}
     </div>`).join("");
   $("list").querySelectorAll(".cand").forEach(el =>
     el.onclick = () => { selId = el.dataset.id; renderList(); renderDetail(DATA[selId]); });
@@ -358,7 +372,7 @@ function renderDetail(a){
   $("detail").innerHTML = `
     <div class="head">
       <div class="av">${ini(a.name)}</div>
-      <div><div class="nm">${esc(a.name)}</div><div class="ps">${esc(a.pos||"—")}</div></div>
+      <div><div class="nm">${esc(a.name)}</div><div class="ps">${esc(a.pos||"—")}</div>${a.submittedAt?`<div style="font-size:12px;color:#64748b;margin-top:4px"><i class="ti ti-clock"></i> ส่งเมื่อ ${esc(fmtDateTime(a.submittedAt))}</div>`:""}</div>
       <div class="delbtns">
         <button class="del2" id="pdf-btn"><i class="ti ti-file-type-pdf"></i> ดาวน์โหลด PDF</button>
         <button class="del" id="del-btn">ลบผู้ทำแบบทดสอบ</button>
@@ -524,7 +538,7 @@ function reportNode(a){
       <div class="pd-htxt">รายงานผลแบบประเมินบุคลิกภาพผู้สมัคร<br><span>MBTI &amp; BOSI · MASARU HR</span></div>
     </div>
     <div class="pd-name"><div class="pd-av">${ini(a.name)}</div>
-      <div><div class="nm">${esc(a.name)}</div><div class="ps">${esc(a.pos||"—")}</div></div>
+      <div><div class="nm">${esc(a.name)}</div><div class="ps">${esc(a.pos||"—")}</div>${a.submittedAt?`<div style="font-size:12px;color:#64748b;margin-top:4px"><i class="ti ti-clock"></i> ส่งเมื่อ ${esc(fmtDateTime(a.submittedAt))}</div>`:""}</div>
       <div class="pd-date">ออกรายงาน: ${new Date().toLocaleDateString("th-TH",{day:"numeric",month:"long",year:"numeric"})}</div>
     </div>
     <div class="pd-sec">
