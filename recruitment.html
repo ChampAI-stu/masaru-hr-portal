@@ -1371,7 +1371,7 @@
       <div class="hero">
         <div style="flex:1;min-width:0">
           <div class="cand-name">${esc(a.name)}<span class="badge">${st.label}</span></div>
-          <div class="cand-pos">${esc(a.pos || '—')}</div>
+          <div class="cand-pos"><span style="color:#6c7671;font-weight:600">ตำแหน่ง:</span> ${esc(a.pos || '—')}</div>
           <div class="cand-meta">${esc(a.src || '—')}${a.phone ? ' · ' + esc(a.phone) : ''} · รับสมัคร ${esc(a.date)}</div>
         </div>
       </div>
