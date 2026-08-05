@@ -947,7 +947,7 @@
       }
 
       // action block (depends on status) — ผู้บริหารดูอย่างเดียว ไม่มี action
-      const action = isExec ? '' : actionBlock(a, st);
+      const action = isExec ? '' : (actionBlock(a, st) + revertBtn(a, st));
 
       el.innerHTML = `
         <div class="dh">
@@ -1101,6 +1101,33 @@
         showToast(next ? 'ทำเครื่องหมายสนใจแล้ว' : 'ยกเลิกสนใจแล้ว');
         await refresh();
       }
+    }
+
+    // ── ย้อนกระบวนการ (เผื่อกดผิดขั้น) ──
+    function prevStage(s) {
+      var i = FLOW.indexOf(s);
+      if (i > 0) return FLOW[i - 1];
+      if (s === 'rejected' || s === 'cancelled') return 'new';
+      return null;
+    }
+    function revertBtn(a, st) {
+      var prev = prevStage(st);
+      if (!prev) return '';
+      return `<div style="text-align:center;margin-top:12px">
+        <button class="btn btn-ghost" onclick="actRevert('${a.id}')" style="font-size:13px;color:#64748b">
+          <i class="ti ti-arrow-back-up"></i> ย้อนกลับไปขั้น "${stMeta(prev).label}"</button></div>`;
+    }
+    async function actRevert(id) {
+      var a = getA(id); if (!a) return;
+      var cur = a.status || 'new';
+      var prev = prevStage(cur);
+      if (!prev) { showToast('อยู่ขั้นแรกแล้ว ย้อนกลับไม่ได้', true); return; }
+      var ok = await askConfirm(
+        'ย้อนสถานะจาก "<b>' + stMeta(cur).label + '</b>" กลับไป "<b>' + stMeta(prev).label + '</b>"?' +
+        '<br><span style="color:#64748b;font-size:13px">ข้อมูลที่กรอกไว้จะยังอยู่ครบ แค่เปลี่ยนขั้นตอน</span>',
+        { title: 'ย้อนกระบวนการ', okText: 'ย้อนกลับ' });
+      if (!ok) return;
+      if (await dbUpdate(id, { status: prev })) { showToast('ย้อนไปขั้น "' + stMeta(prev).label + '" แล้ว'); await refresh(); }
     }
 
     async function actScreen(id) {
