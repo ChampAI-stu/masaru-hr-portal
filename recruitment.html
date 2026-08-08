@@ -441,7 +441,17 @@
     .add-btn:active,.icon-btn:active,.name-mini:active{ transform:translateY(1px); }
     .sb:focus-within{ box-shadow:0 0 0 3px var(--green-soft); }
 
-  </style>
+      .imode{display:inline-flex;gap:6px;flex-wrap:wrap}
+    .imode .mbtn{border:1.5px solid #dfe3e8;background:#fff;border-radius:8px;padding:7px 12px;font:inherit;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;color:#556066;transition:.12s}
+    .imode .mbtn:hover{border-color:#c4ccd3}
+    .imode .mbtn.active[data-mode=onsite]{border-color:#2e7d5b;background:#e7f4ec;color:#1f6f4a}
+    .imode .mbtn.active[data-mode=online]{border-color:#1f6f9c;background:#e2eff8;color:#175a80}
+    .mbadge{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap;vertical-align:middle}
+    .mbadge.onsite{background:#e7f4ec;color:#1f6f4a}
+    .mbadge.online{background:#e2eff8;color:#175a80}
+    .mlink{color:#1f6f9c;font-weight:600;text-decoration:none}
+    .mlink:hover{text-decoration:underline}
+</style>
 </head>
 
 <body>
@@ -695,7 +705,7 @@
     const COLMAP = {
       name: 'name', pos: 'pos', src: 'src', phone: 'phone', date: 'date', status: 'status',
       resumePath: 'resume_path', hrNote: 'hr_note', hrBy: 'hr_by',
-      intDate: 'int_date', intTime: 'int_time', intBy: 'int_by',
+      intDate: 'int_date', intTime: 'int_time', intBy: 'int_by', intMode: 'int_mode', intLink: 'int_link',
       result: 'result', resultNote: 'result_note', agreedSalary: 'agreed_salary',
       offerSalary: 'offer_salary', offerStart: 'offer_start', offerType: 'offer_type', offerBenefits: 'offer_benefits',
       offerSentAt: 'offer_sent_at', offerChannel: 'offer_channel', offerEmail: 'offer_email',
@@ -709,7 +719,7 @@
         id: r.id, name: r.name, pos: r.pos, src: r.src || '', phone: r.phone || '', date: r.date || '',
         status: r.status || 'new', resumePath: r.resume_path || '',
         hrNote: r.hr_note || '', hrBy: r.hr_by || '',
-        intDate: r.int_date || '', intTime: r.int_time || '', intBy: r.int_by || '',
+        intDate: r.int_date || '', intTime: r.int_time || '', intBy: r.int_by || '', intMode: r.int_mode || 'onsite', intLink: r.int_link || '',
         result: r.result || '', resultNote: r.result_note || '', agreedSalary: r.agreed_salary || '',
         offerSalary: r.offer_salary || '', offerStart: r.offer_start || '', offerType: r.offer_type || 'พนักงานประจำ',
         offerBenefits: r.offer_benefits || '', offerSentAt: r.offer_sent_at || '', offerChannel: r.offer_channel || 'Email',
@@ -930,6 +940,8 @@
               <div class="field"><label>เวลา</label><input type="time" class="inp" id="ei-time" value="${esc(a.intTime)}"></div>
               <div class="field"><label>ผู้สัมภาษณ์</label><input class="inp" id="ei-by" value="${esc(a.intBy)}" placeholder="ชื่อผู้สัมภาษณ์"></div>
             </div>
+            <div class="field"><label>รูปแบบการสัมภาษณ์</label><div class="imode" id="ei-modeseg" data-link="ei-linkwrap"><button type="button" class="mbtn ${a.intMode==='online'?'':'active'}" data-mode="onsite" onclick="pickMode(this)"><i class="ti ti-building"></i>ออนไซต์</button><button type="button" class="mbtn ${a.intMode==='online'?'active':''}" data-mode="online" onclick="pickMode(this)"><i class="ti ti-video"></i>ออนไลน์</button></div></div>
+            <div class="field" id="ei-linkwrap" style="display:${a.intMode==='online'?'':'none'}"><label>ลิงก์ประชุม (Google Meet / Zoom)</label><input class="inp" id="ei-link" value="${esc(a.intLink)}" placeholder="วางลิงก์เข้าห้องสัมภาษณ์..."></div>
             <div class="btn-row">
               <button class="btn" onclick="cancelEditInt('${a.id}')">ยกเลิก</button>
               <button class="btn btn-primary" onclick="saveEditInt('${a.id}')"><i class="ti ti-check"></i>บันทึกการแก้ไข</button>
@@ -941,13 +953,13 @@
               <span style="display:flex;align-items:center;gap:7px"><i class="ti ti-calendar-event"></i>การสัมภาษณ์</span>
               ${isExec ? '' : `<button class="icon-btn" style="text-transform:none;letter-spacing:0" onclick="editInterview('${a.id}')"><i class="ti ti-pencil"></i>แก้ไขวัน/เวลา</button>`}
             </div>
-            <div class="note-box">📅 ${esc(thDate(a.intDate))} เวลา ${esc(a.intTime)} น.${a.intBy ? ' · ผู้สัมภาษณ์: ' + esc(a.intBy) : ''}</div>
+            <div class="note-box">📅 ${esc(thDate(a.intDate))} เวลา ${esc(a.intTime)} น.${a.intBy ? ' · ผู้สัมภาษณ์: ' + esc(a.intBy) : ''} ${modeBadge(a.intMode)}${a.intMode === 'online' && a.intLink ? ` · <a href="${esc(a.intLink)}" target="_blank" rel="noopener" class="mlink"><i class="ti ti-external-link"></i>เข้าห้องสัมภาษณ์</a>` : ''}</div>
             ${a.result ? `<div class="note-box" style="margin-top:8px">${a.result === 'pass' ? '✅ ผ่านการสัมภาษณ์' : '❌ ไม่ผ่าน'}${a.resultNote ? ' — ' + esc(a.resultNote) : ''}${a.agreedSalary ? `<br>💰 เงินเดือนที่ตกลง: <b>${money(a.agreedSalary)} บาท</b>` : ''}</div>` : ''}</div>`;
         }
       }
 
       // action block (depends on status) — ผู้บริหารดูอย่างเดียว ไม่มี action
-      const action = isExec ? '' : (actionBlock(a, st) + revertBtn(a, st));
+      const action = isExec ? '' : actionBlock(a, st);
 
       el.innerHTML = `
         <div class="dh">
@@ -994,6 +1006,8 @@
             <div class="field"><label>เวลา</label><input type="time" class="inp" id="f-inttime" value="09:00"></div>
             <div class="field"><label>ผู้สัมภาษณ์</label><input class="inp" id="f-intby" value="${esc(currentUser?.name || '')}" placeholder="ชื่อผู้สัมภาษณ์"></div>
           </div>
+          <div class="field"><label>รูปแบบการสัมภาษณ์</label><div class="imode" id="f-modeseg" data-link="f-linkwrap"><button type="button" class="mbtn active" data-mode="onsite" onclick="pickMode(this)"><i class="ti ti-building"></i>ออนไซต์</button><button type="button" class="mbtn" data-mode="online" onclick="pickMode(this)"><i class="ti ti-video"></i>ออนไลน์</button></div></div>
+          <div class="field" id="f-linkwrap" style="display:none"><label>ลิงก์ประชุม (Google Meet / Zoom)</label><input class="inp" id="f-intlink" placeholder="วางลิงก์เข้าห้องสัมภาษณ์..."></div>
           <div class="btn-row">
             <button class="btn btn-danger btn-ghost" onclick="actReject('${a.id}','ไม่ผ่านการคัดกรอง')"><i class="ti ti-x"></i>ไม่ผ่าน</button>
             <button class="btn btn-primary" onclick="actSchedule('${a.id}')"><i class="ti ti-calendar-check"></i>บันทึกนัดสัมภาษณ์</button>
@@ -1103,33 +1117,6 @@
       }
     }
 
-    // ── ย้อนกระบวนการ (เผื่อกดผิดขั้น) ──
-    function prevStage(s) {
-      var i = FLOW.indexOf(s);
-      if (i > 0) return FLOW[i - 1];
-      if (s === 'rejected' || s === 'cancelled') return 'new';
-      return null;
-    }
-    function revertBtn(a, st) {
-      var prev = prevStage(st);
-      if (!prev) return '';
-      return `<div style="text-align:center;margin-top:12px">
-        <button class="btn btn-ghost" onclick="actRevert('${a.id}')" style="font-size:13px;color:#64748b">
-          <i class="ti ti-arrow-back-up"></i> ย้อนกลับไปขั้น "${stMeta(prev).label}"</button></div>`;
-    }
-    async function actRevert(id) {
-      var a = getA(id); if (!a) return;
-      var cur = a.status || 'new';
-      var prev = prevStage(cur);
-      if (!prev) { showToast('อยู่ขั้นแรกแล้ว ย้อนกลับไม่ได้', true); return; }
-      var ok = await askConfirm(
-        'ย้อนสถานะจาก "<b>' + stMeta(cur).label + '</b>" กลับไป "<b>' + stMeta(prev).label + '</b>"?' +
-        '<br><span style="color:#64748b;font-size:13px">ข้อมูลที่กรอกไว้จะยังอยู่ครบ แค่เปลี่ยนขั้นตอน</span>',
-        { title: 'ย้อนกระบวนการ', okText: 'ย้อนกลับ' });
-      if (!ok) return;
-      if (await dbUpdate(id, { status: prev })) { showToast('ย้อนไปขั้น "' + stMeta(prev).label + '" แล้ว'); await refresh(); }
-    }
-
     async function actScreen(id) {
       const note = document.getElementById('f-hrnote')?.value || '';
       const by = document.getElementById('f-hrby')?.value.trim() || currentUser?.name || '';
@@ -1140,9 +1127,10 @@
       const d = document.getElementById('f-intd')?.value;
       const t = document.getElementById('f-inttime')?.value || '09:00';
       const by = document.getElementById('f-intby')?.value.trim() || '';
+      const mode = readMode('f-modeseg'); const link = mode === 'online' ? (document.getElementById('f-intlink')?.value.trim() || '') : '';
       if (!d) { showToast('กรุณาเลือกวันที่สัมภาษณ์', true); return; }
       if (!await askConfirm(`นัดสัมภาษณ์วันที่ <b>${thDate(d)}</b> เวลา <b>${t} น.</b>?`, { title: 'บันทึกนัดสัมภาษณ์', okText: 'บันทึก' })) return;
-      if (await dbUpdate(id, { intDate: d, intTime: t, intBy: by, status: 'interview' })) { showToast('บันทึกนัดสัมภาษณ์แล้ว'); await refresh(); }
+      if (await dbUpdate(id, { intDate: d, intTime: t, intBy: by, intMode: mode, intLink: link, status: 'interview' })) { showToast('บันทึกนัดสัมภาษณ์แล้ว'); await refresh(); }
     }
     function editInterview(id) { editInt = id; const a = getA(id); if (a) renderDetail(a); }
     function editHrNote(id) { editHr = id; const a = getA(id); if (a) renderDetail(a); }
@@ -1173,9 +1161,10 @@
       const d = document.getElementById('ei-date')?.value;
       const t = document.getElementById('ei-time')?.value || '';
       const by = document.getElementById('ei-by')?.value.trim() || '';
+      const mode = readMode('ei-modeseg'); const link = mode === 'online' ? (document.getElementById('ei-link')?.value.trim() || '') : '';
       if (!d) { showToast('กรุณาเลือกวันที่', true); return; }
       if (!t) { showToast('กรุณาระบุเวลา', true); return; }
-      if (await dbUpdate(id, { intDate: d, intTime: t, intBy: by })) { editInt = null; showToast('แก้ไขนัดสัมภาษณ์แล้ว'); await refresh(); }
+      if (await dbUpdate(id, { intDate: d, intTime: t, intBy: by, intMode: mode, intLink: link })) { editInt = null; showToast('แก้ไขนัดสัมภาษณ์แล้ว'); await refresh(); }
     }
     async function actResult(id, r) {
       const note = document.getElementById('f-resnote')?.value || '';
@@ -1317,6 +1306,8 @@
       const screening = F('ผู้ตรวจ', esc(a.hrBy)) + FULL('ความเห็นคัดกรอง', esc(a.hrNote));
       const resTag = a.result === 'pass' ? '<span class="tag ok">ผ่าน</span>' : a.result === 'fail' ? '<span class="tag no">ไม่ผ่าน</span>' : '';
       const interview = F('วัน/เวลาสัมภาษณ์', a.intDate ? esc(thDate(a.intDate)) + ' · ' + esc(a.intTime) + ' น.' : '') +
+        F('รูปแบบ', a.intDate ? modeBadge(a.intMode) : '') +
+        (a.intMode === 'online' && a.intLink ? F('ลิงก์ประชุม', `<a href="${esc(a.intLink)}" target="_blank" rel="noopener" class="mlink">${esc(a.intLink)}</a>`) : '') +
         F('ผู้สัมภาษณ์', esc(a.intBy)) + F('ผลสัมภาษณ์', resTag) +
         F('เงินเดือนที่ตกลง', a.agreedSalary ? money(a.agreedSalary) + ' บาท' : '') +
         FULL('รายละเอียดผล', esc(a.resultNote));
@@ -1523,6 +1514,22 @@
     }
 
     // ═══════════════════ INTERVIEWS ═══════════════════
+    function pickMode(btn) {
+      const wrap = btn.parentNode;
+      wrap.querySelectorAll('.mbtn').forEach(b => b.classList.toggle('active', b === btn));
+      const lw = document.getElementById(wrap.dataset.link);
+      if (lw) lw.style.display = (btn.dataset.mode === 'online') ? '' : 'none';
+    }
+    function readMode(segId) {
+      const w = document.getElementById(segId);
+      const b = w && w.querySelector('.mbtn.active');
+      return b ? b.dataset.mode : 'onsite';
+    }
+    function modeBadge(mode) {
+      return mode === 'online'
+        ? '<span class="mbadge online"><i class="ti ti-video"></i>ออนไลน์</span>'
+        : '<span class="mbadge onsite"><i class="ti ti-building"></i>ออนไซต์</span>';
+    }
     function dayDiff(iso) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return null;
       const d = new Date(iso + 'T00:00:00');
@@ -1557,8 +1564,8 @@
             <div class="int-day"><div class="int-day-d">${esc(thDate(a.intDate) || '—')}</div><div class="int-day-t">${esc(a.intTime || '')} น.</div></div>
             <div class="aiv" style="${av.bg};width:36px;height:36px">${av.inner}</div>
             <div style="flex:1;min-width:0">
-              <div class="int-name">${esc(a.name)}</div>
-              <div class="int-pos">${esc(a.pos)}${a.intBy ? ' · ผู้สัมภาษณ์: ' + esc(a.intBy) : ''}</div>
+              <div class="int-name">${esc(a.name)} ${modeBadge(a.intMode)}</div>
+              <div class="int-pos">${esc(a.pos)}${a.intBy ? ' · ผู้สัมภาษณ์: ' + esc(a.intBy) : ''}${a.intMode === 'online' && a.intLink ? ` · <a href="${esc(a.intLink)}" target="_blank" rel="noopener" class="mlink" onclick="event.stopPropagation()"><i class="ti ti-external-link"></i>ลิงก์</a>` : ''}</div>
             </div>
             ${rel ? `<span class="int-rel" style="color:${color}">${rel}</span>` : ''}
           </div>`;
