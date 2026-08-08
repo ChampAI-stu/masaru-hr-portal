@@ -382,6 +382,13 @@
 #view-score .sc-msg{font-size:12.5px;margin:6px 2px}
 #view-score .sc-msg.err{color:var(--absent)}
 #view-score .sc-msg.ok{color:var(--present)}
+#scModal .scm-combo{position:relative}
+#scModal .scm-list{position:absolute;left:0;right:0;top:calc(100% + 4px);background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 30px rgba(16,31,54,.16);max-height:230px;overflow:auto;z-index:5;display:none}
+#scModal .scm-list.open{display:block}
+#scModal .scm-opt{padding:9px 12px;cursor:pointer;font-size:14px;display:flex;justify-content:space-between;gap:10px}
+#scModal .scm-opt:hover,#scModal .scm-opt.active{background:var(--orange-soft)}
+#scModal .scm-opt small{color:var(--muted)}
+#scModal .scm-none{padding:11px 12px;color:var(--muted);font-size:13px}
 /* modal */
 #scModal{position:fixed;inset:0;background:rgba(16,31,54,.42);display:none;align-items:center;justify-content:center;z-index:9999;padding:16px}
 #scModal.open{display:flex}
@@ -419,7 +426,11 @@
       <h3>ออกใบเตือน (หนังสือเตือน)</h3>
       <p class="hint">บันทึกลงระบบและนับเป็น −5 คะแนนในเดือนที่ออก</p>
       <label>พนักงาน</label>
-      <select id="scmEmp"></select>
+      <div class="scm-combo">
+        <input id="scmEmpText" autocomplete="off" placeholder="พิมพ์ชื่อเพื่อค้นหา...">
+        <input type="hidden" id="scmEmp">
+        <div id="scmEmpList" class="scm-list"></div>
+      </div>
       <div class="row2">
         <div><label>วันที่ออก</label><input type="date" id="scmDate"></div>
         <div><label>ระดับการเตือน</label>
@@ -1947,27 +1958,60 @@ window.__gridEnsure=function(){try{ if(SB && loadedYM===null) loadMonth(); }catc
   window.__scoreActivate=function(){ render(); };
 
   // ---- issue-warning modal ----
+  var scmEmps=[], scmActive=-1;
+  function empLabel(e){ return e.name+(e.nick?" ("+e.nick+")":""); }
+  function renderEmpList(q){
+    q=(q||"").trim().toLowerCase();
+    var list=$("scmEmpList");
+    var arr=scmEmps.filter(function(e){ return !q || empLabel(e).toLowerCase().indexOf(q)>=0; });
+    scmActive=-1;
+    if(!scmEmps.length){ list.innerHTML='<div class="scm-none">— ไม่มีพนักงานที่บันทึกในฐานข้อมูล —</div>'; list.classList.add("open"); return; }
+    if(!arr.length){ list.innerHTML='<div class="scm-none">ไม่พบชื่อที่ค้นหา</div>'; list.classList.add("open"); return; }
+    list.innerHTML=arr.map(function(e){
+      return '<div class="scm-opt" data-id="'+e.dbId+'" data-label="'+esc(empLabel(e))+'">'+esc(e.name)+(e.nick?' <small>'+esc(e.nick)+'</small>':'')+'</div>';
+    }).join("");
+    list.classList.add("open");
+    list.querySelectorAll(".scm-opt").forEach(function(o){
+      o.onmousedown=function(ev){ ev.preventDefault(); pickEmp(o.dataset.id, o.dataset.label); };
+    });
+  }
+  function pickEmp(id,label){
+    $("scmEmp").value=id; $("scmEmpText").value=label;
+    $("scmEmpList").classList.remove("open");
+  }
   function openModal(){
     var c=ctx();
-    var emps=(c.EMP||[]).filter(function(e){return e.dbId!=null;});
-    var sel=$("scmEmp");
-    if(!emps.length){
-      sel.innerHTML='<option value="">— ไม่มีพนักงานที่บันทึกในฐานข้อมูล —</option>';
-      $("scmSave").disabled=true;
-    }else{
-      sel.innerHTML=emps.map(function(e){return '<option value="'+e.dbId+'">'+esc(e.name)+(e.nick?" ("+esc(e.nick)+")":"")+'</option>';}).join("");
-      $("scmSave").disabled=false;
-    }
+    scmEmps=(c.EMP||[]).filter(function(e){return e.dbId!=null;});
+    $("scmEmp").value=""; $("scmEmpText").value="";
+    $("scmSave").disabled=!scmEmps.length;
+    $("scmEmpText").disabled=!scmEmps.length;
+    $("scmEmpText").placeholder=scmEmps.length?"พิมพ์ชื่อเพื่อค้นหา...":"— ไม่มีพนักงานที่บันทึกในฐานข้อมูล —";
     var t=new Date();
     $("scmDate").value=t.getFullYear()+"-"+p2(t.getMonth()+1)+"-"+p2(t.getDate());
     $("scmLevel").value="ครั้งที่ 1"; $("scmReason").value=""; $("scmDetail").value="";
+    $("scmEmpList").classList.remove("open");
     $("scModal").classList.add("open");
   }
-  function closeModal(){ $("scModal").classList.remove("open"); }
+  function closeModal(){ $("scModal").classList.remove("open"); $("scmEmpList").classList.remove("open"); }
 
   $("scIssueBtn").onclick=openModal;
   $("scmCancel").onclick=closeModal;
   $("scModal").addEventListener("click",function(e){ if(e.target===$("scModal")) closeModal(); });
+  $("scmEmpText").addEventListener("input",function(){ $("scmEmp").value=""; renderEmpList(this.value); });
+  $("scmEmpText").addEventListener("focus",function(){ renderEmpList(this.value); });
+  $("scmEmpText").addEventListener("blur",function(){ setTimeout(function(){ $("scmEmpList").classList.remove("open"); },120); });
+  $("scmEmpText").addEventListener("keydown",function(ev){
+    var list=$("scmEmpList"); var opts=list.querySelectorAll(".scm-opt");
+    if(ev.key==="ArrowDown"||ev.key==="ArrowUp"){
+      ev.preventDefault(); if(!opts.length) return;
+      scmActive+= (ev.key==="ArrowDown"?1:-1);
+      if(scmActive<0) scmActive=opts.length-1; if(scmActive>=opts.length) scmActive=0;
+      opts.forEach(function(o,i){ o.classList.toggle("active",i===scmActive); });
+      opts[scmActive].scrollIntoView({block:"nearest"});
+    }else if(ev.key==="Enter"){
+      if(scmActive>=0&&opts[scmActive]){ ev.preventDefault(); pickEmp(opts[scmActive].dataset.id,opts[scmActive].dataset.label); }
+    }else if(ev.key==="Escape"){ list.classList.remove("open"); }
+  });
   $("scmSave").onclick=async function(){
     var eid=$("scmEmp").value; var reason=$("scmReason").value.trim();
     if(!eid){ alert("เลือกพนักงานก่อน"); return; }
