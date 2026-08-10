@@ -343,7 +343,8 @@ body.locked{overflow:hidden}
   <div class="modal">
     <h2>✓ ผ่านการประเมิน</h2>
     <div class="field"><label>รายการ</label><div id="pass_name" style="font-weight:600"></div></div>
-    <div class="field"><label>วันที่ส่งแบบประเมินกลับมา</label><input type="date" id="pass_date"></div>
+    <div class="field"><label>วันที่ส่งแบบประเมิน (ส่งให้หัวหน้า)</label><input type="date" id="pass_sent"></div>
+    <div class="field"><label>วันที่รับแบบประเมินกลับมา</label><input type="date" id="pass_date"></div>
     <div class="field"><label>หมายเหตุ (ไม่บังคับ)</label><textarea id="pass_note" rows="2" placeholder="เช่น ผ่านเกณฑ์ / หัวหน้าเซ็นแล้ว"></textarea></div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
       <button class="btn ghost" id="passCancel">ยกเลิก</button>
@@ -474,7 +475,7 @@ async function sbLoad(){
     if(r3.error) throw r3.error;
     state.records=(r1.data||[]).map(rowToRec);
     state.done=(r2.data||[]).map(x=>x.milestone_id);
-    state.doneMeta={}; (r2.data||[]).forEach(function(x){ if(x.eval_date||x.note) state.doneMeta[x.milestone_id]={eval_date:x.eval_date||null,note:x.note||null}; });
+    state.doneMeta={}; (r2.data||[]).forEach(function(x){ if(x.eval_date||x.note||x.sent_date) state.doneMeta[x.milestone_id]={sent_date:x.sent_date||null,eval_date:x.eval_date||null,note:x.note||null}; });
     state.terms=(r3.data||[]).map(rowToTerm);
     cacheSave(); setStatus(true);
   }catch(err){
@@ -496,7 +497,7 @@ async function sbDeleteRecord(id){
 }
 async function sbSetDone(mid, done, meta){
   if(!_sb) return;
-  if(done){ const row={milestone_id:mid}; if(meta){ row.eval_date=meta.eval_date||null; row.note=meta.note||null; } const {error}=await _sb.from("hr_deadline_done").upsert(row,{onConflict:"milestone_id"}); if(error) throw error; }
+  if(done){ const row={milestone_id:mid}; if(meta){ row.sent_date=meta.sent_date||null; row.eval_date=meta.eval_date||null; row.note=meta.note||null; } const {error}=await _sb.from("hr_deadline_done").upsert(row,{onConflict:"milestone_id"}); if(error) throw error; }
   else { const {error}=await _sb.from("hr_deadline_done").delete().eq("milestone_id", mid); if(error) throw error; }
 }
 // push entire local state to Supabase (used by import / restore)
@@ -786,13 +787,15 @@ function groupHTML(g){
     </div>`;
   const rows = g.miles.map(m=>{
     const meta = (state.doneMeta&&state.doneMeta[m.id])||null;
+    var _tt=[]; if(meta){ if(meta.sent_date)_tt.push("ส่ง "+thDate(meta.sent_date)); if(meta.eval_date)_tt.push("รับ "+thDate(meta.eval_date)); if(meta.note)_tt.push(meta.note); }
+    const metaTitle=_tt.join(" \u00B7 ");
     const acts = m.done
       ? `<span class="gm-passed">\u2713 ผ่าน</span><button class="iconbtn sm gm-undo" data-pass="${m.id}" title="ยกเลิกผ่าน">\u21A9</button>`
       : `<button class="gm-pass" data-pass-open="${m.id}" data-name="${escAttr(g.name)}" data-ms="${escAttr(m.label)}">\u2713 ผ่าน</button><button class="gm-fail" data-fail="${g.rid}" data-eid="${autoEid(g.rid)}" data-name="${escAttr(g.name)}" data-dept="${escAttr(g.dept||'')}" data-ms="${escAttr(m.label)}">\u2717 ไม่ผ่าน</button>`;
-    return `<div class="gmile ${m.done?'done':m.st.k}"${meta&&meta.note?(' title="'+escAttr(meta.note)+'"'):''}>
+    return `<div class="gmile ${m.done?'done':m.st.k}"${metaTitle?(' title="'+escAttr(metaTitle)+'"'):''}>
         <span class="gm-label">${escapeH(m.label)}</span>
         <span class="gm-date">${thDate(m.date)}</span>
-        <span class="gm-days ${m.st.k}">${ m.done ? ('\u2713 ผ่าน'+(meta&&meta.eval_date?(' \u00B7 '+thDate(meta.eval_date)):'')) : daysText(m.days) }</span>
+        <span class="gm-days ${m.st.k}">${ m.done ? ('\u2713 ผ่าน'+(meta&&meta.eval_date?(' \u00B7 รับ '+thDate(meta.eval_date)):'')) : daysText(m.days) }</span>
         <span class="gm-actions">${acts}</span>
       </div>`;
   }).join("");
@@ -836,6 +839,7 @@ function openPassModal(mid, name, ms){
   _passId=mid;
   var ex=(state.doneMeta&&state.doneMeta[mid])||null;
   _q("pass_name").textContent=(name||"")+(ms?(" \u00B7 "+ms):"");
+  _q("pass_sent").value=ex&&ex.sent_date?(""+ex.sent_date).slice(0,10):"";
   _q("pass_date").value=ex&&ex.eval_date?(""+ex.eval_date).slice(0,10):toISO(new Date());
   _q("pass_note").value=ex&&ex.note?ex.note:"";
   _q("passOverlay").classList.add("show");
@@ -843,7 +847,7 @@ function openPassModal(mid, name, ms){
 function closePassModal(){ _q("passOverlay").classList.remove("show"); _passId=null; }
 function savePass(){
   if(!_passId) return;
-  var meta={ eval_date:_q("pass_date").value||null, note:(_q("pass_note").value.trim()||null) };
+  var meta={ sent_date:_q("pass_sent").value||null, eval_date:_q("pass_date").value||null, note:(_q("pass_note").value.trim()||null) };
   var id=_passId; closePassModal(); window.passMilestone(id, meta);
 }
 window.editRec=function(rid){
