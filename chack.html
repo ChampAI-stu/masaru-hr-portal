@@ -459,7 +459,6 @@
   <header>
     <h1><span class="brand-dot"></span> ระบบเตือน Deadline HR</h1>
     <div style="display:flex;align-items:center;gap:12px">
-      <a href="index.html" title="กลับหน้าหลัก" style="background:rgba(255,255,255,.12);border:none;color:#fff;border-radius:9px;padding:7px 12px;cursor:pointer;font-family:inherit;font-size:.95rem;text-decoration:none">← หน้าหลัก</a>
       <span id="syncDot" class="sync off" title="สถานะการเชื่อมต่อ">● ...</span>
       <button id="bellBtn" title="ดูงานด่วน" style="background:rgba(255,255,255,.12);border:none;color:#fff;border-radius:9px;padding:7px 12px;cursor:pointer;font-family:inherit;font-size:.95rem">🔔 งานด่วน</button>
       <div class="date" id="todayLabel"></div>
@@ -480,7 +479,8 @@
     </div>
     <div class="spacer"></div>
     <button class="btn ghost" id="toggleDone">แสดงที่เสร็จแล้ว</button>
-    <button class="btn gold" id="importBtn">📥 นำเข้า Excel</button>
+    <button class="btn ghost" id="exportXlsxBtn">📤 ส่งออก Excel</button>
+    <button class="btn gold" id="importBtn">📥 นำเข้า / กู้ข้อมูล</button>
     <button class="btn" id="addBtn">+ เพิ่มรายการ</button>
     <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" class="hide">
   </div>
@@ -493,15 +493,6 @@
     <div class="section-title">✅ เสร็จแล้ว</div>
     <div class="list" id="doneList"></div>
   </div>
-
-  <div class="backup-bar">
-    <span class="backup-note">💾 ข้อมูลซิงค์บน Supabase — ปุ่มนี้ไว้สำรองเป็นไฟล์เพิ่มอีกชั้น:</span>
-    <button class="btn ghost" id="exportBtn">⬇️ ส่งออกข้อมูล (สำรอง)</button>
-    <button class="btn ghost" id="restoreBtn">⬆️ กู้คืนข้อมูล</button>
-    <input type="file" id="restoreInput" accept=".json" class="hide">
-  </div>
-
-  <footer>MASARU HR &middot; ข้อมูลซิงค์ผ่าน Supabase (ใช้ร่วมกันหลายเครื่อง) &middot; เหนือกว่า ทุกวัน</footer>
 </div>
 
 <!-- Modal -->
@@ -2730,12 +2721,111 @@ function handleFile(file){
   reader.onload=e=>{
     try{
       const wb=XLSX.read(new Uint8Array(e.target.result), {type:"array", cellDates:true});
+      // ไฟล์สำรองจากระบบนี้จะมีชีท "DATA" → กู้คืน
+      if(wb.SheetNames.indexOf("DATA")>=0){
+        const dj=XLSX.utils.sheet_to_json(wb.Sheets["DATA"], {defval:""});
+        restoreFromRows(dj);
+        if(wb.SheetNames.indexOf("DONE")>=0){
+          const dd=XLSX.utils.sheet_to_json(wb.Sheets["DONE"], {defval:""})
+            .map(x=>String(x.milestone_id||"").trim()).filter(Boolean);
+          if(dd.length){ dd.forEach(id=>{ if(state.done.indexOf(id)<0) state.done.push(id); }); cacheSave(); render(); }
+        }
+        return;
+      }
       const ws=wb.Sheets[wb.SheetNames[0]];
       const rows=XLSX.utils.sheet_to_json(ws, {header:1, defval:""});
       importRows(rows);
     }catch(err){ alert("อ่านไฟล์ไม่สำเร็จ: "+err.message); }
   };
   reader.readAsArrayBuffer(file);
+}
+function restoreFromRows(dj){
+  var records=[];
+  dj.forEach(function(rw){
+    var type=String(rw.type||"").trim(), name=String(rw.name||"").trim();
+    if(!type||!name) return;
+    var rec={ id:String(rw.id||("r"+Date.now()+Math.floor(Math.random()*1000))), type:type, name:name,
+      dept:String(rw.dept||"").trim(), note:String(rw.note||"").trim() };
+    var ref=normDate(rw.ref); if(ref) rec.ref=ref;
+    var due=normDate(rw.due); if(due) rec.due=due;
+    if(rw.threshold!==""&&rw.threshold!=null){ var th=Number(rw.threshold); if(!isNaN(th)) rec.threshold=th; }
+    records.push(rec);
+  });
+  if(!records.length){ alert("ไม่พบข้อมูลสำหรับกู้คืนในไฟล์นี้"); return; }
+  var replace=confirm("พบข้อมูลสำรอง "+records.length+" รายการ\n\n[ตกลง] = แทนที่ข้อมูลปัจจุบันทั้งหมด\n[ยกเลิก] = รวมกับของเดิม (ไม่เพิ่มที่ซ้ำ)");
+  if(replace){ state.records=records; }
+  else{
+    var key=function(r){ return r.name+"|"+r.type+"|"+(r.ref||r.due||""); };
+    var ex={}; state.records.forEach(function(r){ ex[key(r)]=1; });
+    records.forEach(function(r){ if(!ex[key(r)]){ state.records.push(r); ex[key(r)]=1; } });
+  }
+  cacheSave(); render(); guard(function(){ sbSyncAll(); });
+  alert("กู้คืนข้อมูลสำเร็จ \u2705 ("+records.length+" รายการ)");
+}
+function loadExcelJS(){
+  return new Promise(function(res,rej){
+    if(window.ExcelJS) return res(window.ExcelJS);
+    var urls=["https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js",
+              "https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"];
+    var i=0;
+    (function tryLoad(){
+      if(i>=urls.length) return rej(new Error("โหลด ExcelJS ไม่สำเร็จ (ตรวจสอบอินเทอร์เน็ต)"));
+      var sc=document.createElement("script"); sc.src=urls[i++];
+      sc.onload=function(){ window.ExcelJS?res(window.ExcelJS):tryLoad(); };
+      sc.onerror=tryLoad; document.head.appendChild(sc);
+    })();
+  });
+}
+async function exportExcel(){
+  var ExcelJS; try{ ExcelJS=await loadExcelJS(); }catch(e){ alert(e.message); return; }
+  var TYPE={probation:"ทดลองงาน",maternity:"ลาคลอด",contract:"สัญญา",document:"เอกสาร"};
+  var BD={top:{style:"thin",color:{argb:"FFE3E3DC"}},left:{style:"thin",color:{argb:"FFE3E3DC"}},
+          bottom:{style:"thin",color:{argb:"FFE3E3DC"}},right:{style:"thin",color:{argb:"FFE3E3DC"}}};
+  var wb=new ExcelJS.Workbook(); wb.creator="MASARU HR"; wb.created=new Date();
+  var ws=wb.addWorksheet("รายงาน",{views:[{state:"frozen",ySplit:3}]});
+  ws.columns=[{width:14},{width:28},{width:32},{width:16},{width:11},{width:14},{width:10}];
+  ws.mergeCells("A1:G1"); var t=ws.getCell("A1");
+  t.value="รายการเตือน Deadline — MASARU HR";
+  t.font={bold:true,size:16,color:{argb:"FFFFFFFF"}}; t.alignment={vertical:"middle",indent:1};
+  t.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF1B2D51"}}; ws.getRow(1).height=28;
+  ws.mergeCells("A2:G2"); var s2=ws.getCell("A2");
+  s2.font={size:10,color:{argb:"FF64708A"}}; s2.alignment={indent:1};
+  var heads=["ประเภท","ชื่อพนักงาน","รายละเอียด","วันครบกำหนด","เหลือ (วัน)","สถานะ","เสร็จ"];
+  var hr=ws.getRow(3);
+  heads.forEach(function(h,i){ var c=hr.getCell(i+1); c.value=h;
+    c.font={bold:true,color:{argb:"FFFFFFFF"}}; c.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF2E75B6"}};
+    c.alignment={horizontal:"center",vertical:"middle"}; c.border=BD; });
+  hr.height=20;
+  var ms=milestones(); var rr=4;
+  ms.forEach(function(m,idx){
+    var days=m.days;
+    var argb= days<0?"FFC00000":(days<=3?"FFD8453A":(days<=7?"FFC9A227":"FF1E7145"));
+    var row=ws.getRow(rr++);
+    row.getCell(1).value=TYPE[m.type]||m.type;
+    row.getCell(2).value=m.name;
+    row.getCell(3).value=m.label;
+    row.getCell(4).value=thDate(toISO(m.date));
+    row.getCell(5).value=days;
+    row.getCell(6).value=(m.st&&m.st.label)||"";
+    row.getCell(7).value=m.done?"\u2713":"";
+    row.eachCell(function(c,col){ c.border=BD;
+      c.alignment={vertical:"middle",horizontal:(col===2||col===3)?"left":"center"};
+      if(idx%2===1) c.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFF7FBFF"}}; });
+    row.getCell(5).font={bold:true,color:{argb:argb}};
+    row.getCell(6).font={bold:true,color:{argb:argb}};
+  });
+  s2.value="ส่งออกเมื่อ "+thDate(toISO(new Date()))+" · รวม "+ms.length+" รายการเตือน";
+  var wd=wb.addWorksheet("DATA"); wd.state="hidden";
+  wd.addRow(["id","type","name","dept","ref","due","threshold","note"]);
+  state.records.forEach(function(x){ wd.addRow([x.id,x.type,x.name,x.dept||"",x.ref||"",x.due||"",(x.threshold==null?"":x.threshold),x.note||""]); });
+  var wDone=wb.addWorksheet("DONE"); wDone.state="hidden"; wDone.addRow(["milestone_id"]);
+  (state.done||[]).forEach(function(id){ wDone.addRow([id]); });
+  var buf=await wb.xlsx.writeBuffer();
+  var blob=new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+  var url=URL.createObjectURL(blob); var n=new Date();
+  var stamp=n.getFullYear()+String(n.getMonth()+1).padStart(2,"0")+String(n.getDate()).padStart(2,"0");
+  var a=document.createElement("a"); a.href=url; a.download="MASARU_Deadline_"+stamp+".xlsx";
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
 }
 function importRows(rows){
   // find header row: contains "ชื่อ" and "ประเภท"
@@ -2876,12 +2966,7 @@ async function init(){
   _q("deleteBtn").onclick=deleteRec;
   _q("f_type").onchange=syncFields;
   _q("toggleDone").onclick=()=>{ showDone=!showDone; render(); };
-  _q("exportBtn").onclick=exportData;
-  _q("restoreBtn").onclick=()=>_q("restoreInput").click();
-  _q("restoreInput").onchange=e=>{
-    if(e.target.files[0]) restoreData(e.target.files[0]);
-    e.target.value="";
-  };
+  _q("exportXlsxBtn").onclick=exportExcel;
   _q("overlay").onclick=(e)=>{ if(e.target.id==="overlay") closeModal(); };
 
   _q("bellBtn").onclick=()=>showAlertPop(true);
