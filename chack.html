@@ -504,7 +504,7 @@
       <button class="chip focus" data-focus="overdue">เลยกำหนด</button>
     </div>
     <select id="deadDept" class="dead-dept"><option value="all">ทุกแผนก</option></select>
-    <label class="auto-toggle"><input type="checkbox" id="autoChk" checked> ทดลองงานอัตโนมัติ (จากวันเริ่มงาน)</label>
+    <label class="auto-toggle"><input type="checkbox" id="autoChk"> ทดลองงานอัตโนมัติ (จากวันเริ่มงาน)</label>
   </div>
 
   <!-- Active alerts -->
@@ -2438,7 +2438,7 @@ const THMONTH = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","�
 let state = { records: [], done: [], terms: [] };  // done = array of milestone ids
 let filter = "probation";
 let showDone = false;
-let qSearch="", focusWin="all", deptFilter="all", showAuto=true;
+let qSearch="", focusWin="all", deptFilter="all", showAuto=false;
 let online = false;
 
 /* ---------- Supabase config ---------- */
@@ -2762,8 +2762,9 @@ function renderTermList(){
 }
 function render(){
   const all = milestones();
-  const active = all.filter(m=>!m.done).sort((a,b)=>a.days-b.days);
-  const done = all.filter(m=>m.done).sort((a,b)=>b.date-a.date);
+  const termKeys={}; (state.terms||[]).forEach(function(t){ termKeys[t.emp_key]=1; });
+  const active = all.filter(m=>!m.done && !termKeys[m.rid]).sort((a,b)=>a.days-b.days);
+  const done = all.filter(m=>m.done && !termKeys[m.rid]).sort((a,b)=>b.date-a.date);
 
   // summary counts (active only)
   const c={overdue:0,urgent:0,soon:0,ok:0};
@@ -2781,7 +2782,6 @@ function render(){
 
   // ---- จัดกลุ่มเป็น 1 การ์ด/คน (ทดลองงานยุบ 30/60/90 เป็นแถวย่อย) ----
   const groups = groupMiles(all);
-  const termKeys={}; (state.terms||[]).forEach(function(t){ termKeys[t.emp_key]=1; });
   if(filter==="termination"){ renderTermList(); return; }
   const _q2=qSearch.trim().toLowerCase();
   const gShown = groups.filter(function(g){
@@ -3175,7 +3175,8 @@ function restoreData(file){
 /* ---------- alert popup ---------- */
 const SNOOZE_KEY="masaru_hr_deadline_snooze";
 function urgentMilestones(){
-  return milestones().filter(m=>!m.done && m.days<=7).sort((a,b)=>a.days-b.days);
+  var tk={}; (state.terms||[]).forEach(function(t){ tk[t.emp_key]=1; });
+  return milestones().filter(m=>!m.done && m.days<=7 && !tk[m.rid]).sort((a,b)=>a.days-b.days);
 }
 function showAlertPop(force){
   const items=urgentMilestones();
