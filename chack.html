@@ -646,6 +646,25 @@
   .iconbtn{border:1px solid var(--line);background:#fff;border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:1rem}
   .iconbtn:hover{background:#f0f3f9}
   .empty{text-align:center;color:var(--muted);padding:40px}
+  .gitem{background:var(--card);border:1px solid var(--line);border-left:6px solid var(--line);border-radius:11px;padding:12px 14px;margin-bottom:10px}
+  .gitem.overdue{border-left-color:var(--red)} .gitem.urgent{border-left-color:#e06a00} .gitem.soon{border-left-color:var(--gold)} .gitem.done{opacity:.6}
+  .ghead{display:flex;align-items:center;gap:10px}
+  .ghead .icon{font-size:1.4rem;width:30px;text-align:center}
+  .gtitle{flex:1;min-width:0;font-weight:600}
+  .gtitle .tag{display:inline-block;font-size:.72rem;padding:1px 8px;border-radius:12px;background:#eef2f9;color:var(--muted);margin-right:6px}
+  .gitem.done .gtitle{text-decoration:line-through}
+  .glead{white-space:nowrap;text-align:right;font-weight:700}
+  .glead .badge{margin-left:6px}
+  .ghead .iconbtn{width:32px;height:32px}
+  .gmiles{margin:8px 0 2px;border-top:1px dashed var(--line);padding-top:8px;display:flex;flex-direction:column;gap:6px}
+  .gmile{display:flex;align-items:center;gap:10px;font-size:.9rem;padding:4px 6px;border-radius:8px}
+  .gmile.overdue{background:#fdecea} .gmile.urgent{background:#fff2e6} .gmile.soon{background:#fff8e1} .gmile.done{opacity:.55}
+  .gm-label{flex:1;min-width:0}
+  .gm-date{color:var(--muted);white-space:nowrap}
+  .gm-days{white-space:nowrap;font-weight:700;min-width:96px;text-align:right}
+  .gm-days.overdue{color:var(--red)} .gm-days.urgent{color:#e06a00} .gm-days.soon{color:#b8860b}
+  .gmile.done .gm-days{color:var(--ok)}
+  .iconbtn.sm{width:30px;height:30px;font-size:.9rem}
 
   .section-title{font-weight:700;color:var(--green-dark);margin:18px 0 8px;font-size:1rem}
 
@@ -2185,13 +2204,9 @@ window.__gridEnsure=function(){try{ if(SB && loadedYM===null) loadMonth(); }catc
         '<td class="nm">'+esc(nameOf(w.employee_id))+'</td>'+
         '<td><span class="sc-badge">'+esc(w.level||"")+'</span></td>'+
         '<td style="text-align:left">'+esc(w.reason||"")+'</td>'+
-        '<td><span class="sc-act"><button class="pr" data-pr="'+w.id+'">🖨️ พิมพ์</button>'+
-        '<button class="del" data-del="'+w.id+'">ลบ</button></span></td></tr>';
+        '<td><span class="sc-act"><button class="del" data-del="'+w.id+'">ลบใบเตือน</button></span></td></tr>';
     }).join("");
     $("scWarn").innerHTML=head+'<tbody>'+body+'</tbody>';
-    $("scWarn").querySelectorAll("button[data-pr]").forEach(function(b){
-      b.onclick=function(){ var w=warnAll.filter(function(x){return ""+x.id===b.dataset.pr;})[0]; if(w) printLetter(w); };
-    });
     $("scWarn").querySelectorAll("button[data-del]").forEach(function(b){
       b.onclick=async function(){
         if(!confirm("ลบใบเตือนนี้?")) return;
@@ -2279,7 +2294,6 @@ window.__gridEnsure=function(){try{ if(SB && loadedYM===null) loadMonth(); }catc
       closeModal();
       await render();
       scMsg("ออกใบเตือนให้ "+nameOf(+eid)+" แล้ว (−5 คะแนน)","ok");
-      if(d&&d[0]&&confirm("บันทึกแล้ว — เปิดหน้าพิมพ์หนังสือเตือนเลยไหม?")) printLetter(d[0]);
     }catch(e){ scMsg("บันทึกไม่สำเร็จ: "+(e.message||e),"err"); alert("บันทึกไม่สำเร็จ: "+(e.message||e)); }
     finally{ $("scmSave").disabled=false; $("scmSave").textContent="บันทึกใบเตือน"; }
   };
@@ -2570,27 +2584,62 @@ function render(){
     <div class="scard soon"><div class="num">${c.soon}</div><div class="lbl">🟡 ใกล้ถึง (≤7 วัน)</div></div>
     <div class="scard ok"><div class="num">${c.ok}</div><div class="lbl">🟢 ปกติ</div></div>`;
 
-  // active list
-  const shown = filter==="all" ? active : active.filter(m=>m.type===filter);
-  const listEl=_q("list");
-  if(shown.length===0){
-    listEl.innerHTML=`<div class="empty">🎉 ไม่มีรายการที่ต้องเตือนในหมวดนี้</div>`;
-  }else{
-    listEl.innerHTML=shown.map(m=>itemHTML(m)).join("");
-  }
+  // ---- จัดกลุ่มเป็น 1 การ์ด/คน (ทดลองงานยุบ 30/60/90 เป็นแถวย่อย) ----
+  const groups = groupMiles(all);
+  const gShown = filter==="all" ? groups : groups.filter(g=>g.type===filter);
+  const activeG = gShown.filter(g=>!g.allDone).sort((a,b)=>a.leadDays-b.leadDays);
+  const doneG   = gShown.filter(g=>g.allDone).sort((a,b)=>b.leadDate-a.leadDate);
 
-  // done list
+  const listEl=_q("list");
+  listEl.innerHTML = activeG.length
+    ? activeG.map(groupHTML).join("")
+    : `<div class="empty">🎉 ไม่มีรายการที่ต้องเตือนในหมวดนี้</div>`;
+
   const doneWrap=_q("doneWrap");
-  const doneShown = filter==="all"?done:done.filter(m=>m.type===filter);
-  if(showDone && doneShown.length){
+  if(showDone && doneG.length){
     doneWrap.classList.remove("hide");
-    _q("doneList").innerHTML=doneShown.map(m=>itemHTML(m)).join("");
+    _q("doneList").innerHTML=doneG.map(groupHTML).join("");
   }else{
     doneWrap.classList.add("hide");
   }
   _q("toggleDone").textContent = showDone ? "ซ่อนที่เสร็จแล้ว" : "แสดงที่เสร็จแล้ว";
 }
 
+function groupMiles(list){
+  const map={}, order=[];
+  list.forEach(m=>{
+    if(!map[m.rid]){ map[m.rid]={rid:m.rid,type:m.type,name:m.name,dept:m.dept,miles:[]}; order.push(m.rid); }
+    map[m.rid].miles.push(m);
+  });
+  return order.map(rid=>{
+    const g=map[rid];
+    g.miles.sort((a,b)=>a.date-b.date);
+    const pending=g.miles.filter(m=>!m.done);
+    g.allDone=pending.length===0;
+    const lead=pending.slice().sort((a,b)=>a.days-b.days)[0] || g.miles[g.miles.length-1];
+    g.lead=lead; g.leadDays=lead?lead.days:0; g.leadDate=lead?lead.date:0;
+    return g;
+  });
+}
+function groupHTML(g){
+  if(g.miles.length===1) return itemHTML(g.miles[0]);
+  const cls = g.allDone ? 'done' : (g.lead? g.lead.st.k : '');
+  const dept = g.dept?' <span class="tag">'+escapeH(g.dept)+'</span>':'';
+  const head = `<div class="ghead">
+      <div class="icon">${typeIcon(g.type)}</div>
+      <div class="gtitle"><span class="tag">${typeName(g.type)}</span>${escapeH(g.name)}${dept}</div>
+      <div class="glead">${ g.allDone ? '\u2705 เสร็จครบ' : daysText(g.leadDays)+' <span class="badge '+g.lead.st.k+'">'+g.lead.st.label+'</span>' }</div>
+      <button class="iconbtn" title="แก้ไข" onclick="editRec('${g.rid}')">\u270E</button>
+    </div>`;
+  const rows = g.miles.map(m=>`
+      <div class="gmile ${m.done?'done':m.st.k}">
+        <span class="gm-label">${escapeH(m.label)}</span>
+        <span class="gm-date">${thDate(m.date)}</span>
+        <span class="gm-days ${m.st.k}">${ m.done ? '\u2713 เสร็จ' : daysText(m.days) }</span>
+        <button class="iconbtn sm" title="${m.done?'ยกเลิกเสร็จ':'ทำเสร็จแล้ว'}" onclick="toggleDone('${m.id}')">${m.done?'\u21A9':'\u2713'}</button>
+      </div>`).join("");
+  return `<div class="gitem ${cls}">${head}<div class="gmiles">${rows}</div></div>`;
+}
 function itemHTML(m){
   return `<div class="item ${m.done?'done':m.st.k}">
     <div class="icon">${typeIcon(m.type)}</div>
