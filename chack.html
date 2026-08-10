@@ -2606,13 +2606,27 @@ function daysText(days){
 /* ---------- build milestones from records ---------- */
 function autoMilestones(){
   if(!showAuto || !EMPLOYEES || !EMPLOYEES.length) return [];
-  var manual={};
-  state.records.forEach(function(r){ if(r.type==="probation") manual[(r.name||"").trim()]=true; });
-  var out=[];
+  // ชื่อทดลองงานที่เพิ่ม/นำเข้าเอง (กันสร้างซ้ำ) — เก็บทั้งชื่อเต็มและตัวพิมพ์เล็ก
+  var manualNames=[];
+  state.records.forEach(function(r){ if(r.type==="probation"){ var n=(r.name||"").trim(); if(n) manualNames.push(n.toLowerCase()); } });
+  function hasManual(e){
+    var full=(e.full_name||"").trim().toLowerCase();
+    var label=(_empLabel(e)||"").trim().toLowerCase();
+    for(var i=0;i<manualNames.length;i++){
+      var m=manualNames[i];
+      if(!m) continue;
+      if(m===full || m===label) return true;          // ตรงกันเป๊ะ
+      if(full && (m.indexOf(full)>=0 || full.indexOf(m)>=0)) return true; // ชื่อเต็มซ้อนกัน (จับ "แชมป์ (ชื่อเต็ม)")
+    }
+    return false;
+  }
+  var out=[], seen={};
   EMPLOYEES.forEach(function(e){
     if(e.is_active===false || e.resign_date) return;
     var start=e.start_date; if(!start) return;
-    var nm=(e.full_name||"").trim(); if(!nm || manual[nm]) return;
+    var nm=(e.full_name||"").trim(); if(!nm) return;
+    var key=nm.toLowerCase(); if(seen[key]) return; seen[key]=true;   // กันพนักงานชื่อซ้ำใน DB
+    if(hasManual(e)) return;                                          // มี manual แล้ว ไม่สร้าง auto
     var dept=e.group_name||"";
     [30,60,90].forEach(function(n){
       var d=addDays(start,n); var days=daysUntil(d);
