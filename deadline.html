@@ -176,9 +176,34 @@
 .back-home:hover{background:rgba(255,255,255,.2)}
 .gm-passed{color:#0e7a4b;font-weight:700;font-size:.82rem}
 
+.auth-gate{position:fixed;inset:0;background:#0e1c38;display:flex;align-items:center;justify-content:center;z-index:99999;padding:20px}
+.auth-gate.hide{display:none}
+.auth-card{background:#fff;border-radius:18px;padding:30px 28px;width:360px;max-width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35);font-family:'IBM Plex Sans Thai',sans-serif}
+.auth-brand{font-weight:800;font-size:20px;color:#1B2D51;text-align:center}
+.auth-sub{color:#7A8398;text-align:center;margin:4px 0 18px;font-size:14px}
+.auth-fld{margin-bottom:12px}
+.auth-fld label{display:block;font-size:12.5px;font-weight:600;color:#1B2D51;margin-bottom:5px}
+.auth-fld input{width:100%;border:1px solid #e3e3dc;border-radius:10px;padding:11px 13px;font-family:inherit;font-size:15px;box-sizing:border-box}
+.auth-btn{width:100%;background:#D42027;color:#fff;border:none;border-radius:10px;padding:12px;font-family:inherit;font-weight:700;font-size:15px;cursor:pointer;margin-top:6px}
+.auth-btn:hover{filter:brightness(1.05)} .auth-btn:disabled{opacity:.6}
+.auth-err{background:#fdecea;color:#c0392b;border-radius:8px;padding:9px 12px;font-size:13px;margin-top:10px}
+.auth-err.hide{display:none}
+.auth-portal{display:block;text-align:center;margin-top:14px;color:#2E75B6;font-size:13px;text-decoration:none}
+body.locked{overflow:hidden}
 </style>
 </head>
-<body>
+<body class="locked">
+<div id="authGate" class="auth-gate">
+  <div class="auth-card">
+    <div class="auth-brand">MASARU · Deadline HR</div>
+    <p class="auth-sub">เข้าสู่ระบบเพื่อใช้งาน</p>
+    <div class="auth-fld"><label>อีเมล</label><input id="authEmail" type="email" placeholder="name@masaru.co.th" autocomplete="username"></div>
+    <div class="auth-fld"><label>รหัสผ่าน</label><input id="authPass" type="password" autocomplete="current-password"></div>
+    <button class="auth-btn" id="authLoginBtn">เข้าสู่ระบบ</button>
+    <div class="auth-err hide" id="authErr"></div>
+    <a class="auth-portal" href="index.html">ยังไม่มีบัญชี? สมัคร / กลับหน้าหลัก →</a>
+  </div>
+</div>
 <div class="wrap">
   <header>
     <h1><span class="brand-dot"></span> ระบบเตือน Deadline HR</h1>
@@ -498,7 +523,7 @@ async function guard(fn){
 function parseD(s){ const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); }
 function addDays(dstr,n){ const d=parseD(dstr); d.setDate(d.getDate()+n); return d; }
 function toISO(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
-function thDate(d){ return d.getDate()+" "+THMONTH[d.getMonth()]+" "+(d.getFullYear()+543); }
+function thDate(d){ if(typeof d==="string") d=parseD(d); if(!(d instanceof Date)||isNaN(d)) return ""; return d.getDate()+" "+THMONTH[d.getMonth()]+" "+(d.getFullYear()+543); }
 function daysUntil(d){
   const now=new Date(); now.setHours(0,0,0,0);
   const t=new Date(d); t.setHours(0,0,0,0);
@@ -1195,7 +1220,32 @@ async function init(){
     }catch(e){ console.warn("realtime off", e); }
   }
 }
-init();
+/* ---- ประตูล็อกอิน (ใช้ session ร่วมกับพอร์ทัล โปรเจกต์เดียวกัน) ---- */
+function showAppReady(){ var g=_q("authGate"); if(g) g.classList.add("hide"); document.body.classList.remove("locked"); }
+function showAuthGate(){ var g=_q("authGate"); if(g) g.classList.remove("hide"); document.body.classList.add("locked"); }
+async function doLogin(){
+  var em=_q("authEmail").value.trim(), pw=_q("authPass").value, err=_q("authErr"), btn=_q("authLoginBtn");
+  if(!em||!pw){ err.textContent="กรอกอีเมลและรหัสผ่าน"; err.classList.remove("hide"); return; }
+  if(!_sb){ err.textContent="เชื่อมต่อฐานข้อมูลไม่ได้"; err.classList.remove("hide"); return; }
+  btn.disabled=true; btn.textContent="กำลังเข้าสู่ระบบ..."; err.classList.add("hide");
+  try{
+    var r=await _sb.auth.signInWithPassword({email:em,password:pw});
+    if(r.error) throw r.error;
+    showAppReady(); init();
+  }catch(e){ err.textContent="เข้าสู่ระบบไม่สำเร็จ: "+((e&&e.message)||e); err.classList.remove("hide"); }
+  finally{ btn.disabled=false; btn.textContent="เข้าสู่ระบบ"; }
+}
+async function bootAuth(){
+  if(!_sb){ showAppReady(); init(); return; }
+  try{
+    var res=await _sb.auth.getSession();
+    if(res && res.data && res.data.session){ showAppReady(); init(); }
+    else { showAuthGate(); }
+  }catch(e){ showAuthGate(); }
+}
+_q("authLoginBtn").onclick=doLogin;
+_q("authPass").addEventListener("keydown",function(e){ if(e.key==="Enter") doLogin(); });
+bootAuth();
 </script>
 </body>
 </html>
