@@ -374,6 +374,22 @@
 #view-score .sc-tbl td.rem.low{color:var(--absent)}
 #view-score .sc-h2{font-size:16px;font-weight:700;margin:26px 0 10px;color:var(--ink)}
 #view-score .sc-badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;background:var(--orange-soft);color:var(--orange)}
+#view-score .sc-dim{color:var(--muted)}
+#view-score .warn-btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;border-radius:8px;padding:3px 9px;font-family:inherit;font-size:12.5px;cursor:pointer;color:var(--ink)}
+#view-score .warn-btn:hover{border-color:var(--orange);color:var(--orange)}
+#view-score .warn-mng{color:var(--muted);font-size:11.5px}
+#view-score tr.warn-detail>td{background:#F7FBFF;border-bottom:1px solid var(--line);padding:10px 14px}
+#view-score tr.warn-detail.hide{display:none}
+#view-score .warn-panel{display:flex;flex-direction:column;gap:8px;text-align:left}
+#view-score .wp-item{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-radius:9px;padding:7px 10px}
+#view-score .wp-date{font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap;font-size:12.5px}
+#view-score .wp-reason{flex:1;min-width:120px}
+#view-score .wp-act{display:inline-flex;gap:6px}
+#view-score .wp-act button{border:1px solid var(--line);background:#fff;border-radius:7px;padding:4px 10px;font-family:inherit;font-size:12px;cursor:pointer}
+#view-score .wp-edit:hover{border-color:var(--navy);color:var(--navy)}
+#view-score .wp-del:hover{border-color:var(--absent);color:var(--absent)}
+#view-score .wp-empty{color:var(--muted);font-size:13px;padding:2px}
+#view-score .wp-add{align-self:flex-start;border:1px dashed var(--orange);background:#fff;color:var(--orange);border-radius:8px;padding:6px 12px;font-family:inherit;font-weight:600;font-size:12.5px;cursor:pointer}
 #view-score .sc-act{display:inline-flex;gap:6px}
 #view-score .sc-act button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 10px;font-family:inherit;font-size:12.5px;cursor:pointer}
 #view-score .sc-act button.pr:hover{border-color:var(--navy);color:var(--navy)}
@@ -418,8 +434,6 @@
     <div class="sc-rules" id="scRules"></div>
     <div class="sc-msg" id="scMsg"></div>
     <div class="sc-tablewrap"><table class="sc-tbl" id="scTbl"><tbody><tr><td class="sc-empty">กด “🔄 โหลด” ด้านบนเพื่อดึงข้อมูลก่อน</td></tr></tbody></table></div>
-    <h2 class="sc-h2">ประวัติใบเตือน</h2>
-    <div class="sc-tablewrap"><table class="sc-tbl" id="scWarn"><tbody><tr><td class="sc-empty">—</td></tr></tbody></table></div>
   </div>
   <div id="scModal">
     <div class="box">
@@ -2123,6 +2137,12 @@ window.__gridEnsure=function(){try{ if(SB && loadedYM===null) loadMonth(); }catc
     var r=await sb.from("daiki_warnings").delete().eq("id",id);
     if(r.error) throw r.error;
   }
+  async function updateWarning(id,obj){
+    var sb=window.__getSB&&window.__getSB();
+    if(!sb) throw new Error("ยังไม่ได้เชื่อมต่อฐานข้อมูล");
+    var r=await sb.from("daiki_warnings").update(obj).eq("id",id).select();
+    if(r.error) throw r.error; return r.data;
+  }
 
   function computeRows(){
     var c=ctx(); var EMP=c.EMP||[], cl=c.classify;
@@ -2154,20 +2174,56 @@ window.__gridEnsure=function(){try{ if(SB && loadedYM===null) loadMonth(); }catc
 
   function renderTable(rows){
     rows=rows.slice().sort(function(a,b){ return b.ded-a.ded; });
+    var byEmp={};
+    warnAll.forEach(function(w){ (byEmp[w.employee_id]=byEmp[w.employee_id]||[]).push(w); });
+    Object.keys(byEmp).forEach(function(k){ byEmp[k].sort(function(a,b){ return (""+b.issue_date).localeCompare(""+a.issue_date); }); });
     var head='<thead><tr><th>#</th><th style="text-align:left">พนักงาน</th><th>สาย</th><th>ป่วย</th><th>กิจ</th><th>ลืมสแกน</th><th>ขาด</th><th>ใบเตือน</th><th>รวมหัก</th><th>คงเหลือ</th></tr></thead>';
     var body=rows.map(function(r,i){
       var zero=r.ded===0?" zero":"";
       var low=r.rem<LOW?" low":"";
-      return '<tr class="'+(zero?"zero":"")+'">'+
+      var wl=(r.dbId!=null && byEmp[r.dbId])?byEmp[r.dbId]:[];
+      var badge=r.warn?('<span class="sc-badge">'+r.warn+'</span> '):'';
+      var warnCell=(r.dbId!=null)
+        ? '<button type="button" class="warn-btn" data-emp="'+r.dbId+'">'+badge+'<span class="warn-mng">จัดการ \u25BE</span></button>'
+        : '<span class="sc-dim">\u2014</span>';
+      var mainRow='<tr class="'+(zero?"zero":"")+'">'+
         '<td>'+(i+1)+'</td>'+
-        '<td class="nm">'+esc(r.name||"")+(r.nick?' <small>'+esc(r.nick)+(r.pos?" · "+esc(r.pos):"")+'</small>':(r.pos?' <small>'+esc(r.pos)+'</small>':''))+'</td>'+
+        '<td class="nm">'+esc(r.name||"")+(r.nick?' <small>'+esc(r.nick)+(r.pos?" \u00B7 "+esc(r.pos):"")+'</small>':(r.pos?' <small>'+esc(r.pos)+'</small>':''))+'</td>'+
         '<td>'+(r.t.late||"")+'</td><td>'+(r.t.sick||"")+'</td><td>'+(r.t.personal||"")+'</td>'+
         '<td>'+(r.t.noscan||"")+'</td><td>'+(r.t.absent||"")+'</td>'+
-        '<td>'+(r.warn?('<span class="sc-badge">'+r.warn+'</span>'):"")+'</td>'+
-        '<td class="tot">'+(r.ded?("−"+fnum(r.ded)):"0")+'</td>'+
+        '<td class="warn-cell">'+warnCell+'</td>'+
+        '<td class="tot">'+(r.ded?("\u2212"+fnum(r.ded)):"0")+'</td>'+
         '<td class="rem'+low+'">'+fnum(r.rem)+'</td></tr>';
+      var detail='';
+      if(r.dbId!=null){
+        var items=wl.length ? wl.map(function(w){
+          return '<div class="wp-item">'+
+            '<span class="wp-date">'+esc(thDate(w.issue_date)||w.issue_date||"")+'</span>'+
+            '<span class="sc-badge">'+esc(w.level||"")+'</span>'+
+            '<span class="wp-reason">'+esc(w.reason||"")+'</span>'+
+            '<span class="wp-act"><button type="button" class="wp-edit" data-edit="'+w.id+'">\u270E แก้ไข</button>'+
+            '<button type="button" class="wp-del" data-del="'+w.id+'">ลบ</button></span></div>';
+        }).join("") : '<div class="wp-empty">ยังไม่มีใบเตือน</div>';
+        detail='<tr class="warn-detail hide" data-detail="'+r.dbId+'"><td colspan="10">'+
+          '<div class="warn-panel"><div class="wp-list">'+items+'</div>'+
+          '<button type="button" class="wp-add" data-add="'+r.dbId+'">\uFF0B ออกใบเตือนใหม่</button></div></td></tr>';
+      }
+      return mainRow+detail;
     }).join("");
     $("scTbl").innerHTML=head+'<tbody>'+(rows.length?body:'<tr><td class="sc-empty" colspan="10">ยังไม่มีข้อมูลพนักงาน</td></tr>')+'</tbody>';
+    var tbl=$("scTbl");
+    tbl.querySelectorAll(".warn-btn").forEach(function(b){
+      b.onclick=function(){ var dr=tbl.querySelector('tr.warn-detail[data-detail="'+b.dataset.emp+'"]'); if(dr) dr.classList.toggle("hide"); };
+    });
+    tbl.querySelectorAll(".wp-add").forEach(function(b){ b.onclick=function(){ openModal({empId:+b.dataset.add}); }; });
+    tbl.querySelectorAll(".wp-edit").forEach(function(b){
+      b.onclick=function(){ var w=warnAll.filter(function(x){return ""+x.id===b.dataset.edit;})[0]; if(w) openModal({edit:w}); };
+    });
+    tbl.querySelectorAll(".wp-del").forEach(function(b){
+      b.onclick=async function(){ if(!confirm("ลบใบเตือนนี้?")) return;
+        try{ await delWarning(b.dataset.del); await render(); scMsg("ลบใบเตือนแล้ว","ok"); }
+        catch(e){ scMsg("ลบไม่สำเร็จ: "+(e.message||e),"err"); } };
+    });
   }
 
   function renderKpis(rows){
@@ -2196,26 +2252,6 @@ window.__gridEnsure=function(){try{ if(SB && loadedYM===null) loadMonth(); }catc
     return f?(f.pos||""):"";
   }
 
-  function renderWarnings(){
-    if(!warnAll.length){ $("scWarn").innerHTML='<tbody><tr><td class="sc-empty">ยังไม่มีประวัติใบเตือน</td></tr></tbody>'; return; }
-    var head='<thead><tr><th>วันที่</th><th style="text-align:left">พนักงาน</th><th>ระดับ</th><th style="text-align:left">เรื่อง</th><th></th></tr></thead>';
-    var body=warnAll.map(function(w){
-      return '<tr><td>'+esc(w.issue_date||"")+'</td>'+
-        '<td class="nm">'+esc(nameOf(w.employee_id))+'</td>'+
-        '<td><span class="sc-badge">'+esc(w.level||"")+'</span></td>'+
-        '<td style="text-align:left">'+esc(w.reason||"")+'</td>'+
-        '<td><span class="sc-act"><button class="del" data-del="'+w.id+'">ลบใบเตือน</button></span></td></tr>';
-    }).join("");
-    $("scWarn").innerHTML=head+'<tbody>'+body+'</tbody>';
-    $("scWarn").querySelectorAll("button[data-del]").forEach(function(b){
-      b.onclick=async function(){
-        if(!confirm("ลบใบเตือนนี้?")) return;
-        try{ await delWarning(b.dataset.del); await render(); scMsg("ลบใบเตือนแล้ว","ok"); }
-        catch(e){ scMsg("ลบไม่สำเร็จ: "+(e.message||e),"err"); }
-      };
-    });
-  }
-
   async function render(){
     var c=ctx();
     $("scSub").textContent="ประจำเดือน "+monthLabel(c.Y,c.M)+" · หักจากพฤติกรรม เริ่มต้น "+START+" คะแนน";
@@ -2224,12 +2260,11 @@ window.__gridEnsure=function(){try{ if(SB && loadedYM===null) loadMonth(); }catc
     var rows=computeRows();
     renderKpis(rows);
     renderTable(rows);
-    renderWarnings();
   }
   window.__scoreActivate=function(){ render(); };
 
   // ---- issue-warning modal ----
-  var scmEmps=[], scmActive=-1;
+  var scmEmps=[], scmActive=-1, scEditId=null;
   function empLabel(e){ return e.name+(e.nick?" ("+e.nick+")":""); }
   function renderEmpList(q){
     q=(q||"").trim().toLowerCase();
@@ -2250,20 +2285,36 @@ window.__gridEnsure=function(){try{ if(SB && loadedYM===null) loadMonth(); }catc
     $("scmEmp").value=id; $("scmEmpText").value=label;
     $("scmEmpList").classList.remove("open");
   }
-  function openModal(){
+  function openModal(opts){
+    opts=opts||{};
     var c=ctx();
     scmEmps=(c.EMP||[]).filter(function(e){return e.dbId!=null;});
-    $("scmEmp").value=""; $("scmEmpText").value="";
-    $("scmSave").disabled=!scmEmps.length;
-    $("scmEmpText").disabled=!scmEmps.length;
-    $("scmEmpText").placeholder=scmEmps.length?"พิมพ์ชื่อเพื่อค้นหา...":"— ไม่มีพนักงานที่บันทึกในฐานข้อมูล —";
-    var t=new Date();
-    $("scmDate").value=t.getFullYear()+"-"+p2(t.getMonth()+1)+"-"+p2(t.getDate());
-    $("scmLevel").value="ครั้งที่ 1"; $("scmReason").value=""; $("scmDetail").value="";
+    var editing=opts.edit||null;
+    scEditId=editing?editing.id:null;
     $("scmEmpList").classList.remove("open");
+    var h=$("scModal").querySelector("h3"); if(h) h.textContent=editing?"แก้ไขใบเตือน":"ออกใบเตือน (หนังสือเตือน)";
+    var fixedId=editing?editing.employee_id:(opts.empId!=null?opts.empId:null);
+    if(fixedId!=null){
+      $("scmEmp").value=fixedId; $("scmEmpText").value=nameOf(fixedId); $("scmEmpText").disabled=true;
+    }else{
+      $("scmEmp").value=""; $("scmEmpText").value=""; $("scmEmpText").disabled=!scmEmps.length;
+    }
+    $("scmEmpText").placeholder=scmEmps.length?"พิมพ์ชื่อเพื่อค้นหา...":"— ไม่มีพนักงานที่บันทึกในฐานข้อมูล —";
+    if(editing){
+      $("scmDate").value=(""+(editing.issue_date||"")).slice(0,10);
+      $("scmLevel").value=editing.level||"ครั้งที่ 1";
+      $("scmReason").value=editing.reason||"";
+      $("scmDetail").value=editing.detail||"";
+      $("scmSave").textContent="บันทึกการแก้ไข"; $("scmSave").disabled=false;
+    }else{
+      var t=new Date();
+      $("scmDate").value=t.getFullYear()+"-"+p2(t.getMonth()+1)+"-"+p2(t.getDate());
+      $("scmLevel").value="ครั้งที่ 1"; $("scmReason").value=""; $("scmDetail").value="";
+      $("scmSave").textContent="บันทึกใบเตือน"; $("scmSave").disabled=(!scmEmps.length && fixedId==null);
+    }
     $("scModal").classList.add("open");
   }
-  function closeModal(){ $("scModal").classList.remove("open"); $("scmEmpList").classList.remove("open"); }
+  function closeModal(){ scEditId=null; $("scmEmpText").disabled=false; $("scModal").classList.remove("open"); $("scmEmpList").classList.remove("open"); }
 
   $("scIssueBtn").onclick=openModal;
   $("scmCancel").onclick=closeModal;
@@ -2288,14 +2339,13 @@ window.__gridEnsure=function(){try{ if(SB && loadedYM===null) loadMonth(); }catc
     if(!eid){ alert("เลือกพนักงานก่อน"); return; }
     if(!reason){ alert("ระบุเรื่อง/สาเหตุก่อน"); $("scmReason").focus(); return; }
     var obj={employee_id:+eid, issue_date:$("scmDate").value, level:$("scmLevel").value, reason:reason, detail:$("scmDetail").value.trim()||null};
-    $("scmSave").disabled=true; $("scmSave").textContent="กำลังบันทึก...";
+    var editId=scEditId;
+    $("scmSave").disabled=true; var oldtxt=$("scmSave").textContent; $("scmSave").textContent="กำลังบันทึก...";
     try{
-      var d=await saveWarning(obj);
-      closeModal();
-      await render();
-      scMsg("ออกใบเตือนให้ "+nameOf(+eid)+" แล้ว (−5 คะแนน)","ok");
+      if(editId){ await updateWarning(editId,obj); closeModal(); await render(); scMsg("แก้ไขใบเตือนของ "+nameOf(+eid)+" แล้ว","ok"); }
+      else{ await saveWarning(obj); closeModal(); await render(); scMsg("ออกใบเตือนให้ "+nameOf(+eid)+" แล้ว (\u22125 คะแนน)","ok"); }
     }catch(e){ scMsg("บันทึกไม่สำเร็จ: "+(e.message||e),"err"); alert("บันทึกไม่สำเร็จ: "+(e.message||e)); }
-    finally{ $("scmSave").disabled=false; $("scmSave").textContent="บันทึกใบเตือน"; }
+    finally{ $("scmSave").disabled=false; $("scmSave").textContent=oldtxt||"บันทึกใบเตือน"; }
   };
 
   // ---- print warning letter ----
