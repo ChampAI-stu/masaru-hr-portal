@@ -642,6 +642,18 @@ window.cancelTerm=function(key){
   state.terms=(state.terms||[]).filter(function(t){return t.emp_key!==key;});
   cacheSave(); render(); guard(function(){ sbDelTerm(key); });
 };
+window.deleteTermItem=function(key){
+  if(!confirm("ลบรายการนี้ถาวร?\n(เอาออกจากระบบทั้งหมด — ไม่กลับไปเป็นทดลองงาน)")) return;
+  state.terms=(state.terms||[]).filter(function(t){return t.emp_key!==key;});
+  var rec=state.records.filter(function(r){return r.id===key;})[0];
+  if(rec){
+    state.records=state.records.filter(function(r){return r.id!==key;});
+    state.done=(state.done||[]).filter(function(m){return !(""+m).startsWith(key+"-");});
+    if(state.doneMeta){ Object.keys(state.doneMeta).forEach(function(m){ if((""+m).startsWith(key+"-")) delete state.doneMeta[m]; }); }
+  }
+  cacheSave(); render();
+  guard(async function(){ await sbDelTerm(key); if(rec) await sbDeleteRecord(key); });
+};
 window.editTerm=function(key){
   var t=(state.terms||[]).filter(function(x){return x.emp_key===key;})[0]; if(!t) return;
   openTermModal({ key:t.emp_key, eid:t.employee_id, name:t.emp_name, dept:t.dept, ms:t.fail_milestone });
@@ -675,6 +687,7 @@ function renderTermList(){
         '<div class="glead">วันออก '+thDate(t.term_date)+' <span class="badge '+st+'">'+lbl+'</span></div>'+
         '<button class="iconbtn" title="แก้ไขวันออก" onclick="editTerm(\''+escAttr(t.emp_key)+'\')">\u270E</button>'+
         '<button class="iconbtn" title="ยกเลิก (กลับเป็นทดลองงาน)" onclick="cancelTerm(\''+escAttr(t.emp_key)+'\')">\u21A9</button>'+
+        '<button class="iconbtn" title="ลบรายการถาวร" style="color:var(--red)" onclick="deleteTermItem(\''+escAttr(t.emp_key)+'\')">\uD83D\uDDD1</button>'+
         '</div>'+(t.reason?'<div class="gmiles"><div class="gmile" style="justify-content:flex-start">\uD83D\uDCDD '+escapeH(t.reason)+'</div></div>':'')+'</div>';
     }).join("");
   }
