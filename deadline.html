@@ -94,7 +94,14 @@
   .modal .row{display:flex;gap:10px}
   .modal .row .field{flex:1}
   .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
-  .hide{display:none!important}
+  .emp-combo{position:relative}
+.emp-list{position:absolute;left:0;right:0;top:calc(100% + 4px);background:#fff;border:1px solid #e3e3dc;border-radius:10px;box-shadow:0 12px 30px rgba(16,31,54,.16);max-height:240px;overflow:auto;z-index:30;display:none}
+.emp-list.open{display:block}
+.emp-opt{padding:9px 12px;cursor:pointer;font-size:14px;display:flex;justify-content:space-between;gap:10px;align-items:center}
+.emp-opt:hover,.emp-opt.active{background:#FBE7E8}
+.emp-opt small{color:#7A8398;white-space:nowrap}
+.emp-none{padding:11px 12px;color:#7A8398;font-size:13px}
+.hide{display:none!important}
 
   /* Alert popup */
   .modal.pop{max-width:680px;padding:28px 30px}
@@ -198,7 +205,11 @@
     </div>
     <div class="field">
       <label id="lbl_name">ชื่อพนักงาน</label>
-      <input id="f_name" placeholder="เช่น ปอ (ณัฐสินี เอกณรงค์พันธ์)">
+      <div class="emp-combo">
+        <input id="f_name" autocomplete="off" placeholder="พิมพ์ชื่อ/ชื่อเล่นเพื่อค้นหา หรือพิมพ์เองก็ได้">
+        <div id="empList" class="emp-list"></div>
+      </div>
+      <div class="hint" id="hint_name">ดึงรายชื่อจากระบบบันทึกการมาทำงาน — เลือกแล้วเติมวันเริ่มงาน/แผนกให้อัตโนมัติ</div>
     </div>
 
     <!-- probation / maternity ref date -->
@@ -300,6 +311,68 @@ function setStatus(ok){
   const el=document.getElementById("syncDot");
   if(el){ el.className="sync "+(ok?"ok":"off"); el.textContent = ok ? "● ซิงค์แล้ว" : "● ออฟไลน์"; }
 }
+/* ---------- employee source: daiki_employees (จาก chack) ---------- */
+var EMPLOYEES=[], _empActive=-1, _empLoaded=false;
+function _empLabel(e){ var nm=e.full_name||""; return e.nickname?(e.nickname+" ("+nm+")"):nm; }
+async function loadEmployees(){
+  if(!_sb) return;
+  try{
+    var r=await _sb.from("daiki_employees")
+      .select("id,full_name,nickname,position,group_name,start_date,resign_date,is_active");
+    if(r.error) throw r.error;
+    EMPLOYEES=(r.data||[]).filter(function(e){ return e.is_active!==false && !e.resign_date; })
+      .sort(function(a,b){ return (""+(a.full_name||"")).localeCompare(""+(b.full_name||""),"th"); });
+    _empLoaded=true;
+  }catch(err){ console.warn("โหลดรายชื่อพนักงานไม่ได้", err); _empLoaded=false; }
+}
+function renderEmpList(q){
+  var list=document.getElementById("empList"); if(!list) return;
+  q=(""+(q||"")).trim().toLowerCase();
+  _empActive=-1;
+  if(!_empLoaded && !EMPLOYEES.length){ list.innerHTML='<div class="emp-none">— ยังไม่ได้เชื่อมต่อ/ไม่มีรายชื่อ (พิมพ์เองได้) —</div>'; list.classList.add("open"); return; }
+  var arr=EMPLOYEES.filter(function(e){ return !q || (_empLabel(e).toLowerCase().indexOf(q)>=0); }).slice(0,50);
+  if(!arr.length){ list.innerHTML='<div class="emp-none">ไม่พบชื่อ — จะใช้ที่พิมพ์ไว้</div>'; list.classList.add("open"); return; }
+  list.innerHTML=arr.map(function(e){
+    var sub=[e.position,e.group_name].filter(Boolean).join(" · ");
+    return '<div class="emp-opt" data-id="'+e.id+'">'+
+      '<span>'+_esc(_empLabel(e))+'</span>'+(sub?'<small>'+_esc(sub)+'</small>':'')+'</div>';
+  }).join("");
+  list.classList.add("open");
+  list.querySelectorAll(".emp-opt").forEach(function(o){
+    o.onmousedown=function(ev){ ev.preventDefault(); pickEmployee(o.dataset.id); };
+  });
+}
+function pickEmployee(id){
+  var e=EMPLOYEES.filter(function(x){return ""+x.id===""+id;})[0]; if(!e) return;
+  var fn=document.getElementById("f_name"); if(fn) fn.value=_empLabel(e);
+  // เติมวันเริ่มงานให้อัตโนมัติ (ใช้กับทดลองงาน/ลาคลอด)
+  var ref=document.getElementById("f_ref");
+  if(ref && e.start_date){ ref.value=(""+e.start_date).slice(0,10); }
+  // เติมแผนก
+  var dept=document.getElementById("f_dept");
+  if(dept && e.group_name){ dept.value=e.group_name; }
+  var list=document.getElementById("empList"); if(list) list.classList.remove("open");
+}
+function _esc(t){ return (""+(t==null?"":t)).replace(/[&<>"]/g,function(m){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m];}); }
+function bindEmpCombo(){
+  var inp=document.getElementById("f_name"); if(!inp) return;
+  inp.addEventListener("input",function(){ renderEmpList(this.value); });
+  inp.addEventListener("focus",function(){ if(!_empLoaded){ loadEmployees().then(function(){ renderEmpList(inp.value); }); } else { renderEmpList(this.value); } });
+  inp.addEventListener("blur",function(){ setTimeout(function(){ var l=document.getElementById("empList"); if(l) l.classList.remove("open"); },140); });
+  inp.addEventListener("keydown",function(ev){
+    var list=document.getElementById("empList"); var opts=list?list.querySelectorAll(".emp-opt"):[];
+    if(ev.key==="ArrowDown"||ev.key==="ArrowUp"){
+      ev.preventDefault(); if(!opts.length) return;
+      _empActive+=(ev.key==="ArrowDown"?1:-1);
+      if(_empActive<0)_empActive=opts.length-1; if(_empActive>=opts.length)_empActive=0;
+      opts.forEach(function(o,i){ o.classList.toggle("active",i===_empActive); });
+      opts[_empActive].scrollIntoView({block:"nearest"});
+    }else if(ev.key==="Enter"){
+      if(_empActive>=0&&opts[_empActive]){ ev.preventDefault(); pickEmployee(opts[_empActive].dataset.id); }
+    }else if(ev.key==="Escape"){ if(list) list.classList.remove("open"); }
+  });
+}
+
 async function sbLoad(){
   if(!_sb){ cacheLoad(); setStatus(false); render(); return; }
   try{
@@ -711,7 +784,9 @@ function closeAlertPop(){
 async function init(){
   const now=new Date();
   document.getElementById("todayLabel").textContent = "วันนี้ "+thDate(now);
-  cacheLoad();     // instant render from cache
+  cacheLoad();     // instant render
+  bindEmpCombo();
+  loadEmployees();
   render();
   await sbLoad();  // then fetch fresh from Supabase
 
