@@ -498,6 +498,17 @@
     <button class="btn" id="addBtn">+ เพิ่มรายการ</button>
     <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" class="hide">
   </div>
+  <div class="toolbar toolbar2">
+    <input type="text" id="deadSearch" class="dead-search" placeholder="🔍 ค้นหาชื่อ...">
+    <div class="focus-btns" id="focusBtns">
+      <button class="chip focus active" data-focus="all">ทั้งหมด</button>
+      <button class="chip focus" data-focus="week">สัปดาห์นี้</button>
+      <button class="chip focus" data-focus="month">เดือนนี้</button>
+      <button class="chip focus" data-focus="overdue">เลยกำหนด</button>
+    </div>
+    <select id="deadDept" class="dead-dept"><option value="all">ทุกแผนก</option></select>
+    <label class="auto-toggle"><input type="checkbox" id="autoChk" checked> ทดลองงานอัตโนมัติ (จากวันเริ่มงาน)</label>
+  </div>
 
   <!-- Active alerts -->
   <div class="list" id="list"></div>
@@ -679,6 +690,15 @@
   .gm-days.overdue{color:var(--red)} .gm-days.urgent{color:#e06a00} .gm-days.soon{color:#b8860b}
   .gmile.done .gm-days{color:var(--ok)}
   .iconbtn.sm{width:30px;height:30px;font-size:.9rem}
+  .toolbar2{gap:10px;flex-wrap:wrap;align-items:center;margin-top:-4px}
+  .dead-search{border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-family:inherit;font-size:.92rem;min-width:180px;color:var(--ink)}
+  .focus-btns{display:inline-flex;gap:6px;flex-wrap:wrap}
+  .chip.focus{padding:6px 12px}
+  .dead-dept{border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-family:inherit;font-size:.9rem;background:#fff;color:var(--ink);max-width:200px}
+  .auto-toggle{display:inline-flex;align-items:center;gap:6px;font-size:.88rem;color:var(--muted);cursor:pointer;user-select:none}
+  .auto-toggle input{width:15px;height:15px}
+  .auto-tag{font-size:.7rem;font-weight:700;color:#0e7a4b;background:#e3f5ec;border:1px solid #bfe6d2;border-radius:20px;padding:3px 9px;white-space:nowrap}
+  .gitem .ghead .auto-tag{margin-left:2px}
 
   .section-title{font-weight:700;color:var(--green-dark);margin:18px 0 8px;font-size:1rem}
 
@@ -2406,6 +2426,7 @@ const THMONTH = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","�
 let state = { records: [], done: [] };  // done = array of milestone ids
 let filter = "all";
 let showDone = false;
+let qSearch="", focusWin="all", deptFilter="all", showAuto=true;
 let online = false;
 
 /* ---------- Supabase config ---------- */
@@ -2583,6 +2604,25 @@ function daysText(days){
 }
 
 /* ---------- build milestones from records ---------- */
+function autoMilestones(){
+  if(!showAuto || !EMPLOYEES || !EMPLOYEES.length) return [];
+  var manual={};
+  state.records.forEach(function(r){ if(r.type==="probation") manual[(r.name||"").trim()]=true; });
+  var out=[];
+  EMPLOYEES.forEach(function(e){
+    if(e.is_active===false || e.resign_date) return;
+    var start=e.start_date; if(!start) return;
+    var nm=(e.full_name||"").trim(); if(!nm || manual[nm]) return;
+    var dept=e.group_name||"";
+    [30,60,90].forEach(function(n){
+      var d=addDays(start,n); var days=daysUntil(d);
+      if(days < -14) return;
+      out.push({ id:"auto:"+e.id+":p"+n, rid:"auto:"+e.id, type:"probation", name:nm,
+        label:"ประเมินทดลองงาน "+n+" วัน", date:d, dept:dept, auto:true });
+    });
+  });
+  return out;
+}
 function milestones(){
   const out=[];
   state.records.forEach(r=>{
@@ -2606,9 +2646,10 @@ function milestones(){
         date:d, note:r.note });
     }
   });
-  out.forEach(m=>{ m.days=daysUntil(m.date); m.st=statusOf(m.days); m.done=state.done.includes(m.id);
-    const r=state.records.find(x=>x.id===m.rid); m.dept=r&&r.dept?r.dept:""; });
-  return out;
+  var merged=out.concat(autoMilestones());
+  merged.forEach(m=>{ m.days=daysUntil(m.date); m.st=statusOf(m.days); m.done=state.done.includes(m.id);
+    if(!m.auto){ const r=state.records.find(x=>x.id===m.rid); m.dept=r&&r.dept?r.dept:""; } });
+  return merged;
 }
 
 /* ---------- render ---------- */
@@ -2636,7 +2677,16 @@ function render(){
 
   // ---- จัดกลุ่มเป็น 1 การ์ด/คน (ทดลองงานยุบ 30/60/90 เป็นแถวย่อย) ----
   const groups = groupMiles(all);
-  const gShown = filter==="all" ? groups : groups.filter(g=>g.type===filter);
+  const _q2=qSearch.trim().toLowerCase();
+  const gShown = groups.filter(function(g){
+    if(filter!=="all" && g.type!==filter) return false;
+    if(deptFilter!=="all" && (g.dept||"")!==deptFilter) return false;
+    if(_q2 && (g.name||"").toLowerCase().indexOf(_q2)<0) return false;
+    if(focusWin==="overdue" && !(g.leadDays<0)) return false;
+    if(focusWin==="week" && !(g.leadDays<=7)) return false;
+    if(focusWin==="month" && !(g.leadDays<=30)) return false;
+    return true;
+  });
   const activeG = gShown.filter(g=>!g.allDone).sort((a,b)=>a.leadDays-b.leadDays);
   const doneG   = gShown.filter(g=>g.allDone).sort((a,b)=>b.leadDate-a.leadDate);
 
@@ -2652,6 +2702,11 @@ function render(){
   }else{
     doneWrap.classList.add("hide");
   }
+  (function(){ var sel=_q("deadDept"); if(!sel) return;
+    var set={}; groups.forEach(function(g){ if(g.dept) set[g.dept]=1; });
+    var opts=Object.keys(set).sort(function(a,b){return a.localeCompare(b,"th");});
+    sel.innerHTML='<option value="all">ทุกแผนก</option>'+opts.map(function(d){ return '<option value="'+d.replace(/"/g,"&quot;")+'"'+(d===deptFilter?" selected":"")+'>'+d+'</option>'; }).join("");
+  })();
   _q("toggleDone").textContent = showDone ? "ซ่อนที่เสร็จแล้ว" : "แสดงที่เสร็จแล้ว";
 }
 
@@ -2679,7 +2734,7 @@ function groupHTML(g){
       <div class="icon">${typeIcon(g.type)}</div>
       <div class="gtitle"><span class="tag">${typeName(g.type)}</span>${escapeH(g.name)}${dept}</div>
       <div class="glead">${ g.allDone ? '\u2705 เสร็จครบ' : daysText(g.leadDays)+' <span class="badge '+g.lead.st.k+'">'+g.lead.st.label+'</span>' }</div>
-      <button class="iconbtn" title="แก้ไข" onclick="editRec('${g.rid}')">\u270E</button>
+      ${ String(g.rid).indexOf("auto:")===0 ? '<span class="auto-tag">อัตโนมัติ</span>' : '<button class="iconbtn" title="แก้ไข" onclick="editRec(\''+g.rid+'\')">\u270E</button>' }
     </div>`;
   const rows = g.miles.map(m=>`
       <div class="gmile ${m.done?'done':m.st.k}">
@@ -3050,8 +3105,8 @@ async function init(){
   _q("todayLabel").textContent = "วันนี้ "+thDate(now);
   cacheLoad();     // instant render
   bindEmpCombo();
-  loadEmployees();
   render();
+  loadEmployees().then(function(){ render(); });
   await sbLoad();  // then fetch fresh from Supabase
 
   _q("addBtn").onclick=()=>openModal(null);
@@ -3079,6 +3134,12 @@ async function init(){
       filter=ch.dataset.type; render();
     };
   });
+  _q("deadSearch").addEventListener("input",function(){ qSearch=this.value; render(); });
+  root.querySelectorAll("#focusBtns .focus").forEach(function(b){
+    b.onclick=function(){ root.querySelectorAll("#focusBtns .focus").forEach(function(c){c.classList.remove("active");}); b.classList.add("active"); focusWin=b.dataset.focus; render(); };
+  });
+  _q("deadDept").onchange=function(){ deptFilter=this.value; render(); };
+  _q("autoChk").onchange=function(){ showAuto=this.checked; render(); };
 
   showAlertPop(false); // auto-open on load if there are urgent items
 
