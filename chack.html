@@ -485,11 +485,8 @@
   <!-- Toolbar -->
   <div class="toolbar">
     <div class="filters" id="filters">
-      <button class="chip active" data-type="all">ทั้งหมด</button>
-      <button class="chip" data-type="probation">⏳ ทดลองงาน</button>
-      <button class="chip" data-type="maternity">👶 ลาคลอด</button>
-      <button class="chip" data-type="contract">📄 สัญญา</button>
-      <button class="chip" data-type="document">📁 เอกสาร</button>
+      <button class="chip active" data-type="probation">⏳ ทดลองงาน</button>
+      <button class="chip" data-type="termination">🚪 วันพ้นสภาพ (วันออก)</button>
     </div>
     <div class="spacer"></div>
     <button class="btn ghost" id="toggleDone">แสดงที่เสร็จแล้ว</button>
@@ -529,9 +526,6 @@
       <label>ประเภท</label>
       <select id="f_type">
         <option value="probation">⏳ ทดลองงาน (30/60/90 วัน)</option>
-        <option value="maternity">👶 ลาคลอด + ประกันสังคม</option>
-        <option value="contract">📄 ต่อสัญญา / หมดสัญญา</option>
-        <option value="document">📁 ครบกำหนดเอกสาร</option>
       </select>
     </div>
     <div class="field">
@@ -595,6 +589,18 @@
     <label class="pop-snooze"><input type="checkbox" id="popSnooze"> ไม่ต้องเตือนซ้ำวันนี้</label>
     <div class="modal-actions">
       <button class="btn" id="popClose">รับทราบ</button>
+    </div>
+  </div>
+</div>
+<div class="overlay" id="termOverlay">
+  <div class="modal">
+    <h2>ไม่ผ่านทดลองงาน — บันทึกวันพ้นสภาพ</h2>
+    <div class="field"><label>พนักงาน</label><div id="term_name" style="font-weight:600"></div><div id="term_ms" style="color:var(--muted);font-size:.9rem;margin-top:2px"></div></div>
+    <div class="field"><label>วันพ้นสภาพ (วันออกจริง)</label><input type="date" id="term_date"></div>
+    <div class="field"><label>เหตุผล (ไม่บังคับ)</label><textarea id="term_reason" rows="2" placeholder="เช่น ผลงานไม่ผ่านเกณฑ์ทดลองงาน"></textarea></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+      <button class="btn ghost" id="termCancel">ยกเลิก</button>
+      <button class="btn" id="termSave" style="background:var(--red);color:#fff">บันทึกวันออก</button>
     </div>
   </div>
 </div>
@@ -689,6 +695,12 @@
   .gm-days{white-space:nowrap;font-weight:700;min-width:96px;text-align:right}
   .gm-days.overdue{color:var(--red)} .gm-days.urgent{color:#e06a00} .gm-days.soon{color:#b8860b}
   .gmile.done .gm-days{color:var(--ok)}
+  .gm-actions{display:inline-flex;gap:6px;white-space:nowrap;align-items:center}
+  .gm-pass{border:1px solid #bfe6d2;background:#eafaf1;color:#0e7a4b;border-radius:8px;padding:4px 10px;font-family:inherit;font-size:.82rem;font-weight:700;cursor:pointer}
+  .gm-pass:hover{background:#0e7a4b;color:#fff}
+  .gm-fail{border:1px solid #f2c2c0;background:#fdecea;color:#c0392b;border-radius:8px;padding:4px 10px;font-family:inherit;font-size:.82rem;font-weight:700;cursor:pointer}
+  .gm-fail:hover{background:#c0392b;color:#fff}
+  .gm-passed{color:#0e7a4b;font-weight:700;font-size:.82rem}
   .iconbtn.sm{width:30px;height:30px;font-size:.9rem}
   .toolbar2{gap:10px;flex-wrap:wrap;align-items:center;margin-top:-4px}
   .dead-search{border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-family:inherit;font-size:.92rem;min-width:180px;color:var(--ink)}
@@ -2423,8 +2435,8 @@ window.__gridEnsure=function(){try{ if(SB && loadedYM===null) loadMonth(); }catc
 const KEY = "masaru_hr_deadline_v1";
 const THMONTH = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 
-let state = { records: [], done: [] };  // done = array of milestone ids
-let filter = "all";
+let state = { records: [], done: [], terms: [] };  // done = array of milestone ids
+let filter = "probation";
 let showDone = false;
 let qSearch="", focusWin="all", deptFilter="all", showAuto=true;
 let online = false;
@@ -2442,6 +2454,7 @@ function cacheLoad(){
   }catch(e){}
   if(!state.records) state.records = [];
   if(!state.done) state.done = [];
+  if(!state.terms) state.terms = [];
 }
 function cacheSave(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
 
@@ -2527,14 +2540,17 @@ function bindEmpCombo(){
 async function sbLoad(){
   if(!_sb){ cacheLoad(); setStatus(false); render(); return; }
   try{
-    const [r1,r2]=await Promise.all([
+    const [r1,r2,r3]=await Promise.all([
       _sb.from("hr_deadlines").select("*"),
-      _sb.from("hr_deadline_done").select("milestone_id")
+      _sb.from("hr_deadline_done").select("milestone_id"),
+      _sb.from("hr_termination").select("*")
     ]);
     if(r1.error) throw r1.error;
     if(r2.error) throw r2.error;
+    if(r3.error) throw r3.error;
     state.records=(r1.data||[]).map(rowToRec);
     state.done=(r2.data||[]).map(x=>x.milestone_id);
+    state.terms=(r3.data||[]).map(rowToTerm);
     cacheSave(); setStatus(true);
   }catch(err){
     console.warn("Supabase load failed → cache", err);
@@ -2627,6 +2643,8 @@ function autoMilestones(){
     var nm=(e.full_name||"").trim(); if(!nm) return;
     var key=nm.toLowerCase(); if(seen[key]) return; seen[key]=true;   // กันพนักงานชื่อซ้ำใน DB
     if(hasManual(e)) return;                                          // มี manual แล้ว ไม่สร้าง auto
+    var ek="auto:"+e.id;
+    if((state.terms||[]).some(function(t){return t.emp_key===ek;})) return;  // ไม่ผ่านแล้ว → ไปตารางวันออก
     var dept=e.group_name||"";
     [30,60,90].forEach(function(n){
       var d=addDays(start,n); var days=daysUntil(d);
@@ -2670,6 +2688,78 @@ function milestones(){
 function typeIcon(t){ return {probation:"⏳",maternity:"👶",contract:"📄",document:"📁"}[t]||"📌"; }
 function typeName(t){ return {probation:"ทดลองงาน",maternity:"ลาคลอด",contract:"สัญญา",document:"เอกสาร"}[t]||t; }
 
+function escAttr(s){ return (""+(s==null?"":s)).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;"); }
+function autoEid(rid){ rid=""+rid; return rid.indexOf("auto:")===0 ? rid.slice(5) : ""; }
+function rowToTerm(x){ return { id:x.id, employee_id:x.employee_id, emp_key:x.emp_key, emp_name:x.emp_name, dept:x.dept||"", fail_milestone:x.fail_milestone||"", term_date:x.term_date, reason:x.reason||"" }; }
+var _termCtx=null;
+function openTermModal(opts){
+  _termCtx={ key:opts.key, eid:opts.eid?(+opts.eid):null, name:opts.name||"", dept:opts.dept||"", ms:opts.ms||"" };
+  var ex=(state.terms||[]).filter(function(t){return t.emp_key===_termCtx.key;})[0];
+  _q("term_name").textContent=_termCtx.name+(_termCtx.dept?(" \u00B7 "+_termCtx.dept):"");
+  _q("term_ms").textContent="ไม่ผ่าน: "+(_termCtx.ms||"ทดลองงาน");
+  _q("term_date").value=ex&&ex.term_date?(""+ex.term_date).slice(0,10):toISO(new Date());
+  _q("term_reason").value=ex&&ex.reason?ex.reason:"";
+  _q("termOverlay").classList.add("show");
+}
+function closeTermModal(){ _q("termOverlay").classList.remove("show"); _termCtx=null; }
+function saveTerm(){
+  if(!_termCtx) return;
+  var d=_q("term_date").value; if(!d){ alert("เลือกวันพ้นสภาพก่อน"); return; }
+  var t={ employee_id:_termCtx.eid, emp_key:_termCtx.key, emp_name:_termCtx.name, dept:_termCtx.dept,
+          fail_milestone:_termCtx.ms, term_date:d, reason:(_q("term_reason").value.trim()||null) };
+  var arr=state.terms||(state.terms=[]);
+  var i=-1; for(var k=0;k<arr.length;k++){ if(arr[k].emp_key===t.emp_key){ i=k; break; } }
+  if(i>=0) arr[i]=t; else arr.push(t);
+  cacheSave(); closeTermModal(); render(); guard(function(){ sbAddTerm(t); });
+}
+window.cancelTerm=function(key){
+  if(!confirm("ยกเลิกสถานะไม่ผ่าน และกลับไปนับทดลองงานตามปกติ?")) return;
+  state.terms=(state.terms||[]).filter(function(t){return t.emp_key!==key;});
+  cacheSave(); render(); guard(function(){ sbDelTerm(key); });
+};
+window.editTerm=function(key){
+  var t=(state.terms||[]).filter(function(x){return x.emp_key===key;})[0]; if(!t) return;
+  openTermModal({ key:t.emp_key, eid:t.employee_id, name:t.emp_name, dept:t.dept, ms:t.fail_milestone });
+};
+async function sbAddTerm(t){ if(!_sb) return; const {error}=await _sb.from("hr_termination").upsert(t,{onConflict:"emp_key"}); if(error) throw error; }
+async function sbDelTerm(key){ if(!_sb) return; const {error}=await _sb.from("hr_termination").delete().eq("emp_key",key); if(error) throw error; }
+function bindListActions(container){
+  if(!container) return;
+  container.querySelectorAll("[data-pass]").forEach(function(b){ b.onclick=function(){ window.toggleDone(b.getAttribute("data-pass")); }; });
+  container.querySelectorAll("[data-fail]").forEach(function(b){ b.onclick=function(){ openTermModal({ key:b.getAttribute("data-fail"), eid:b.getAttribute("data-eid"), name:b.getAttribute("data-name"), dept:b.getAttribute("data-dept"), ms:b.getAttribute("data-ms") }); }; });
+}
+function renderTermList(){
+  var q=qSearch.trim().toLowerCase();
+  var arr=(state.terms||[]).slice().filter(function(t){
+    if(deptFilter!=="all" && (t.dept||"")!==deptFilter) return false;
+    if(q && (t.emp_name||"").toLowerCase().indexOf(q)<0) return false;
+    return true;
+  }).sort(function(a,b){ return (""+a.term_date).localeCompare(""+b.term_date); });
+  var listEl=_q("list");
+  if(!arr.length){ listEl.innerHTML='<div class="empty">ยังไม่มีพนักงานที่ไม่ผ่านทดลองงาน</div>'; }
+  else{
+    listEl.innerHTML=arr.map(function(t){
+      var days=daysUntil(t.term_date);
+      var st=days<0?"overdue":(days<=7?"soon":"ok");
+      var lbl=days<0?("ออกแล้ว "+Math.abs(days)+" วัน"):(days===0?"ออกวันนี้":("อีก "+days+" วัน"));
+      return '<div class="gitem '+st+'"><div class="ghead">'+
+        '<div class="icon">\uD83D\uDEAA</div>'+
+        '<div class="gtitle"><span class="tag">พ้นสภาพ</span>'+escapeH(t.emp_name)+(t.dept?' <span class="tag">'+escapeH(t.dept)+'</span>':'')+
+        (t.fail_milestone?' <small style="color:var(--muted)">ไม่ผ่าน '+escapeH(t.fail_milestone)+'</small>':'')+'</div>'+
+        '<div class="glead">วันออก '+thDate(t.term_date)+' <span class="badge '+st+'">'+lbl+'</span></div>'+
+        '<button class="iconbtn" title="แก้ไขวันออก" onclick="editTerm(\''+escAttr(t.emp_key)+'\')">\u270E</button>'+
+        '<button class="iconbtn" title="ยกเลิก (กลับเป็นทดลองงาน)" onclick="cancelTerm(\''+escAttr(t.emp_key)+'\')">\u21A9</button>'+
+        '</div>'+(t.reason?'<div class="gmiles"><div class="gmile" style="justify-content:flex-start">\uD83D\uDCDD '+escapeH(t.reason)+'</div></div>':'')+'</div>';
+    }).join("");
+  }
+  _q("doneWrap").classList.add("hide");
+  (function(){ var sel=_q("deadDept"); if(!sel) return;
+    var set={}; (state.terms||[]).forEach(function(t){ if(t.dept) set[t.dept]=1; });
+    var opts=Object.keys(set).sort(function(a,b){return a.localeCompare(b,"th");});
+    sel.innerHTML='<option value="all">ทุกแผนก</option>'+opts.map(function(d){ return '<option value="'+d.replace(/"/g,"&quot;")+'"'+(d===deptFilter?" selected":"")+'>'+d+'</option>'; }).join("");
+  })();
+  _q("toggleDone").textContent = showDone ? "ซ่อนที่เสร็จแล้ว" : "แสดงที่เสร็จแล้ว";
+}
 function render(){
   const all = milestones();
   const active = all.filter(m=>!m.done).sort((a,b)=>a.days-b.days);
@@ -2691,9 +2781,12 @@ function render(){
 
   // ---- จัดกลุ่มเป็น 1 การ์ด/คน (ทดลองงานยุบ 30/60/90 เป็นแถวย่อย) ----
   const groups = groupMiles(all);
+  const termKeys={}; (state.terms||[]).forEach(function(t){ termKeys[t.emp_key]=1; });
+  if(filter==="termination"){ renderTermList(); return; }
   const _q2=qSearch.trim().toLowerCase();
   const gShown = groups.filter(function(g){
     if(filter!=="all" && g.type!==filter) return false;
+    if(termKeys[g.rid]) return false;
     if(deptFilter!=="all" && (g.dept||"")!==deptFilter) return false;
     if(_q2 && (g.name||"").toLowerCase().indexOf(_q2)<0) return false;
     if(focusWin==="overdue" && !(g.leadDays<0)) return false;
@@ -2716,6 +2809,8 @@ function render(){
   }else{
     doneWrap.classList.add("hide");
   }
+  bindListActions(listEl);
+  if(showDone && doneG.length) bindListActions(_q("doneList"));
   (function(){ var sel=_q("deadDept"); if(!sel) return;
     var set={}; groups.forEach(function(g){ if(g.dept) set[g.dept]=1; });
     var opts=Object.keys(set).sort(function(a,b){return a.localeCompare(b,"th");});
@@ -2750,13 +2845,17 @@ function groupHTML(g){
       <div class="glead">${ g.allDone ? '\u2705 เสร็จครบ' : daysText(g.leadDays)+' <span class="badge '+g.lead.st.k+'">'+g.lead.st.label+'</span>' }</div>
       ${ String(g.rid).indexOf("auto:")===0 ? '<span class="auto-tag">อัตโนมัติ</span>' : '<button class="iconbtn" title="แก้ไข" onclick="editRec(\''+g.rid+'\')">\u270E</button>' }
     </div>`;
-  const rows = g.miles.map(m=>`
-      <div class="gmile ${m.done?'done':m.st.k}">
+  const rows = g.miles.map(m=>{
+    const acts = m.done
+      ? `<span class="gm-passed">\u2713 ผ่าน</span><button class="iconbtn sm gm-undo" data-pass="${m.id}" title="ยกเลิกผ่าน">\u21A9</button>`
+      : `<button class="gm-pass" data-pass="${m.id}">\u2713 ผ่าน</button><button class="gm-fail" data-fail="${g.rid}" data-eid="${autoEid(g.rid)}" data-name="${escAttr(g.name)}" data-dept="${escAttr(g.dept||'')}" data-ms="${escAttr(m.label)}">\u2717 ไม่ผ่าน</button>`;
+    return `<div class="gmile ${m.done?'done':m.st.k}">
         <span class="gm-label">${escapeH(m.label)}</span>
         <span class="gm-date">${thDate(m.date)}</span>
-        <span class="gm-days ${m.st.k}">${ m.done ? '\u2713 เสร็จ' : daysText(m.days) }</span>
-        <button class="iconbtn sm" title="${m.done?'ยกเลิกเสร็จ':'ทำเสร็จแล้ว'}" onclick="toggleDone('${m.id}')">${m.done?'\u21A9':'\u2713'}</button>
-      </div>`).join("");
+        <span class="gm-days ${m.st.k}">${ m.done ? '\u2713 ผ่าน' : daysText(m.days) }</span>
+        <span class="gm-actions">${acts}</span>
+      </div>`;
+  }).join("");
   return `<div class="gitem ${cls}">${head}<div class="gmiles">${rows}</div></div>`;
 }
 function itemHTML(m){
@@ -3154,6 +3253,9 @@ async function init(){
   });
   _q("deadDept").onchange=function(){ deptFilter=this.value; render(); };
   _q("autoChk").onchange=function(){ showAuto=this.checked; render(); };
+  _q("termSave").onclick=saveTerm;
+  _q("termCancel").onclick=closeTermModal;
+  _q("termOverlay").addEventListener("click",function(e){ if(e.target===_q("termOverlay")) closeTermModal(); });
 
   showAlertPop(false); // auto-open on load if there are urgent items
 
