@@ -504,7 +504,6 @@
       <button class="chip focus" data-focus="overdue">เลยกำหนด</button>
     </div>
     <select id="deadDept" class="dead-dept"><option value="all">ทุกแผนก</option></select>
-    <label class="auto-toggle"><input type="checkbox" id="autoChk"> ทดลองงานอัตโนมัติ (จากวันเริ่มงาน)</label>
   </div>
 
   <!-- Active alerts -->
@@ -2678,7 +2677,7 @@ function milestones(){
         date:d, note:r.note });
     }
   });
-  var merged=out.concat(autoMilestones());
+  var merged=out;  // ไม่ดึงอัตโนมัติแล้ว — เฉพาะที่เพิ่มเอง
   merged.forEach(m=>{ m.days=daysUntil(m.date); m.st=statusOf(m.days); m.done=state.done.includes(m.id);
     if(!m.auto){ const r=state.records.find(x=>x.id===m.rid); m.dept=r&&r.dept?r.dept:""; } });
   return merged;
@@ -3253,7 +3252,6 @@ async function init(){
     b.onclick=function(){ root.querySelectorAll("#focusBtns .focus").forEach(function(c){c.classList.remove("active");}); b.classList.add("active"); focusWin=b.dataset.focus; render(); };
   });
   _q("deadDept").onchange=function(){ deptFilter=this.value; render(); };
-  _q("autoChk").onchange=function(){ showAuto=this.checked; render(); };
   _q("termSave").onclick=saveTerm;
   _q("termCancel").onclick=closeTermModal;
   _q("termOverlay").addEventListener("click",function(e){ if(e.target===_q("termOverlay")) closeTermModal(); });
