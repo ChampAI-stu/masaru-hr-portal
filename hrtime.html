@@ -19,12 +19,11 @@
 
     const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // ===== AUTH ร่วมกับ Portal =====
-    // ยืนยันตัวตนกับ project เดียวกับ Portal เพื่อให้ล็อกอินครั้งเดียวใช้ได้ทุกระบบ
-    // (ข้อมูลยังอ่าน/เขียนที่ project เดิมผ่าน _sb)
-    const AUTH_URL = 'https://iyycyvnvfmerxkcfalea.supabase.co';
-    const AUTH_KEY = 'sb_publishable_ChkZClaeE6NCAxqyTqE4Yw_aTsz4zqi';
-    const _sbAuth = window.supabase.createClient(AUTH_URL, AUTH_KEY);
+    // ===== AUTH =====
+    // ต้อง login กับ "โปรเจกต์เดียวกับที่เก็บข้อมูล" (project B นี้) ไม่งั้น RLS จะบล็อก
+    // เพราะ session/JWT ของ Supabase ผูกกับแต่ละ project ข้ามโปรเจกต์ไม่ได้
+    // ใช้ client ตัวเดียวกับข้อมูล เพื่อให้ทุก query พก session ไปด้วยอัตโนมัติ
+    const _sbAuth = _sb;
     const SUPABASE_READY = SUPABASE_URL !== 'https://YOUR_PROJECT_ID.supabase.co';
 
     // ===================== SUPABASE HELPERS =====================
