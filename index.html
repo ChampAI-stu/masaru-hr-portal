@@ -84,6 +84,17 @@
   .app-newtab:hover{background:var(--green-soft);border-color:var(--green-line);color:var(--green-dark)}
   .empty-apps{grid-column:1/-1;text-align:center;color:var(--muted);padding:44px;
     background:#fff;border:1px dashed var(--line);border-radius:14px}
+  /* ===== การ์ดกำลังพัฒนา: ลายทางเหลืองดำ + กากบาด ===== */
+  .app-tile.soon{cursor:not-allowed;filter:grayscale(.12)}
+  .app-tile.soon:hover{transform:none;box-shadow:var(--shadow);border-color:var(--line)}
+  .app-tile.soon:hover::before{transform:scaleX(0)}
+  .app-tile.soon .app-go{visibility:hidden}
+  .soon-hazard{position:absolute;top:0;left:0;right:0;height:9px;background:repeating-linear-gradient(45deg,#ffcc00 0 12px,#1a1a1a 12px 24px)}
+  .soon-cross{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+  .soon-cross::before,.soon-cross::after{content:"";position:absolute;top:50%;left:-12%;width:124%;height:9px;background:repeating-linear-gradient(45deg,#ffcc00 0 11px,#1a1a1a 11px 22px);opacity:.9;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+  .soon-cross::before{transform:translateY(-50%) rotate(22deg)}
+  .soon-cross::after{transform:translateY(-50%) rotate(-22deg)}
+  .soon-tag{position:absolute;bottom:14px;right:14px;background:#1a1a1a;color:#ffcc00;font-weight:800;font-size:12px;padding:5px 12px;border-radius:8px;letter-spacing:.5px;display:inline-flex;align-items:center;gap:6px;z-index:2}
   footer{text-align:center;color:var(--faint);font-size:.85rem;margin-top:40px}
   footer .tag{color:var(--green-dark);font-weight:600}
 
@@ -176,6 +187,9 @@ const APPS_FALLBACK = [
   { key:'hrtime', icon:'ti-calendar-time', title:'ระบบลงเวลา · ขาด-ลา-มาสาย',
     desc:'นำเข้าข้อมูลเข้างานจาก HR Cloud · ติดตามขาด ลา มาสาย OT รายบุคคลและรายทีม',
     url:'hrtime.html', roles:['hr','hr_manager','executive'] },
+  { key:'payroll', icon:'ti-cash', title:'ระบบเงินเดือน (Payroll)',
+    desc:'คำนวณเงินเดือนสุทธิ + OT − ประกันสังคม/ประกันบริษัท · ตั้งค่ายืดหยุ่น · ส่งออก Excel',
+    url:'payroll.html', roles:['hr','hr_manager','executive'], soon:true },
 ];
 
 async function loadApps(){
@@ -234,7 +248,8 @@ async function showHub(session){
   const ic = n => `<i class="ti ${n}"></i>`;
   $('appGrid').innerHTML = apps.length
     ? apps.map(a => `
-      <div class="app-tile" data-url="${a.url}">
+      <div class="app-tile ${a.soon?'soon':''}" data-url="${a.url}" data-soon="${a.soon?1:0}">
+        ${a.soon?`<div class="soon-hazard"></div><div class="soon-cross"></div><div class="soon-tag">${ic('ti-tools')} กำลังพัฒนา</div>`:''}
         <div class="app-icon">${ic(a.icon)}</div>
         <div class="app-name">${a.title}</div>
         <div class="app-desc">${a.desc}</div>
@@ -245,9 +260,16 @@ async function showHub(session){
     : `<div class="empty-apps">ยังไม่มีระบบที่บทบาทนี้เข้าใช้งานได้<br>ติดต่อแอดมินเพื่อขอสิทธิ์เพิ่ม</div>`;
 
   document.querySelectorAll('.app-tile').forEach(t =>
-    t.addEventListener('click', () => { window.location.href = t.dataset.url; }));
+    t.addEventListener('click', () => {
+      if(t.dataset.soon === '1') return;   // การ์ดกำลังพัฒนา — ยังเข้าไม่ได้
+      window.location.href = t.dataset.url;
+    }));
   document.querySelectorAll('.app-newtab').forEach(b =>
-    b.addEventListener('click', e => { e.stopPropagation(); window.open(b.dataset.url, '_blank'); }));
+    b.addEventListener('click', e => {
+      e.stopPropagation();
+      if(b.closest('.app-tile') && b.closest('.app-tile').dataset.soon === '1') return;
+      window.open(b.dataset.url, '_blank');
+    }));
 }
 
 function showLoginErr(msg){ const e=$('loginErr'); e.textContent=msg; e.classList.remove('hide'); }
