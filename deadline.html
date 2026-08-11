@@ -1141,12 +1141,12 @@ function restoreData(file){
 const SNOOZE_KEY="masaru_hr_deadline_snooze";
 function urgentMilestones(){
   var tk={}; (state.terms||[]).forEach(function(t){ tk[t.emp_key]=1; });
-  return milestones().filter(m=>!m.done && m.days<=7 && !tk[m.rid]).sort((a,b)=>a.days-b.days);
+  return milestones().filter(m=>!m.done && m.days<=5 && !tk[m.rid]).sort((a,b)=>a.days-b.days);
 }
 function showAlertPop(force){
   const items=urgentMilestones();
   if(items.length===0){
-    if(force) alert("ไม่มีงานด่วน ✅ (ภายใน 7 วันข้างหน้า)");
+    if(force) alert("ไม่มีงานด่วน ✅ (ภายใน 5 วันข้างหน้า)");
     return;
   }
   // snooze check (skip auto-open if dismissed today)
@@ -1159,7 +1159,7 @@ function showAlertPop(force){
   const parts=[];
   if(od) parts.push("🔴 เลยกำหนด "+od);
   if(ur) parts.push("🟠 ด่วน "+ur);
-  parts.push("รวม "+items.length+" รายการภายใน 7 วัน");
+  parts.push("รวม "+items.length+" รายการภายใน 5 วัน");
   _q("popSub").textContent=parts.join(" · ");
   _q("popList").innerHTML=items.map(m=>`
     <div class="pop-row ${m.st.k}">
