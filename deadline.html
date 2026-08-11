@@ -357,6 +357,7 @@ var root=document;
 function _q(id){ return document.getElementById(id); }
 "use strict";
 const KEY = "masaru_hr_deadline_v1";
+const SUBMIT_BUFFER = 5; // deadline ของเรา = กำหนดจริง − 5 วัน (ส่งก่อน)
 const THMONTH = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 
 let state = { records: [], done: [], terms: [], doneMeta: {} };  // done = array of milestone ids
@@ -521,7 +522,7 @@ async function guard(fn){
 }
 
 /* ---------- date helpers ---------- */
-function parseD(s){ const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); }
+function parseD(s){ if(s instanceof Date) return new Date(s); const [y,m,d]=(""+s).split("-").map(Number); return new Date(y,m-1,d); }
 function addDays(dstr,n){ const d=parseD(dstr); d.setDate(d.getDate()+n); return d; }
 function toISO(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
 function thDate(d){ if(typeof d==="string") d=parseD(d); if(!(d instanceof Date)||isNaN(d)) return ""; return d.getDate()+" "+THMONTH[d.getMonth()]+" "+(d.getFullYear()+543); }
@@ -605,7 +606,7 @@ function milestones(){
     }
   });
   var merged=out;  // ไม่ดึงอัตโนมัติแล้ว — เฉพาะที่เพิ่มเอง
-  merged.forEach(m=>{ m.days=daysUntil(m.date); m.st=statusOf(m.days); m.done=state.done.includes(m.id);
+  merged.forEach(m=>{ m.realDate=m.date; m.date=addDays(m.date, -SUBMIT_BUFFER); m.days=daysUntil(m.date); m.st=statusOf(m.days); m.done=state.done.includes(m.id);
     if(!m.auto){ const r=state.records.find(x=>x.id===m.rid); m.dept=r&&r.dept?r.dept:""; } });
   return merged;
 }
@@ -794,7 +795,7 @@ function groupHTML(g){
       : `<button class="gm-pass" data-pass-open="${m.id}" data-name="${escAttr(g.name)}" data-ms="${escAttr(m.label)}">\u2713 ผ่าน</button><button class="gm-fail" data-fail="${g.rid}" data-eid="${autoEid(g.rid)}" data-name="${escAttr(g.name)}" data-dept="${escAttr(g.dept||'')}" data-ms="${escAttr(m.label)}">\u2717 ไม่ผ่าน</button>`;
     return `<div class="gmile ${m.done?'done':m.st.k}"${metaTitle?(' title="'+escAttr(metaTitle)+'"'):''}>
         <span class="gm-label">${escapeH(m.label)}</span>
-        <span class="gm-date">${thDate(m.date)}</span>
+        <span class="gm-date">ส่งภายใน ${thDate(m.date)} <small style="color:var(--muted)">(กำหนดจริง ${thDate(m.realDate)})</small></span>
         <span class="gm-days ${m.st.k}">${ m.done ? ('\u2713 ผ่าน'+(meta&&meta.eval_date?(' \u00B7 รับ '+thDate(meta.eval_date)):'')) : daysText(m.days) }</span>
         <span class="gm-actions">${acts}</span>
       </div>`;
@@ -1141,12 +1142,12 @@ function restoreData(file){
 const SNOOZE_KEY="masaru_hr_deadline_snooze";
 function urgentMilestones(){
   var tk={}; (state.terms||[]).forEach(function(t){ tk[t.emp_key]=1; });
-  return milestones().filter(m=>!m.done && m.days<=5 && !tk[m.rid]).sort((a,b)=>a.days-b.days);
+  return milestones().filter(m=>!m.done && m.days<=7 && !tk[m.rid]).sort((a,b)=>a.days-b.days);
 }
 function showAlertPop(force){
   const items=urgentMilestones();
   if(items.length===0){
-    if(force) alert("ไม่มีงานด่วน ✅ (ภายใน 5 วันข้างหน้า)");
+    if(force) alert("ไม่มีงานด่วน ✅ (ภายใน 7 วันข้างหน้า)");
     return;
   }
   // snooze check (skip auto-open if dismissed today)
@@ -1159,7 +1160,7 @@ function showAlertPop(force){
   const parts=[];
   if(od) parts.push("🔴 เลยกำหนด "+od);
   if(ur) parts.push("🟠 ด่วน "+ur);
-  parts.push("รวม "+items.length+" รายการภายใน 5 วัน");
+  parts.push("รวม "+items.length+" รายการภายใน 7 วัน");
   _q("popSub").textContent=parts.join(" · ");
   _q("popList").innerHTML=items.map(m=>`
     <div class="pop-row ${m.st.k}">
