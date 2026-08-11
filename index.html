@@ -87,11 +87,12 @@
   /* ===== การ์ดกำลังพัฒนา: ลายทางเหลืองดำ + กากบาด ===== */
   .app-tile.soon{filter:grayscale(.05)}          /* คงลุคกำลังพัฒนา แต่กดเข้าได้ */
   .soon-hazard,.soon-cross,.soon-tag{pointer-events:none}
-  .soon-hazard{position:absolute;top:0;left:0;right:0;height:9px;background:repeating-linear-gradient(45deg,#ffcc00 0 12px,#1a1a1a 12px 24px)}
   .soon-cross{position:absolute;inset:0;pointer-events:none;overflow:hidden}
-  .soon-cross::before,.soon-cross::after{content:"";position:absolute;top:50%;left:-12%;width:124%;height:9px;background:repeating-linear-gradient(45deg,#ffcc00 0 11px,#1a1a1a 11px 22px);opacity:.9;box-shadow:0 1px 4px rgba(0,0,0,.25)}
-  .soon-cross::before{transform:translateY(-50%) rotate(22deg)}
-  .soon-cross::after{transform:translateY(-50%) rotate(-22deg)}
+  .soon-cross::before,.soon-cross::after{content:"";position:absolute;top:50%;left:50%;width:200%;height:22px;
+    background:repeating-linear-gradient(45deg,#ffd400 0 14px,#1a1a1a 14px 28px);
+    box-shadow:0 2px 6px rgba(0,0,0,.3);border-radius:2px}
+  .soon-cross::before{transform:translate(-50%,-50%) rotate(34deg)}
+  .soon-cross::after{transform:translate(-50%,-50%) rotate(-34deg)}
   .soon-tag{position:absolute;bottom:14px;right:14px;background:#1a1a1a;color:#ffcc00;font-weight:800;font-size:12px;padding:5px 12px;border-radius:8px;letter-spacing:.5px;display:inline-flex;align-items:center;gap:6px;z-index:2}
   footer{text-align:center;color:var(--faint);font-size:.85rem;margin-top:40px}
   footer .tag{color:var(--green-dark);font-weight:600}
@@ -253,7 +254,7 @@ async function showHub(session){
   $('appGrid').innerHTML = apps.length
     ? apps.map(a => `
       <div class="app-tile ${a.soon?'soon':''}" data-url="${a.url}" data-soon="${a.soon?1:0}">
-        ${a.soon?`<div class="soon-hazard"></div><div class="soon-cross"></div><div class="soon-tag">${ic('ti-tools')} กำลังพัฒนา</div>`:''}
+        ${a.soon?`<div class="soon-cross"></div><div class="soon-tag">${ic('ti-tools')} กำลังพัฒนา</div>`:''}
         <div class="app-icon">${ic(a.icon)}</div>
         <div class="app-name">${a.title}</div>
         <div class="app-desc">${a.desc}</div>
