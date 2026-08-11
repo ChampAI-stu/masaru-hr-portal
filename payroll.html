@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MASARU · ระบบเงินเดือน (Payroll)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/dist/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --green:#16294d; --green-dark:#0e1c38; --green-deep:#0a1428;
+    --green-soft:#e7ecf5; --green-line:#cdd6e6; --gold:#d62030;
+    --bg:#f2f4f8; --card:#ffffff; --line:#e2e7ef; --line-soft:#eef1f7;
+    --ink:#16233f; --muted:#64708a; --faint:#97a1b5; --red:#b23a48; --amber:#8a5a12;
+    --radius:16px; --shadow:0 1px 2px rgba(16,60,45,.05),0 8px 28px rgba(16,60,45,.07);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'IBM Plex Sans Thai',system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;min-height:100vh;-webkit-font-smoothing:antialiased}
+  button{font-family:inherit;cursor:pointer}
+  input,select{font-family:inherit;font-size:14px}
+  .hide{display:none!important}
+
+  /* ===== BANNER แจ้งว่าเป็นโครงร่าง ===== */
+  .wip-banner{background:repeating-linear-gradient(45deg,#ffcc00 0 18px,#1a1a1a 18px 36px);
+    color:#fff;text-align:center;padding:0}
+  .wip-banner .inner{background:rgba(26,26,26,.86);padding:9px 16px;display:flex;align-items:center;justify-content:center;gap:9px;font-weight:700;font-size:13.5px;letter-spacing:.3px}
+  .wip-banner i{color:#ffcc00;font-size:1.1rem}
+
+  /* ===== HEADER ===== */
+  header.top{background:linear-gradient(120deg,#0e1c38,#16294d);color:#fff;padding:15px 26px;display:flex;align-items:center;gap:14px;border-bottom:4px solid var(--gold)}
+  header.top .masaru-logo{font-weight:800;letter-spacing:2px;font-size:18px}
+  header.top .hdr-label{font-weight:600;font-size:15px;opacity:.95}
+  header.top .spacer{flex:1}
+  .back{background:transparent;border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:9px;padding:8px 15px;font-size:13px;transition:.15s;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+  .back:hover{background:rgba(255,255,255,.12)}
+
+  main{max-width:1120px;margin:0 auto;padding:26px 22px 60px}
+  .page-title{font-size:23px;color:var(--green-dark);font-weight:700;margin-bottom:4px;letter-spacing:-.3px}
+  .page-sub{color:var(--muted);margin-bottom:22px;font-size:14px}
+
+  /* ===== TABS ===== */
+  .tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:22px;flex-wrap:wrap}
+  .tab{background:none;border:none;padding:11px 16px;font-size:14px;font-weight:600;color:var(--muted);border-bottom:2.5px solid transparent;margin-bottom:-1px;display:flex;align-items:center;gap:7px;transition:.15s}
+  .tab:hover{color:var(--green-dark)}
+  .tab.active{color:var(--green);border-bottom-color:var(--green)}
+
+  .panel{display:none} .panel.active{display:block}
+
+  /* ===== CARDS / TOOLBAR ===== */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow);margin-bottom:18px}
+  .card h3{font-size:16px;color:var(--green-dark);margin-bottom:4px}
+  .card .hint{color:var(--muted);font-size:13px;margin-bottom:16px;line-height:1.55}
+  .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 15px;font-weight:600;font-size:14px;color:var(--ink);display:inline-flex;align-items:center;gap:7px;transition:.15s}
+  .btn:hover{background:var(--green-soft);border-color:var(--green-line)}
+  .btn.primary{background:var(--green);color:#fff;border-color:var(--green)}
+  .btn.primary:hover{background:var(--green-dark)}
+  .btn.ghost{background:#f7f9fc}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:18px}
+  .kpi{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .kpi .lbl{color:var(--muted);font-size:12.5px;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+  .kpi .val{font-size:24px;font-weight:800;color:var(--green-dark);letter-spacing:-.5px}
+  .kpi .val small{font-size:14px;color:var(--muted);font-weight:600}
+
+  /* ===== FORM GRID ===== */
+  .fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+  .fld{display:flex;flex-direction:column;gap:6px}
+  .fld label{font-size:13px;color:var(--muted);font-weight:600}
+  .fld .sub{font-size:12px;color:var(--faint);font-weight:400}
+  .fld input,.fld select{padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fbfcfe;transition:.15s}
+  .fld input:focus,.fld select:focus{outline:none;border-color:var(--green);background:#fff;box-shadow:0 0 0 3px var(--green-soft)}
+
+  /* ===== TABLE ===== */
+  .tbl-wrap{overflow:auto;border:1px solid var(--line);border-radius:12px}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:760px}
+  th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line-soft);white-space:nowrap}
+  th{background:#f7f9fc;color:var(--muted);font-weight:600;position:sticky;top:0}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  tbody tr:hover{background:#f9fbfe}
+  td input{width:104px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;text-align:right;background:#fff}
+  td input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px var(--green-soft)}
+  .net{font-weight:800;color:var(--green-dark)}
+  .badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:var(--green-soft);color:var(--green-dark)}
+
+  .empty{text-align:center;color:var(--muted);padding:40px;background:#fff;border:1px dashed var(--line);border-radius:14px}
+  .todo{border-left:3px solid #ffcc00;background:#fffdf3;padding:12px 15px;border-radius:0 10px 10px 0;font-size:13px;color:#7a5c00;line-height:1.6;margin-top:8px}
+  .todo b{color:#5a4400}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--green-dark);color:#fff;padding:12px 22px;border-radius:12px;font-weight:600;font-size:14px;opacity:0;transition:.25s;box-shadow:0 10px 30px rgba(0,0,0,.25);z-index:50}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  footer{text-align:center;color:var(--faint);font-size:.85rem;margin-top:36px}
+  @media(max-width:560px){ header.top .hdr-label{display:none} }
+</style>
+</head>
+<body>
+
+<!-- แจ้งสถานะ: ระบบนี้เป็นโครงร่างรอข้อมูลจริง -->
+<div class="wip-banner"><div class="inner"><i class="ti ti-alert-triangle"></i>ระบบเงินเดือนอยู่ระหว่างพัฒนา — ตัวเลข OT / ประกัน ยังเป็นค่าตั้งต้น รอยืนยันจากบัญชี</div></div>
+
+<header class="top">
+  <span class="masaru-logo">MASARU</span>
+  <span class="hdr-label">ระบบเงินเดือน · Payroll</span>
+  <div class="spacer"></div>
+  <a class="back" href="index.html"><i class="ti ti-arrow-left"></i> กลับหน้าหลัก</a>
+</header>
+
+<main>
+  <div class="page-title">ระบบเงินเดือน (Payroll)</div>
+  <div class="page-sub">คำนวณเงินเดือนสุทธิจากฐานเงินเดือน + OT − รายการหัก · ตั้งค่ายืดหยุ่นได้ทั้งหมด</div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="run"><i class="ti ti-calculator"></i> คำนวณเงินเดือน</button>
+    <button class="tab" data-tab="base"><i class="ti ti-users"></i> ฐานเงินเดือน</button>
+    <button class="tab" data-tab="settings"><i class="ti ti-settings"></i> ตั้งค่า</button>
+  </div>
+
+  <!-- ============ TAB: คำนวณเงินเดือน ============ -->
+  <section class="panel active" id="panel-run">
+    <div class="toolbar">
+      <div class="fld" style="min-width:150px">
+        <label>รอบเดือน</label>
+        <input type="month" id="runMonth">
+      </div>
+      <button class="btn" id="loadRun"><i class="ti ti-refresh"></i> โหลดพนักงาน</button>
+      <div class="spacer" style="flex:1"></div>
+      <button class="btn ghost" id="exportRun"><i class="ti ti-file-spreadsheet"></i> ส่งออก Excel</button>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi"><div class="lbl"><i class="ti ti-users"></i> พนักงาน</div><div class="val" id="kHead">0 <small>คน</small></div></div>
+      <div class="kpi"><div class="lbl"><i class="ti ti-cash"></i> ฐานเงินเดือนรวม</div><div class="val" id="kBase">0 <small>บ.</small></div></div>
+      <div class="kpi"><div class="lbl"><i class="ti ti-arrow-down-right"></i> หักรวม</div><div class="val" id="kDeduct">0 <small>บ.</small></div></div>
+      <div class="kpi"><div class="lbl"><i class="ti ti-wallet"></i> จ่ายสุทธิรวม</div><div class="val" id="kNet">0 <small>บ.</small></div></div>
+    </div>
+
+    <div class="card">
+      <h3>ตารางคำนวณ</h3>
+      <p class="hint">กรอกชั่วโมง OT และจำนวนวันขาด/ลาไม่รับเงิน ต่อคน — ระบบคำนวณสุทธิให้อัตโนมัติตามค่าที่ตั้งไว้</p>
+      <div class="tbl-wrap">
+        <table id="runTable">
+          <thead><tr>
+            <th>ชื่อ-นามสกุล</th><th>แผนก</th>
+            <th class="num">ฐานเงินเดือน</th>
+            <th class="num">OT (ชม.)</th>
+            <th class="num">เงิน OT</th>
+            <th class="num">ขาด/ลา (วัน)</th>
+            <th class="num">หักขาด/ลา</th>
+            <th class="num">ประกันสังคม</th>
+            <th class="num">ประกันบริษัท</th>
+            <th class="num">สุทธิ</th>
+          </tr></thead>
+          <tbody id="runBody"><tr><td colspan="10"><div class="empty">เลือกเดือนแล้วกด “โหลดพนักงาน”</div></td></tr></tbody>
+        </table>
+      </div>
+      <div class="todo">
+        <b>ยังรอเชื่อมต่อ:</b> ตอนนี้ OT และวันขาด/ลากรอกมือก่อน — ขั้นถัดไปจะดึงชั่วโมง OT + วันขาด/ลาอัตโนมัติจากระบบลงเวลา (chack) ตามรอบเดือน
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TAB: ฐานเงินเดือน ============ -->
+  <section class="panel" id="panel-base">
+    <div class="toolbar">
+      <button class="btn" id="loadBase"><i class="ti ti-refresh"></i> โหลดพนักงาน</button>
+      <label class="btn ghost" style="cursor:pointer"><i class="ti ti-upload"></i> นำเข้าฐานเงินเดือน (Excel)
+        <input type="file" id="importBase" accept=".xlsx,.xls,.csv" class="hide"></label>
+      <button class="btn ghost" id="tplBase"><i class="ti ti-download"></i> ดาวน์โหลดเทมเพลต</button>
+      <div class="spacer" style="flex:1"></div>
+      <button class="btn primary" id="saveBase"><i class="ti ti-device-floppy"></i> บันทึกฐานเงินเดือน</button>
+    </div>
+    <div class="card">
+      <h3>ฐานเงินเดือนพนักงาน</h3>
+      <p class="hint">แก้ไขฐานเงินเดือนได้ในตาราง หรือนำเข้าทีเดียวจาก Excel (คอลัมน์: <b>employee_id, base_salary</b>) แล้วกด “บันทึก”</p>
+      <div class="tbl-wrap">
+        <table id="baseTable">
+          <thead><tr><th>รหัส</th><th>ชื่อ-นามสกุล</th><th>แผนก</th><th>ตำแหน่ง</th><th class="num">ฐานเงินเดือน (บ./เดือน)</th></tr></thead>
+          <tbody id="baseBody"><tr><td colspan="5"><div class="empty">กด “โหลดพนักงาน” เพื่อเริ่ม</div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TAB: ตั้งค่า ============ -->
+  <section class="panel" id="panel-settings">
+    <div class="card">
+      <h3>OT (ค่าล่วงเวลา)</h3>
+      <p class="hint">เลือกวิธีคิด OT — ค่ากฎหมายเป็นค่าอ้างอิงทั่วไป ปรับได้ตามนโยบายบริษัท</p>
+      <div class="fgrid">
+        <div class="fld">
+          <label>วิธีคิด OT</label>
+          <select id="setOtMode">
+            <option value="fixed">เรทคงที่ต่อชั่วโมง</option>
+            <option value="rate">คูณจากค่าจ้างรายชั่วโมง (ฐาน ÷ ชม./เดือน × ตัวคูณ)</option>
+          </select>
+        </div>
+        <div class="fld" data-otmode="fixed">
+          <label>เรท OT คงที่ <span class="sub">บาท/ชม.</span></label>
+          <input type="number" id="setOtFixed" value="60" min="0">
+        </div>
+        <div class="fld" data-otmode="rate">
+          <label>ตัวคูณ OT <span class="sub">เช่น 1.5</span></label>
+          <input type="number" id="setOtMult" value="1.5" step="0.1" min="0">
+        </div>
+        <div class="fld" data-otmode="rate">
+          <label>ชั่วโมงทำงาน/เดือน <span class="sub">ใช้หารหาค่าจ้าง/ชม.</span></label>
+          <input type="number" id="setOtHours" value="240" min="1">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>รายการหัก</h3>
+      <p class="hint">ประกันสังคม + ประกันบริษัท (ตามที่ยืนยันไว้) · ยังไม่หักภาษี ณ ที่จ่าย</p>
+      <div class="fgrid">
+        <div class="fld">
+          <label>ประกันสังคม <span class="sub">% ของฐาน</span></label>
+          <input type="number" id="setSsoPct" value="5" step="0.1" min="0">
+        </div>
+        <div class="fld">
+          <label>เพดานประกันสังคม <span class="sub">บาท/เดือน</span></label>
+          <input type="number" id="setSsoCap" value="750" min="0">
+        </div>
+        <div class="fld">
+          <label>ประกันบริษัท <span class="sub">บาท/คน/เดือน (คงที่)</span></label>
+          <input type="number" id="setCoIns" value="0" min="0">
+        </div>
+        <div class="fld">
+          <label>ฐานหักขาด/ลา <span class="sub">วันทำงาน/เดือน</span></label>
+          <input type="number" id="setWorkDays" value="30" min="1">
+        </div>
+      </div>
+    </div>
+
+    <div class="toolbar" style="justify-content:flex-end">
+      <button class="btn primary" id="saveSettings"><i class="ti ti-device-floppy"></i> บันทึกการตั้งค่า</button>
+    </div>
+    <div class="todo">
+      <b>ค่าเริ่มต้นทั้งหมดเป็นเพียงตัวอย่าง</b> — เมื่อได้ตัวเลขจริงจากบัญชี (เรท OT, ยอดประกันบริษัทต่อคน) กรอกที่หน้านี้แล้วบันทึก การคำนวณจะอัปเดตทันทีโดยไม่ต้องแก้โค้ด
+    </div>
+  </section>
+
+  <footer>MASARU · ระบบเงินเดือน (โครงร่าง) — เหนือกว่า ทุกวัน</footer>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://iyycyvnvfmerxkcfalea.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_ChkZClaeE6NCAxqyTqE4Yw_aTsz4zqi';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const $ = id => document.getElementById(id);
+
+// ---------- ค่าตั้งต้น (ใช้เมื่อยังไม่มีในตาราง payroll_settings) ----------
+const DEFAULTS = { ot_mode:'fixed', ot_fixed:60, ot_mult:1.5, ot_hours:240, sso_pct:5, sso_cap:750, co_ins:0, work_days:30 };
+let SETTINGS = { ...DEFAULTS };
+let EMP = [];        // พนักงาน { id, name, dept, position, base_salary }
+let baseDirty = {};  // employee_id -> base_salary ที่แก้
+
+const fmt = n => (Number(n)||0).toLocaleString('th-TH',{maximumFractionDigits:2});
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2200); }
+
+// ---------- Tabs ----------
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  $('panel-'+t.dataset.tab).classList.add('active');
+}));
+
+// ---------- Settings ----------
+function applyOtModeVisibility(){
+  const m = $('setOtMode').value;
+  document.querySelectorAll('[data-otmode]').forEach(el=>{
+    el.style.display = (el.dataset.otmode===m) ? '' : 'none';
+  });
+}
+$('setOtMode').addEventListener('change', applyOtModeVisibility);
+
+function fillSettingsForm(){
+  $('setOtMode').value = SETTINGS.ot_mode;
+  $('setOtFixed').value = SETTINGS.ot_fixed;
+  $('setOtMult').value = SETTINGS.ot_mult;
+  $('setOtHours').value = SETTINGS.ot_hours;
+  $('setSsoPct').value = SETTINGS.sso_pct;
+  $('setSsoCap').value = SETTINGS.sso_cap;
+  $('setCoIns').value = SETTINGS.co_ins;
+  $('setWorkDays').value = SETTINGS.work_days;
+  applyOtModeVisibility();
+}
+function readSettingsForm(){
+  return {
+    ot_mode: $('setOtMode').value,
+    ot_fixed: +$('setOtFixed').value || 0,
+    ot_mult: +$('setOtMult').value || 0,
+    ot_hours: +$('setOtHours').value || 240,
+    sso_pct: +$('setSsoPct').value || 0,
+    sso_cap: +$('setSsoCap').value || 0,
+    co_ins: +$('setCoIns').value || 0,
+    work_days: +$('setWorkDays').value || 30
+  };
+}
+async function loadSettings(){
+  try{
+    const { data, error } = await sb.from('payroll_settings').select('key,value');
+    if(!error && data){ data.forEach(r=>{ if(r.key in SETTINGS) SETTINGS[r.key] = isNaN(+r.value) ? r.value : +r.value; }); }
+  }catch(e){ /* ใช้ค่าเริ่มต้น */ }
+  fillSettingsForm();
+}
+$('saveSettings').addEventListener('click', async ()=>{
+  SETTINGS = readSettingsForm();
+  fillSettingsForm();
+  const rows = Object.keys(SETTINGS).map(k=>({ key:k, value:String(SETTINGS[k]) }));
+  try{
+    const { error } = await sb.from('payroll_settings').upsert(rows, { onConflict:'key' });
+    if(error) throw error;
+    toast('บันทึกการตั้งค่าแล้ว');
+  }catch(e){ toast('บันทึกไม่สำเร็จ — ยังไม่มีตาราง payroll_settings? (รัน SQL ก่อน)'); }
+  renderRun();
+});
+
+// ---------- โหลดพนักงาน ----------
+async function fetchEmployees(){
+  // ดึงพนักงานที่ยังทำงานอยู่ พร้อมฐานเงินเดือน
+  const { data, error } = await sb.from('employees')
+    .select('employee_id,full_name,department,position,base_salary,status')
+    .order('employee_id');
+  if(error) throw error;
+  return (data||[])
+    .filter(e => !e.status || /ทำงาน|active|ปกติ/i.test(e.status))
+    .map(e=>({
+      id: e.employee_id,
+      name: e.full_name || e.employee_id,
+      dept: e.department || '-',
+      position: e.position || '-',
+      base_salary: Number(e.base_salary)||0
+    }));
+}
+
+// ---------- TAB: ฐานเงินเดือน ----------
+async function loadBase(){
+  $('baseBody').innerHTML = '<tr><td colspan="5"><div class="empty">กำลังโหลด...</div></td></tr>';
+  try{
+    EMP = await fetchEmployees();
+    baseDirty = {};
+    renderBase();
+  }catch(e){
+    $('baseBody').innerHTML = '<tr><td colspan="5"><div class="empty">โหลดไม่สำเร็จ — ตรวจว่ามีคอลัมน์ base_salary ในตาราง employees แล้ว (รัน SQL ท้ายไฟล์)</div></td></tr>';
+  }
+}
+function renderBase(){
+  if(!EMP.length){ $('baseBody').innerHTML='<tr><td colspan="5"><div class="empty">ไม่พบพนักงาน</div></td></tr>'; return; }
+  $('baseBody').innerHTML = EMP.map(e=>`
+    <tr>
+      <td><span class="badge">${e.id}</span></td>
+      <td>${e.name}</td><td>${e.dept}</td><td>${e.position}</td>
+      <td class="num"><input type="number" min="0" step="100" data-id="${e.id}" value="${e.base_salary||''}" placeholder="0"></td>
+    </tr>`).join('');
+  $('baseBody').querySelectorAll('input[data-id]').forEach(inp=>{
+    inp.addEventListener('input', ()=>{ baseDirty[inp.dataset.id] = +inp.value||0; });
+  });
+}
+$('loadBase').addEventListener('click', loadBase);
+$('saveBase').addEventListener('click', async ()=>{
+  const ids = Object.keys(baseDirty);
+  if(!ids.length){ toast('ยังไม่มีการแก้ไข'); return; }
+  try{
+    for(const id of ids){
+      const { error } = await sb.from('employees').update({ base_salary: baseDirty[id] }).eq('employee_id', id);
+      if(error) throw error;
+    }
+    // sync local
+    EMP.forEach(e=>{ if(e.id in baseDirty) e.base_salary = baseDirty[e.id]; });
+    baseDirty = {};
+    toast('บันทึกฐานเงินเดือนแล้ว ('+ids.length+' คน)');
+  }catch(e){ toast('บันทึกไม่สำเร็จ — ตรวจคอลัมน์ base_salary'); }
+});
+
+// เทมเพลต Excel
+$('tplBase').addEventListener('click', ()=>{
+  const rows = EMP.length ? EMP.map(e=>({ employee_id:e.id, full_name:e.name, base_salary:e.base_salary||0 }))
+                          : [{ employee_id:'EMP001', full_name:'ตัวอย่าง', base_salary:15000 }];
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'base_salary');
+  XLSX.writeFile(wb, 'payroll_base_salary_template.xlsx');
+});
+// นำเข้า Excel
+$('importBase').addEventListener('change', async (ev)=>{
+  const f = ev.target.files[0]; if(!f) return;
+  if(!EMP.length){ toast('กด “โหลดพนักงาน” ก่อนนำเข้า'); ev.target.value=''; return; }
+  const buf = await f.arrayBuffer();
+  const wb = XLSX.read(buf, { type:'array' });
+  const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+  let n=0;
+  const byId = {}; EMP.forEach(e=>byId[String(e.id)]=e);
+  rows.forEach(r=>{
+    const id = String(r.employee_id ?? r.id ?? '').trim();
+    const sal = Number(r.base_salary ?? r.salary ?? r['ฐานเงินเดือน']);
+    if(id && byId[id] && !isNaN(sal)){ baseDirty[id]=sal; byId[id].base_salary=sal; n++; }
+  });
+  renderBase();
+  ev.target.value='';
+  toast('นำเข้า '+n+' รายการ — กด “บันทึก” เพื่อยืนยัน');
+});
+
+// ---------- TAB: คำนวณเงินเดือน ----------
+function calcRow(e, otHours, absDays){
+  const base = e.base_salary||0;
+  let otPay = 0;
+  if(SETTINGS.ot_mode==='fixed') otPay = otHours * SETTINGS.ot_fixed;
+  else { const hourly = base / (SETTINGS.ot_hours||240); otPay = otHours * hourly * SETTINGS.ot_mult; }
+  const absDeduct = (base / (SETTINGS.work_days||30)) * absDays;
+  const sso = Math.min(base * (SETTINGS.sso_pct/100), SETTINGS.sso_cap);
+  const coIns = SETTINGS.co_ins||0;
+  const net = base + otPay - absDeduct - sso - coIns;
+  return { base, otPay, absDeduct, sso, coIns, net };
+}
+async function loadRun(){
+  $('runBody').innerHTML = '<tr><td colspan="10"><div class="empty">กำลังโหลด...</div></td></tr>';
+  try{
+    if(!EMP.length) EMP = await fetchEmployees();
+    renderRun();
+  }catch(e){
+    $('runBody').innerHTML = '<tr><td colspan="10"><div class="empty">โหลดไม่สำเร็จ — ตรวจตาราง employees / คอลัมน์ base_salary</div></td></tr>';
+  }
+}
+function renderRun(){
+  if(!EMP.length){ $('runBody').innerHTML='<tr><td colspan="10"><div class="empty">ไม่พบพนักงาน — เลือกเดือนแล้วกด “โหลดพนักงาน”</div></td></tr>'; return; }
+  $('runBody').innerHTML = EMP.map(e=>`
+    <tr data-id="${e.id}">
+      <td>${e.name}</td><td>${e.dept}</td>
+      <td class="num">${fmt(e.base_salary)}</td>
+      <td class="num"><input type="number" class="ot" min="0" step="0.5" value="0"></td>
+      <td class="num ot-pay">0</td>
+      <td class="num"><input type="number" class="abs" min="0" step="0.5" value="0"></td>
+      <td class="num abs-ded">0</td>
+      <td class="num sso">0</td>
+      <td class="num coins">0</td>
+      <td class="num net">0</td>
+    </tr>`).join('');
+  $('runBody').querySelectorAll('tr[data-id]').forEach(tr=>{
+    const recompute = ()=>{
+      const e = EMP.find(x=>String(x.id)===tr.dataset.id);
+      const otH = +tr.querySelector('.ot').value||0;
+      const abs = +tr.querySelector('.abs').value||0;
+      const r = calcRow(e, otH, abs);
+      tr.querySelector('.ot-pay').textContent = fmt(r.otPay);
+      tr.querySelector('.abs-ded').textContent = fmt(r.absDeduct);
+      tr.querySelector('.sso').textContent = fmt(r.sso);
+      tr.querySelector('.coins').textContent = fmt(r.coIns);
+      tr.querySelector('.net').textContent = fmt(r.net);
+      updateKpis();
+    };
+    tr.querySelector('.ot').addEventListener('input', recompute);
+    tr.querySelector('.abs').addEventListener('input', recompute);
+    recompute();
+  });
+  updateKpis();
+}
+function updateKpis(){
+  let base=0, deduct=0, net=0;
+  $('runBody').querySelectorAll('tr[data-id]').forEach(tr=>{
+    const e = EMP.find(x=>String(x.id)===tr.dataset.id);
+    base += e.base_salary||0;
+    const sso = parseFloat(tr.querySelector('.sso').textContent.replace(/,/g,''))||0;
+    const coins = parseFloat(tr.querySelector('.coins').textContent.replace(/,/g,''))||0;
+    const absd = parseFloat(tr.querySelector('.abs-ded').textContent.replace(/,/g,''))||0;
+    const n = parseFloat(tr.querySelector('.net').textContent.replace(/,/g,''))||0;
+    deduct += sso+coins+absd; net += n;
+  });
+  $('kHead').innerHTML = EMP.length+' <small>คน</small>';
+  $('kBase').innerHTML = fmt(base)+' <small>บ.</small>';
+  $('kDeduct').innerHTML = fmt(deduct)+' <small>บ.</small>';
+  $('kNet').innerHTML = fmt(net)+' <small>บ.</small>';
+}
+$('loadRun').addEventListener('click', loadRun);
+$('exportRun').addEventListener('click', ()=>{
+  const rows=[];
+  $('runBody').querySelectorAll('tr[data-id]').forEach(tr=>{
+    const c = tr.querySelectorAll('td');
+    if(!c.length || tr.querySelector('.empty')) return;
+    rows.push({
+      'ชื่อ-นามสกุล': c[0].textContent, 'แผนก': c[1].textContent,
+      'ฐานเงินเดือน': tr.children[2].textContent,
+      'OT(ชม.)': tr.querySelector('.ot').value, 'เงิน OT': tr.querySelector('.ot-pay').textContent,
+      'ขาด/ลา(วัน)': tr.querySelector('.abs').value, 'หักขาด/ลา': tr.querySelector('.abs-ded').textContent,
+      'ประกันสังคม': tr.querySelector('.sso').textContent, 'ประกันบริษัท': tr.querySelector('.coins').textContent,
+      'สุทธิ': tr.querySelector('.net').textContent
+    });
+  });
+  if(!rows.length){ toast('ยังไม่มีข้อมูล'); return; }
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'payroll');
+  XLSX.writeFile(wb, 'payroll_'+($('runMonth').value||'run')+'.xlsx');
+});
+
+// ---------- INIT ----------
+(function init(){
+  const d = new Date();
+  $('runMonth').value = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  loadSettings();
+})();
+</script>
+
+<!--
+====================================================================
+SQL — รันใน Supabase (project iyycyvnvfmerxkcfalea) ก่อนใช้งาน
+====================================================================
+-- 1) เพิ่มคอลัมน์ฐานเงินเดือน (ยังไม่มีในตาราง employees)
+alter table public.employees add column if not exists base_salary numeric default 0;
+
+-- 2) ตารางตั้งค่า payroll (key/value)
+create table if not exists public.payroll_settings (
+  key   text primary key,
+  value text
+);
+
+-- 3) มาตรฐานโปรเจกต์: ปิด RLS + ให้สิทธิ์เต็ม (HR tools ใช้ในวงทีมเท่านั้น)
+alter table public.payroll_settings disable row level security;
+grant all on public.payroll_settings to anon, authenticated;
+grant all on public.employees to anon, authenticated;
+
+notify pgrst, 'reload schema';
+====================================================================
+-->
+</body>
+</html>
