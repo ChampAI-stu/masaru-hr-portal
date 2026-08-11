@@ -1628,7 +1628,7 @@ window.__gridEnsure=function(){try{ if(SB && loadedYM===null) loadMonth(); }catc
     });
   }
 
-  function byId(id){ for(var i=0;i<LIST.length;i++){ if(LIST[i].id===id) return LIST[i]; } return null; }
+  function byId(id){ for(var i=0;i<LIST.length;i++){ if((""+LIST[i].id)===(""+id)) return LIST[i]; } return null; }
 
   function toDMY(ymd){ if(!ymd) return ''; var p=(''+ymd).slice(0,10).split('-'); if(p.length!==3) return ''+ymd; return (+p[2])+'/'+(+p[1])+'/'+p[0]; }
   function parseDMY(s){ s=(s||'').trim(); if(!s) return null;
@@ -1680,8 +1680,9 @@ window.__gridEnsure=function(){try{ if(SB && loadedYM===null) loadMonth(); }catc
   }
 
   async function act(a,id){
-    var sb=getSB(); if(!sb) return; var e=byId(id); if(!e) return;
+    var e=byId(id); if(!e) return;
     if(a==='edit'){ showForm(e); return; }
+    var sb=getSB(); if(!sb){ say('ยังไม่ได้เชื่อมต่อฐานข้อมูล','err'); return; }
     try{
       if(a==='resign'){
         if(!confirm('ยืนยันให้ '+e.full_name+' ลาออก/พ้นสภาพ?\\n(ประวัติการมาทำงานจะยังเก็บไว้ แต่จะไม่แสดงในหน้ากรอก)')) return;
