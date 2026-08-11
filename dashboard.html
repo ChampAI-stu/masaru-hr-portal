@@ -46,7 +46,9 @@
   .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px}
   .panel h3{color:var(--green-dark);font-size:15px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
   .count{background:var(--green-soft);color:var(--green-dark);font-size:12px;padding:2px 9px;border-radius:99px;font-weight:600}
-  .cand{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:9px;cursor:pointer;transition:.15s}
+  .cand{position:relative;border:1px solid var(--line);border-radius:12px;padding:12px;padding-right:44px;margin-bottom:9px;cursor:pointer;transition:.15s}
+  .cand-del{position:absolute;top:8px;right:8px;width:28px;height:28px;border:1px solid var(--line);background:#fff;border-radius:8px;cursor:pointer;font-size:13px;line-height:1;color:#94a3b8;display:flex;align-items:center;justify-content:center;z-index:2}
+  .cand-del:hover{border-color:#ef4444;color:#ef4444;background:#fef2f2}
   .cand:hover{border-color:var(--green-line);background:#eef1f7}
   .cand.on{border-color:var(--green);background:var(--green-soft)}
   .cand .nm{font-weight:600;font-size:15px}
@@ -338,6 +340,7 @@ function renderList(){
   if(!arr.length){ $("list").innerHTML = `<div class="empty">ยังไม่มีผู้สมัครที่ทำแบบทดสอบ</div>`; return; }
   $("list").innerHTML = arr.map(a => `
     <div class="cand ${a.id===selId?"on":""}" data-id="${a.id}">
+      <button class="cand-del" data-del="${a.id}" title="ลบผู้ทำแบบทดสอบ">🗑</button>
       <div class="nm">${esc(a.name)}</div>
       <div class="ps">${esc(a.pos||"—")}</div>
       <div class="badges">
@@ -348,6 +351,8 @@ function renderList(){
     </div>`).join("");
   $("list").querySelectorAll(".cand").forEach(el =>
     el.onclick = () => { selId = el.dataset.id; renderList(); renderDetail(DATA[selId]); });
+  $("list").querySelectorAll(".cand-del").forEach(b =>
+    b.onclick = (ev) => { ev.stopPropagation(); const a=DATA[b.dataset.del]; deleteRespondent(b.dataset.del, a?a.name:""); });
 }
 
 function renderDetail(a){
