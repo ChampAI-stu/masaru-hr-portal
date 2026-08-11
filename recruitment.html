@@ -591,6 +591,10 @@
             <datalist id="dl-src"><option>Jobthai</option><option>Jobbkk</option><option>Facebook</option><option>Walk-in</option><option>อื่นๆ</option></datalist>
           </div>
         </div>
+        <div class="grid-2">
+          <div class="field"><label>วันที่รับสมัคร</label><input id="a-date" type="date"></div>
+          <div class="field"></div>
+        </div>
         <div class="field">
           <label>แนบไฟล์เรซูเม่</label>
           <div class="dz" id="dz" onclick="document.getElementById('fi').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="onDrop(event)">
@@ -1438,7 +1442,7 @@
     }
 
     // ═══════════════════ ADD MODAL ═══════════════════
-    function openAdd() { document.getElementById('add-overlay').classList.add('on'); checkDup(); }
+    function openAdd() { var dt=document.getElementById('a-date'); if(dt) dt.value=new Date().toISOString().slice(0,10); document.getElementById('add-overlay').classList.add('on'); checkDup(); }
     function closeAdd() {
       document.getElementById('add-overlay').classList.remove('on');
       ['a-name', 'a-phone'].forEach(i => document.getElementById(i).value = '');
@@ -1500,7 +1504,7 @@
 
       const { data, error } = await _sb.from('applicants').insert({
         name, pos, src: document.getElementById('a-src').value || '',
-        phone, date: todayTh(), status: 'new', resume_path: resumePath,
+        phone, date: (function(){ var v=(document.getElementById('a-date')||{}).value; return v ? new Date(v+'T00:00:00').toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'}) : todayTh(); })(), status: 'new', resume_path: resumePath,
       }).select().single();
       btn.disabled = false; btn.innerHTML = '<i class="ti ti-check"></i>บันทึกผู้สมัคร';
       if (error) { showToast('บันทึกไม่สำเร็จ: ' + error.message, true); return; }
