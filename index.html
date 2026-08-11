@@ -241,6 +241,8 @@ async function showHub(session){
       desc:'คำนวณเงินเดือนสุทธิ + OT − ประกันสังคม/ประกันบริษัท · ตั้งค่ายืดหยุ่น · ส่งออก Excel',
       url:'payroll.html', roles:['hr','hr_manager','executive'], soon:true });
   }
+  // บังคับกากบาท "กำลังพัฒนา" บน payroll เสมอ (เผื่อมาจากตาราง portal_apps ที่ไม่มีธง soon)
+  all.forEach(a => { if(a.url==='payroll.html' || a.key==='payroll') a.soon = true; });
   // ถ้าผู้ใช้ไม่มี role ที่กำหนด → เห็นทุกระบบ (กันล็อกเอาต์); ถ้ามี role → กรองตามสิทธิ์
   const apps = roles.length
     ? all.filter(a => !(a.roles||[]).length || a.roles.some(r => roles.includes(r)))
