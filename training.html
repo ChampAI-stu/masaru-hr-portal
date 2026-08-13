@@ -296,7 +296,7 @@
       <div class="tbl-wrap">
         <table id="planTable">
           <colgroup>
-            <col style="width:34px"><col><col style="width:100px"><col style="width:112px"><col style="width:84px">
+            <col style="width:34px"><col><col style="width:104px"><col style="width:112px"><col style="width:84px">
             <col style="width:30px"><col style="width:30px"><col style="width:30px"><col style="width:30px">
             <col style="width:30px"><col style="width:30px"><col style="width:30px"><col style="width:30px">
             <col style="width:30px"><col style="width:30px"><col style="width:30px"><col style="width:30px">
@@ -450,7 +450,7 @@
       <div class="sec-title"><i class="ti ti-info-circle"></i> ข้อมูลหลักสูตร</div>
       <div class="fgrid">
         <div class="fld" style="grid-column:1/-1"><label>ชื่อหลักสูตร</label><input id="cmName"></div>
-        <div class="fld"><label>ประเภท</label><input id="cmCategory" list="catList" placeholder="อบรมภายใน / ภายนอก / ความปลอดภัย"></div>
+        <div class="fld"><label>ประเภท</label><select id="cmCategory"></select></div>
         <div class="fld"><label>ปี (พ.ศ.)</label><select id="cmYear"></select></div>
         <div class="fld"><label>ผู้อบรม <span class="sub">(กลุ่มเป้าหมาย)</span></label><input id="cmAudience" placeholder="เช่น พนักงานคลังสินค้า"></div>
         <div class="fld"><label>วิทยากร</label><input id="cmTrainer"></div>
@@ -476,10 +476,6 @@
     </div>
   </div>
 </div>
-<datalist id="catList">
-  <option value="อบรมภายใน"></option><option value="อบรมภายนอก"></option><option value="ความปลอดภัย"></option>
-  <option value="ปฐมนิเทศ"></option><option value="ทักษะเฉพาะทาง"></option><option value="ภาวะผู้นำ"></option><option value="ตามกฎหมาย"></option>
-</datalist>
 
 <!-- ============ MODAL: ประวัติรายบุคคล ============ -->
 <div class="overlay hide" id="empOverlay">
@@ -517,6 +513,15 @@ try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e){
 
 var $ = function(id){ return document.getElementById(id); };
 var MONTH_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+var CATEGORIES = ['In House','Public'];
+function catOptions(v){
+  var cur = v || '';
+  var list = CATEGORIES.slice();
+  if(cur && list.indexOf(cur)<0) list.push(cur);   // เก็บค่าเดิมที่เคยบันทึกไว้
+  return '<option value="">— เลือก —</option>' + list.map(function(k){
+    return '<option value="'+esc(k)+'"'+(k===cur?' selected':'')+'>'+esc(k)+'</option>';
+  }).join('');
+}
 var THIS_YEAR = new Date().getFullYear();          // ค.ศ. (เก็บใน DB เป็น ค.ศ.)
 var EMP = [], COURSES = [], RECORDS = [], EVALS = [];
 var DIRTY = {};              // course id (หรือ tmp key) -> true
@@ -781,7 +786,7 @@ function renderPlan(){
     return '<tr data-id="'+esc(c.id)+'">'
       + '<td class="seq">'+(i+1)+(DIRTY[c.id]?'<span class="dirty-dot"></span>':'')+'</td>'
       + '<td><input data-f="name" value="'+esc(c.name||'')+'" placeholder="ชื่อหลักสูตร"></td>'
-      + '<td><input data-f="category" list="catList" value="'+esc(c.category||'')+'" placeholder="ประเภท"></td>'
+      + '<td><select data-f="category">'+catOptions(c.category)+'</select></td>'
       + '<td><input data-f="audience" value="'+esc(c.audience||'')+'" placeholder="กลุ่มผู้อบรม"></td>'
       + '<td><input data-f="budget" type="number" min="0" step="100" value="'+(c.budget==null?'':c.budget)+'" style="text-align:right"></td>'
       + mcells
@@ -793,8 +798,9 @@ function renderPlan(){
       + '</td></tr>';
   }).join('');
 
-  $('planBody').querySelectorAll('input[data-f]').forEach(function(inp){
-    inp.addEventListener('input', function(){
+  $('planBody').querySelectorAll('[data-f]').forEach(function(inp){
+    var evt = (inp.tagName==='SELECT') ? 'change' : 'input';
+    inp.addEventListener(evt, function(){
       var id = inp.closest('tr').dataset.id;
       var c = COURSES.filter(function(x){ return String(x.id)===String(id); })[0];
       if(!c) return;
@@ -939,7 +945,7 @@ function openCourse(id){
   if(!c) return;
   curCourseId = c.id;
   $('cmTitle').textContent = c.name || 'รายละเอียดหลักสูตร';
-  $('cmName').value=c.name||''; $('cmCategory').value=c.category||''; $('cmAudience').value=c.audience||'';
+  $('cmName').value=c.name||''; $('cmCategory').innerHTML=catOptions(c.category); $('cmAudience').value=c.audience||'';
   $('cmTrainer').value=c.trainer||''; $('cmBudget').value=(c.budget==null?'':c.budget); $('cmHours').value=(c.hours==null?'':c.hours);
   $('cmDetail').value=c.detail||''; $('cmNote').value=c.note||''; $('cmYear').value=c.year;
   $('cmMonths').innerHTML = MONTH_TH.map(function(m,mi){
