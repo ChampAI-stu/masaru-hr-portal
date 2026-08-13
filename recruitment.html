@@ -1062,7 +1062,7 @@
               <div class="field" id="email-field"><label>Email ผู้สมัคร</label><input class="inp" id="f-oemail" data-af="offerEmail" placeholder="email@example.com" value="${esc(a.offerEmail)}"></div>
             </div>
             <div class="field"><label>หมายเหตุ</label><textarea id="f-osentnote" data-af="offerSentNote" placeholder="เช่น ส่งแล้ว รอตอบกลับภายใน 3 วัน">${esc(a.offerSentNote)}</textarea></div>
-            <div class="btn-row"><button class="btn btn-primary" onclick="actSendOffer('${a.id}')"><i class="ti ti-send"></i>บันทึกว่าส่ง Offer แล้ว</button></div>
+            <div class="btn-row"><button class="btn btn-danger" onclick="actReject('${a.id}','ไม่ผ่าน (ขั้น Offer)')"><i class="ti ti-x"></i>ไม่ผ่าน</button><button class="btn btn-primary" onclick="actSendOffer('${a.id}')"><i class="ti ti-send"></i>บันทึกว่าส่ง Offer แล้ว</button></div>
           </div>`;
         } else {
           flowCard = `<div class="card">
@@ -1071,6 +1071,7 @@
             <div class="field"><label>โน้ตระหว่างรอผู้สมัครตอบรับ</label><textarea id="f-orespnote" data-af="offerRespNote" placeholder="เช่น โทรติดตามแล้ว รอยืนยัน...">${esc(a.offerRespNote)}</textarea><div class="autosave-hint"><i class="ti ti-cloud-check"></i>บันทึกอัตโนมัติขณะพิมพ์</div>
             </div>
             <div class="btn-row">
+              <button class="btn btn-danger" onclick="actReject('${a.id}','ไม่ผ่าน (หลังยื่น Offer)')"><i class="ti ti-x"></i>ไม่ผ่าน</button>
               <button class="btn btn-danger" onclick="actOfferResp('${a.id}','rejected')"><i class="ti ti-circle-x"></i>ผู้สมัครปฏิเสธ</button>
               <button class="btn btn-primary" onclick="actOfferResp('${a.id}','accepted')"><i class="ti ti-circle-check"></i>ผู้สมัครตอบรับ</button>
             </div>
