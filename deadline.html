@@ -356,6 +356,12 @@ body.locked{overflow:hidden}
   .sh-info .cell{min-width:0}
 
 .fi.editable{background:#fffbe8;border-bottom:1px dashed #b08a00}
+
+  .sh-calc2 .res{padding:8px 12px}
+  .sh-calc2 .res .rline{display:flex;align-items:center;gap:8px;margin:7px 0;font-size:11.5px}
+  .sh-calc2 .res .rline b{display:inline-block;min-width:70px;text-align:center;
+    border-bottom:1px dotted #666;font-size:12.5px;padding:0 6px;min-height:15px}
+  .sh-calc2 .rule{line-height:2}
 </style>
 </head>
 <body class="locked">
@@ -517,10 +523,10 @@ body.locked{overflow:hidden}
                 เข้างานสาย : ครั้งละ 0.5 คะแนน<br>
                 ลงโทษทางวินัย : ฉบับละ 5 คะแนน</td>
               <td class="res">
-                คะแนนประเมินรวมทั้งสิ้น <b id="pf_avg2">0</b> คะแนน<br>
-                หักความประพฤติ <b id="pf_deduct">0</b> คะแนน<br>
-                รวมคะแนนที่ได้รับ <b id="pf_final">0</b> คะแนน<br>
-                <span class="grade">ผลประเมิน : <b id="pf_grade">-</b></span></td></tr>
+                <div class="rline">คะแนนประเมินรวมทั้งสิ้น <b id="pf_avg2"></b> คะแนน</div>
+                <div class="rline">หักความประพฤติ <b id="pf_deduct"></b> คะแนน</div>
+                <div class="rline">รวมคะแนนที่ได้รับ <b id="pf_final"></b> คะแนน</div>
+                <span id="pf_grade" style="display:none"></span></td></tr>
         </table>
 
         <div class="pg-no">หน้า 1 / 2</div>
