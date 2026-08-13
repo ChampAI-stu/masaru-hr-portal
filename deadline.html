@@ -1724,9 +1724,9 @@ window.openExtModal=function(rid){
   else { sel.value="custom"; _q("ext_custom").value=cur; }
   _q("ext_note").value = "";
   extCalcDue();
-  _q("extOverlay").classList.add("on");
+  _q("extOverlay").classList.add("show");
 };
-function closeExtModal(){ _q("extOverlay").classList.remove("on"); _extRid=null; }
+function closeExtModal(){ _q("extOverlay").classList.remove("show"); _extRid=null; }
 (function(){
   var d=_q("ext_days"); if(d) d.onchange=extCalcDue;
   var c=_q("ext_custom"); if(c) c.oninput=extCalcDue;
