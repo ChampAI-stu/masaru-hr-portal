@@ -522,12 +522,13 @@
 
         <table class="sh-info">
           <tr><td class="lb">ชื่อ-นามสกุล</td><td><input class="fi" id="f_name"></td>
-              <td class="lb">ตำแหน่ง</td><td><input class="fi" id="f_pos"></td></tr>
+              <td class="lb">ตำแหน่ง</td><td><input class="fi" id="f_pos"></td>
+              <td class="lb">รหัสพนักงาน</td><td style="width:15%"><input class="fi" id="f_code"></td></tr>
           <tr><td class="lb">อัตราค่าจ้าง</td><td><input class="fi" id="f_wage"><span class="unit">บาท / เดือน</span></td>
-              <td class="lb">วันเริ่มงาน</td><td><input class="fi" id="f_start"></td></tr>
+              <td class="lb">วันเริ่มงาน</td><td colspan="3"><input class="fi" id="f_start"></td></tr>
           <tr><td class="lb">ประเมินผลทดลองงาน ครั้งที่</td><td><input class="fi" id="f_round" style="max-width:70px"></td>
               <td class="lb">ครบทดลองงาน</td>
-              <td><input class="fi" id="f_days" style="max-width:60px"><span class="unit">วัน &nbsp;ตั้งแต่วันที่</span>
+              <td colspan="3"><input class="fi" id="f_days" style="max-width:60px"><span class="unit">วัน &nbsp;ตั้งแต่วันที่</span>
                   <input class="fi" id="f_from" style="max-width:120px"><span class="unit">ถึง</span>
                   <input class="fi" id="f_to" style="max-width:120px"></td></tr>
         </table>
@@ -1715,7 +1716,7 @@ function applyLogo(){ $('fmLogoImg').src = FORM_LOGOS[$('fmLogo').value] || ''; 
 $('fmLogo').addEventListener('change', applyLogo);
 
 /* ---------- เก็บ / คืนค่า ---------- */
-var TEXT_IDS = ['f_name','f_pos','f_wage','f_start','f_round','f_days','f_from','f_to',
+var TEXT_IDS = ['f_name','f_pos','f_code','f_wage','f_start','f_round','f_days','f_from','f_to',
   'f_sick','f_personal','f_absent','f_other','f_late','f_warn',
   'f_passdate','f_wage_old','f_wage_new','f_noadj','f_contmon','f_contfrom','f_contto',
   'f_faildate','f_notok','f_mgr','f_mgrname','f_hr','f_hrname','f_emp','f_empname'];
@@ -1762,6 +1763,7 @@ $('fmEmp').addEventListener('change', function(){
   if(!e) return;
   $('f_name').value = e.full_name || '';
   $('f_pos').value  = e.position || e.group_name || '';
+  $('f_code').value = e.emp_code || '';
   $('f_start').value = thDate(e.start_date);
   var days = +($('f_days').value) || 30;
   if(!$('f_round').value) $('f_round').value = '1';
