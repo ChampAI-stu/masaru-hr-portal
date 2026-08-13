@@ -195,7 +195,9 @@
 
   /* ===== FORM SHEET (แบบฟอร์มรายงาน) ===== */
   .sheet-wrap{overflow:auto;padding:6px 0 2px;display:flex;justify-content:center}
-  .sheet{width:210mm;min-height:297mm;background:#fff;color:#000;padding:11mm 10mm 9mm;
+  #formDoc{display:flex;flex-direction:column;gap:18px;align-items:center}
+  .pg-no{margin-top:auto;padding-top:6px;text-align:right;font-size:9.5px;color:#666}
+  .sheet{width:210mm;min-height:297mm;display:flex;flex-direction:column;background:#fff;color:#000;padding:11mm 10mm 9mm;
     box-shadow:0 10px 40px rgba(16,35,63,.18);border:1px solid var(--line);
     font-family:'IBM Plex Sans Thai',sans-serif;font-size:11px;line-height:1.35}
   .sheet table{width:100%;border-collapse:collapse}
@@ -220,10 +222,12 @@
   .sh-stat .disc-b{vertical-align:top;padding-top:6px}
   .sh-score{margin-top:5px}
   .sh-score th{background:#f0f0f0;text-align:center;font-weight:700}
-  .sh-score .c1{width:23%} .sh-score .c2{width:40%}
-  .sh-score .mh{width:3.7%;font-size:10px}
+  .sh-score .c1{width:22%} .sh-score .c2{width:38%}
+  .sh-score .mh{width:4%;font-size:10px;padding:2px 0}
+  .sh-score td.sc{width:4%}
   .sh-score td.gp{font-weight:600;font-size:10.5px;vertical-align:middle}
-  .sh-score td.it{font-size:10.5px}
+  .sh-score td.it{font-size:10.5px;line-height:1.25}
+  .sh-score tbody td{height:20px}
   .sh-score td.sc{text-align:center;padding:0;cursor:pointer;user-select:none}
   .sh-score td.sc:hover{background:#eef3fb}
   .sh-score td.sc.on{background:#dff0e4;font-weight:800}
@@ -250,6 +254,7 @@
   .sh-sign2 .pl{margin-left:30px;margin-top:4px}
   .sh-note{border:1px solid #000;border-top:none;padding:5px 10px;line-height:1.8}
   .sh-note .rm{margin-top:3px} .sh-note .rm2{margin-left:64px}
+  #formPage2 .sh-band:first-child{margin-top:0}
   .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--green-dark);color:#fff;padding:12px 22px;border-radius:12px;font-weight:600;font-size:14px;opacity:0;transition:.25s;box-shadow:0 10px 30px rgba(0,0,0,.25);z-index:9999;max-width:90vw;text-align:center}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   .toast.err{background:var(--red)}
@@ -267,7 +272,11 @@
     #planTable td input,#planTable td select{border:none}
     .col-act{display:none!important}
     .sheet-wrap{padding:0;display:block;overflow:visible}
-    .sheet{width:auto;min-height:auto;box-shadow:none;border:none;padding:6mm 7mm}
+    #formDoc{display:block;gap:0}
+    .sheet{width:auto;min-height:auto;display:block;box-shadow:none;border:none;padding:7mm 8mm;
+      page-break-after:always;break-after:page}
+    .sheet:last-child{page-break-after:auto;break-after:auto}
+    .pg-no{margin-top:8px}
     .fi{border-bottom:1px dotted #666!important;background:transparent!important}
     .sh-score td.sc.on{background:#dff0e4!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     .sh-stat th,.sh-score th,.sh-band,.sh-calc2 th,.sh-sign2 th,.sh-score tfoot td{
@@ -514,7 +523,8 @@
     </div>
 
     <div class="sheet-wrap">
-      <div class="sheet" id="formSheet">
+      <div id="formDoc">
+      <div class="sheet" id="formPage1">
         <div class="sh-head">
           <img id="fmLogoImg" class="sh-logo" alt="">
           <div class="sh-title">แบบประเมินผลการทดลองงาน</div>
@@ -573,6 +583,10 @@
                 <span class="grade">ผลประเมิน : <b id="f_grade">-</b></span></td></tr>
         </table>
 
+        <div class="pg-no">หน้า 1 / 2</div>
+      </div><!-- /page1 -->
+
+      <div class="sheet" id="formPage2">
         <div class="sh-band">เกณฑ์การประเมินผล</div>
         <div class="sh-crit">
           <div>คะแนน ต่ำกว่า 60% ไม่ผ่านทดลองงาน</div>
@@ -626,7 +640,9 @@
           <div class="rm2">ช่วงเวลา 60 วัน เข้าใจบทบาทหน้าที่และประสานงานทุกอย่างด้วยตัวเอง</div>
           <div class="rm2">ช่วงเวลา 90 วัน ทำได้ทุกอย่างและเตรียมบรรจุเป็นพนักงานประจำ</div>
         </div>
-      </div>
+        <div class="pg-no">หน้า 2 / 2</div>
+      </div><!-- /page2 -->
+      </div><!-- /formDoc -->
     </div>
 
     <div class="card no-print" style="margin-top:20px">
@@ -1910,8 +1926,8 @@ $('fmPdf').addEventListener('click', function(){
     image:{ type:'jpeg', quality:0.98 },
     html2canvas:{ scale:2, useCORS:true, backgroundColor:'#ffffff' },
     jsPDF:{ unit:'mm', format:'a4', orientation:'portrait' },
-    pagebreak:{ mode:['css','legacy'] }
-  }).from($('formSheet')).save().then(function(){
+    pagebreak:{ mode:['css','legacy'], before:'#formPage2' }
+  }).from($('formDoc')).save().then(function(){
     btn.disabled=false; toast('บันทึก PDF แล้ว ✓');
   }).catch(function(){ btn.disabled=false; toast('สร้าง PDF ไม่สำเร็จ — ใช้ปุ่มพิมพ์แทนได้', true); });
 });
