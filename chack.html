@@ -2113,5 +2113,265 @@ window.__gridEnsure=function(){try{ if(SB && loadedYM===null) loadMonth(); }catc
 </script>
 
 
+
+<!-- ===== MASARU · Thai Date Input (วว/ดด/ปปปป พ.ศ.) ===== -->
+<script>
+/* ==================================================================
+   MASARU · Thai Date Input  (วว/ดด/ปปปป พ.ศ.)
+   ------------------------------------------------------------------
+   วิธีใช้: วาง <script> ก้อนนี้ไว้ก่อน </body> ของหน้าใดก็ได้
+   - แปลง <input type="date"> ทุกช่องให้แสดง/กรอกเป็น วัน/เดือน/ปี (พ.ศ.)
+   - ค่าที่เก็บใน input เดิมยังเป็น YYYY-MM-DD เหมือนเดิม (โค้ดเดิมไม่ต้องแก้)
+   - รองรับช่องที่ถูกสร้างขึ้นทีหลัง (modal / template) อัตโนมัติ
+   ================================================================== */
+(function () {
+  if (window.__thaiDateReady) return;
+  window.__thaiDateReady = true;
+
+  var MON_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  var MON_FULL  = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  var DOW       = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+
+  /* ---------- style ---------- */
+  var css = ''
+    + '.thd-pop{position:fixed;z-index:2147483000;background:#fff;border:1px solid #e2e7ef;border-radius:14px;'
+    + 'box-shadow:0 16px 46px rgba(16,35,63,.22);padding:12px;width:266px;'
+    + "font-family:'IBM Plex Sans Thai',system-ui,sans-serif;font-size:13.5px;color:#16233f;display:none}"
+    + '.thd-pop.on{display:block}'
+    + '.thd-bar{display:flex;align-items:center;gap:4px;margin-bottom:8px}'
+    + '.thd-bar b{flex:1;text-align:center;font-size:14px;color:#16294d;font-weight:700}'
+    + '.thd-nav{border:1px solid #e2e7ef;background:#fff;border-radius:8px;width:26px;height:26px;line-height:1;'
+    + 'cursor:pointer;color:#16294d;font-size:13px;font-family:inherit;padding:0}'
+    + '.thd-nav:hover{background:#e7ecf5}'
+    + '.thd-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}'
+    + '.thd-dow{text-align:center;font-size:11.5px;color:#97a1b5;font-weight:700;padding:3px 0}'
+    + '.thd-day{border:none;background:none;border-radius:8px;padding:6px 0;cursor:pointer;font-family:inherit;'
+    + 'font-size:13px;color:#16233f}'
+    + '.thd-day:hover{background:#e7ecf5}'
+    + '.thd-day.mute{color:#c4cbd8}'
+    + '.thd-day.today{box-shadow:inset 0 0 0 1.5px #d62030;font-weight:700}'
+    + '.thd-day.sel{background:#16294d;color:#fff;font-weight:700}'
+    + '.thd-foot{display:flex;gap:6px;margin-top:9px;border-top:1px solid #eef1f7;padding-top:9px}'
+    + '.thd-foot button{flex:1;border:1px solid #e2e7ef;background:#fff;border-radius:9px;padding:6px;cursor:pointer;'
+    + 'font-family:inherit;font-size:12.5px;color:#16233f}'
+    + '.thd-foot button:hover{background:#e7ecf5}'
+    + '.thd-input{letter-spacing:.3px}';
+  var st = document.createElement('style');
+  st.textContent = css;
+  (document.head || document.documentElement).appendChild(st);
+
+  /* ---------- helpers ---------- */
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+
+  function isoToTh(v) {
+    if (!v) return '';
+    var p = String(v).slice(0, 10).split('-');
+    if (p.length < 3 || !p[0]) return '';
+    return p[2] + '/' + p[1] + '/' + (parseInt(p[0], 10) + 543);
+  }
+
+  function thToIso(t) {
+    if (!t) return '';
+    var m = String(t).trim().match(/^(\d{1,2})\s*[\/\-.]\s*(\d{1,2})\s*[\/\-.]\s*(\d{2,4})$/);
+    if (!m) return '';
+    var d = +m[1], mo = +m[2], y = +m[3];
+    if (y < 100) y += 2500;          // 69 -> 2569
+    if (y > 2400) y -= 543;          // พ.ศ. -> ค.ศ.
+    if (mo < 1 || mo > 12 || d < 1 || d > 31) return '';
+    var dt = new Date(y, mo - 1, d);
+    if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return '';
+    return y + '-' + pad(mo) + '-' + pad(d);
+  }
+
+  var VAL_DESC = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+
+  function rawGet(el) { return VAL_DESC.get.call(el); }
+  function rawSet(el, v) { VAL_DESC.set.call(el, v); }
+
+  /* ---------- popup (ใช้ร่วมกันทุกช่อง) ---------- */
+  var pop = document.createElement('div');
+  pop.className = 'thd-pop';
+  pop.innerHTML =
+      '<div class="thd-bar">'
+    +   '<button type="button" class="thd-nav" data-nav="-12" title="ปีก่อนหน้า">&laquo;</button>'
+    +   '<button type="button" class="thd-nav" data-nav="-1" title="เดือนก่อนหน้า">&lsaquo;</button>'
+    +   '<b></b>'
+    +   '<button type="button" class="thd-nav" data-nav="1" title="เดือนถัดไป">&rsaquo;</button>'
+    +   '<button type="button" class="thd-nav" data-nav="12" title="ปีถัดไป">&raquo;</button>'
+    + '</div>'
+    + '<div class="thd-grid"></div>'
+    + '<div class="thd-foot">'
+    +   '<button type="button" data-act="today">วันนี้</button>'
+    +   '<button type="button" data-act="clear">ล้าง</button>'
+    + '</div>';
+  document.addEventListener('DOMContentLoaded', function () { document.body.appendChild(pop); });
+  if (document.body) document.body.appendChild(pop);
+
+  var popTarget = null, viewY = 0, viewM = 0;
+
+  function drawPop() {
+    pop.querySelector('b').textContent = MON_FULL[viewM] + ' ' + (viewY + 543);
+    var grid = pop.querySelector('.thd-grid');
+    var html = DOW.map(function (d) { return '<div class="thd-dow">' + d + '</div>'; }).join('');
+    var first = new Date(viewY, viewM, 1).getDay();
+    var days = new Date(viewY, viewM + 1, 0).getDate();
+    var prev = new Date(viewY, viewM, 0).getDate();
+    var sel = popTarget ? rawGet(popTarget).slice(0, 10) : '';
+    var now = new Date();
+    var todayIso = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
+
+    for (var i = 0; i < first; i++) {
+      html += '<button type="button" class="thd-day mute" disabled>' + (prev - first + 1 + i) + '</button>';
+    }
+    for (var d = 1; d <= days; d++) {
+      var iso = viewY + '-' + pad(viewM + 1) + '-' + pad(d);
+      var cls = 'thd-day' + (iso === todayIso ? ' today' : '') + (iso === sel ? ' sel' : '');
+      html += '<button type="button" class="' + cls + '" data-iso="' + iso + '">' + d + '</button>';
+    }
+    grid.innerHTML = html;
+  }
+
+  function openPop(inp) {
+    popTarget = inp;
+    var v = rawGet(inp);
+    var base = v ? new Date(v.slice(0, 10)) : new Date();
+    if (isNaN(base)) base = new Date();
+    viewY = base.getFullYear(); viewM = base.getMonth();
+    drawPop();
+    pop.classList.add('on');
+    var r = (inp.__proxy || inp).getBoundingClientRect();
+    var top = r.bottom + 6, left = r.left;
+    if (top + pop.offsetHeight > window.innerHeight - 8) top = Math.max(8, r.top - pop.offsetHeight - 6);
+    if (left + pop.offsetWidth > window.innerWidth - 8) left = Math.max(8, window.innerWidth - pop.offsetWidth - 8);
+    pop.style.top = top + 'px';
+    pop.style.left = left + 'px';
+  }
+  function closePop() { pop.classList.remove('on'); popTarget = null; }
+
+  pop.addEventListener('mousedown', function (e) { e.preventDefault(); });
+  pop.addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    if (b.dataset.nav) {
+      var n = +b.dataset.nav;
+      var dt = new Date(viewY, viewM + n, 1);
+      viewY = dt.getFullYear(); viewM = dt.getMonth();
+      drawPop(); return;
+    }
+    if (b.dataset.act === 'today') {
+      var t = new Date();
+      commit(popTarget, t.getFullYear() + '-' + pad(t.getMonth() + 1) + '-' + pad(t.getDate()));
+      closePop(); return;
+    }
+    if (b.dataset.act === 'clear') { commit(popTarget, ''); closePop(); return; }
+    if (b.dataset.iso) { commit(popTarget, b.dataset.iso); closePop(); }
+  });
+  document.addEventListener('mousedown', function (e) {
+    if (!pop.classList.contains('on')) return;
+    if (pop.contains(e.target)) return;
+    if (popTarget && popTarget.__proxy === e.target) return;
+    closePop();
+  });
+  window.addEventListener('scroll', closePop, true);
+  window.addEventListener('resize', closePop);
+
+  /* ---------- sync / commit ---------- */
+  function syncProxy(inp) {
+    if (inp.__proxy) inp.__proxy.value = isoToTh(rawGet(inp));
+  }
+  function commit(inp, iso) {
+    if (!inp) return;
+    if (rawGet(inp) !== iso) {
+      rawSet(inp, iso);
+      inp.dispatchEvent(new Event('input', { bubbles: true }));
+      inp.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    syncProxy(inp);
+  }
+
+  /* ---------- enhance one input ---------- */
+  function enhance(inp) {
+    if (inp.__thd) return;
+    inp.__thd = true;
+
+    var proxy = document.createElement('input');
+    proxy.type = 'text';
+    proxy.className = inp.className + ' thd-input';
+    var inline = inp.getAttribute('style');
+    if (inline) proxy.setAttribute('style', inline);
+    proxy.placeholder = 'วว/ดด/ปปปป';
+    proxy.title = 'รูปแบบ วัน/เดือน/ปี (พ.ศ.) เช่น 13/08/2569';
+    proxy.autocomplete = 'off';
+    proxy.setAttribute('inputmode', 'numeric');
+    proxy.maxLength = 10;
+    if (inp.disabled) proxy.disabled = true;
+    if (inp.readOnly) proxy.readOnly = true;
+
+    inp.style.display = 'none';
+    inp.parentNode.insertBefore(proxy, inp.nextSibling);
+    inp.__proxy = proxy;
+    proxy.__src = inp;
+
+    /* ให้โค้ดเดิมที่สั่ง input.value = '...' อัปเดตช่องที่มองเห็นด้วย */
+    try {
+      Object.defineProperty(inp, 'value', {
+        configurable: true,
+        get: function () { return rawGet(this); },
+        set: function (v) { rawSet(this, v); syncProxy(this); }
+      });
+    } catch (e) { /* บางเบราว์เซอร์ล็อกไว้ — ข้ามได้ */ }
+
+    /* พิมพ์เอง: ใส่ / ให้อัตโนมัติ */
+    proxy.addEventListener('input', function () {
+      var digits = proxy.value.replace(/[^\d]/g, '').slice(0, 8);
+      var out = digits;
+      if (digits.length > 4) out = digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4);
+      else if (digits.length > 2) out = digits.slice(0, 2) + '/' + digits.slice(2);
+      if (out !== proxy.value) proxy.value = out;
+    });
+    proxy.addEventListener('change', function () {
+      var iso = thToIso(proxy.value);
+      if (!proxy.value.trim()) { commit(inp, ''); return; }
+      if (iso) commit(inp, iso);
+      else { proxy.value = isoToTh(rawGet(inp)); }   // พิมพ์ผิด → คืนค่าเดิม
+    });
+    proxy.addEventListener('blur', function () {
+      var iso = thToIso(proxy.value);
+      if (proxy.value.trim() && !iso) proxy.value = isoToTh(rawGet(inp));
+    });
+    proxy.addEventListener('focus', function () { openPop(inp); });
+    proxy.addEventListener('click', function () { openPop(inp); });
+    proxy.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closePop();
+      if (e.key === 'Enter') { proxy.dispatchEvent(new Event('change')); closePop(); }
+    });
+
+    syncProxy(inp);
+  }
+
+  /* ---------- scan + observe ---------- */
+  var queued = false;
+  function scan() {
+    queued = false;
+    var list = document.querySelectorAll('input[type="date"]:not([data-thd-skip])');
+    for (var i = 0; i < list.length; i++) enhance(list[i]);
+  }
+  function queueScan() {
+    if (queued) return;
+    queued = true;
+    (window.requestAnimationFrame || setTimeout)(scan, 0);
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scan);
+  else scan();
+
+  try {
+    new MutationObserver(queueScan).observe(document.documentElement, { childList: true, subtree: true });
+  } catch (e) { setInterval(scan, 1500); }
+
+  window.thaiDateRescan = scan;
+})();
+
+</script>
 </body>
 </html>
