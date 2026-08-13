@@ -362,6 +362,9 @@ body.locked{overflow:hidden}
   .sh-calc2 .res .rline b{display:inline-block;min-width:70px;text-align:center;
     border-bottom:1px dotted #666;font-size:12.5px;padding:0 6px;min-height:15px}
   .sh-calc2 .rule{line-height:2}
+
+.gnote{padding:7px 16px;background:#fffaf0;border-top:1px dashed #f0e2c8;
+  color:#8a5a12;font-size:.87rem;line-height:1.5}
 </style>
 </head>
 <body class="locked">
@@ -1196,7 +1199,10 @@ function groupHTML(g){
         <span class="gm-actions">${acts}</span>
       </div>`;
   }).join("");
-  return `<div class="gitem ${cls}">${head}<div class="gmiles">${rows}</div></div>`;
+  const _rec = (state.records||[]).find(function(x){ return String(x.id)===String(g.rid); });
+  const _note = (_rec && _rec.note) ? _rec.note : (g.miles[0] && g.miles[0].note) || "";
+  const noteHTML = _note ? `<div class="gnote">\uD83D\uDCDD ${escapeH(_note)}</div>` : "";
+  return `<div class="gitem ${cls}">${head}${noteHTML}<div class="gmiles">${rows}</div></div>`;
 }
 function itemHTML(m){
   return `<div class="item ${m.done?'done':m.st.k}">
