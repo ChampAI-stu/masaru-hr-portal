@@ -197,6 +197,8 @@
   .sheet-wrap{overflow:auto;padding:6px 0 2px;display:flex;justify-content:center}
   #formDoc{display:flex;flex-direction:column;gap:18px;align-items:center}
   .pg-no{margin-top:auto;padding-top:6px;text-align:right;font-size:9.5px;color:#666}
+  #formDoc.pdfing{gap:0}
+  #formDoc.pdfing .sheet{height:297mm;min-height:297mm;max-height:297mm;overflow:hidden;box-shadow:none;border:none;margin:0}
   .sheet{width:210mm;min-height:297mm;display:flex;flex-direction:column;background:#fff;color:#000;padding:11mm 10mm 9mm;
     box-shadow:0 10px 40px rgba(16,35,63,.18);border:1px solid var(--line);
     font-family:'IBM Plex Sans Thai',sans-serif;font-size:11px;line-height:1.35}
@@ -278,10 +280,11 @@
     #planTable td input,#planTable td select{border:none}
     .col-act{display:none!important}
     .sheet-wrap{padding:0;display:block;overflow:visible}
-    #formDoc{display:block;gap:0}
-    .sheet{width:auto;min-height:auto;display:block;box-shadow:none;border:none;padding:7mm 8mm;
-      page-break-after:always;break-after:page}
-    .sheet:last-child{page-break-after:auto;break-after:auto}
+    #formDoc{display:block;gap:0;margin:0}
+    .sheet{width:auto;height:auto;min-height:0;max-height:none;display:block;overflow:visible;
+      box-shadow:none;border:none;margin:0;padding:7mm 8mm;
+      page-break-after:always;break-after:page;page-break-inside:avoid}
+    .sheet:last-child{page-break-after:avoid;break-after:avoid}
     .pg-no{margin-top:8px}
     .fi{border-bottom:1px dotted #666!important;background:transparent!important}
     .sh-score td.sc.on{background:#dff0e4!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -1926,21 +1929,40 @@ $('fmReload').addEventListener('click', async function(){ await loadForms(); toa
 
 /* ---------- พิมพ์ / PDF ---------- */
 $('fmPrint').addEventListener('click', function(){ window.print(); });
-$('fmPdf').addEventListener('click', function(){
-  var btn=this;
-  if(typeof html2pdf==='undefined'){ toast('โหลดตัวแปลง PDF ไม่ได้ — ใช้ปุ่มพิมพ์แล้วเลือก “Save as PDF” แทน', true); return; }
+$('fmPdf').addEventListener('click', async function(){
+  var btn = this;
+  var jsPDFctor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+  if(typeof html2canvas==='undefined' || !jsPDFctor){
+    toast('โหลดตัวแปลง PDF ไม่ได้ — ใช้ปุ่มพิมพ์แล้วเลือก “Save as PDF” แทน', true); return;
+  }
   var name = ($('f_name').value||'ฟอร์ม').trim().replace(/[\\/:*?"<>|]/g,'');
   var file = 'แบบประเมินทดลองงาน_'+name+(($('f_round').value)?('_ครั้งที่'+$('f_round').value):'')+'.pdf';
-  btn.disabled=true; toast('กำลังสร้าง PDF...');
-  html2pdf().set({
-    margin:0, filename:file,
-    image:{ type:'jpeg', quality:0.98 },
-    html2canvas:{ scale:2, useCORS:true, backgroundColor:'#ffffff' },
-    jsPDF:{ unit:'mm', format:'a4', orientation:'portrait' },
-    pagebreak:{ mode:['css','legacy'], before:'#formPage2' }
-  }).from($('formDoc')).save().then(function(){
-    btn.disabled=false; toast('บันทึก PDF แล้ว ✓');
-  }).catch(function(){ btn.disabled=false; toast('สร้าง PDF ไม่สำเร็จ — ใช้ปุ่มพิมพ์แทนได้', true); });
+  var pages = [$('formPage1'), $('formPage2')].filter(Boolean);
+
+  btn.disabled = true;
+  $('formDoc').classList.add('pdfing');      // ล็อกขนาดให้พอดี A4 พอดีหน้า
+  if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  toast('กำลังสร้าง PDF...');
+  try{
+    var pdf = new jsPDFctor({ unit:'mm', format:'a4', orientation:'portrait', compress:true });
+    for(var i=0;i<pages.length;i++){
+      var canvas = await html2canvas(pages[i], {
+        scale:2, useCORS:true, backgroundColor:'#ffffff',
+        windowWidth: pages[i].scrollWidth, scrollX:0, scrollY:-window.scrollY
+      });
+      var img = canvas.toDataURL('image/jpeg', 0.95);
+      if(i>0) pdf.addPage();
+      pdf.addImage(img, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
+    }
+    pdf.save(file);
+    toast('บันทึก PDF แล้ว ✓ ('+pages.length+' หน้า)');
+  }catch(e){
+    console.error(e);
+    toast('สร้าง PDF ไม่สำเร็จ — ใช้ปุ่มพิมพ์แทนได้', true);
+  }finally{
+    $('formDoc').classList.remove('pdfing');
+    btn.disabled = false;
+  }
 });
 
 /* ==================================================================
