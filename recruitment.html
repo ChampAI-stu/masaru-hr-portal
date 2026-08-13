@@ -1086,9 +1086,11 @@
           <div class="info-grid">
             <div class="info-f"><div class="k">ตำแหน่ง</div><div class="v">${esc(a.pos)}</div></div>
             <div class="info-f"><div class="k">เงินเดือน</div><div class="v">${a.offerSalary ? money(a.offerSalary) : '—'} บาท</div></div>
-            <div class="info-f"><div class="k">วันเริ่มงาน</div><div class="v">${esc(thDate(a.offerStart) || '—')}</div></div>
+            <div class="info-f edit"><div class="k">วันเริ่มงาน <span class="k-edit"><i class="ti ti-pencil"></i>แก้ไขได้</span></div>
+              <div class="v"><input type="date" class="inp inp-date" id="f-hstart" data-af="offerStart" value="${esc(a.offerStart)}"></div></div>
             <div class="info-f"><div class="k">รูปแบบการจ้าง</div><div class="v">${esc(a.offerType)}</div></div>
           </div>
+          <div class="autosave-hint"><i class="ti ti-cloud-check"></i>แก้วันเริ่มงานแล้วบันทึกอัตโนมัติ</div>
         </div>`;
       }
       return '';
@@ -1381,6 +1383,13 @@
   .rp-img{max-width:100%;border:1px solid #e6e9e4;border-radius:10px}
   .sec,.outcome,.hero{page-break-inside:avoid}
   #doc{width:760px;margin:0 auto}
+
+    .info-f.edit{background:#fffdf5;border-color:#f0e2c8}
+    .info-f .k-edit{margin-left:8px;font-size:.72rem;font-weight:600;color:#8a5a12;
+      display:inline-flex;align-items:center;gap:3px}
+    .inp-date{padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-family:inherit;
+      font-size:.9rem;background:#fff;width:100%;max-width:190px;color:var(--ink)}
+    .inp-date:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(22,41,77,.08)}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"><\/script>
@@ -1573,6 +1582,9 @@
               <div class="int-pos">${esc(a.pos)}${a.intBy ? ' · ผู้สัมภาษณ์: ' + esc(a.intBy) : ''}${a.intMode === 'online' && a.intLink ? ` · <a href="${esc(a.intLink)}" target="_blank" rel="noopener" class="mlink" onclick="event.stopPropagation()"><i class="ti ti-external-link"></i>ลิงก์</a>` : ''}</div>
             </div>
             ${rel ? `<span class="int-rel" style="color:${color}">${rel}</span>` : ''}
+            <input type="date" class="inp inp-date start-edit" value="${esc(a.offerStart || '')}"
+                   data-startedit="${a.id}" title="แก้วันเริ่มงาน"
+                   onclick="event.stopPropagation()">
           </div>`;
         }).join('')}` : '';
 
@@ -1601,7 +1613,7 @@
       Object.values(groups).forEach(g => g.sort(byDate));
 
       const el = document.getElementById('start-body');
-      if (!list.length) { el.innerHTML = '<div class="empty"><i class="ti ti-calendar-off"></i>ยังไม่มีผู้สมัครที่ระบุวันเริ่มงาน</div>'; return; }
+      if (!list.length) { el.innerHTML = '<div class="empty"><i class="ti ti-calendar-off"></i>ยังไม่มีผู้สมัครที่ระบุวันเริ่มงาน</div>'; bindStartEdit(); return; }
 
       const sec = (title, arr, color, icon) => arr.length ? `
         <div class="int-sec-title" style="color:${color}"><i class="ti ${icon}"></i>${title}<span class="int-sec-n">${arr.length}</span></div>
@@ -1625,6 +1637,34 @@
         sec('เริ่มวันนี้', groups.today, '#16294d', 'ti-star') +
         sec('ภายใน 7 วัน', groups.week, '#8a5a12', 'ti-calendar-week') +
         sec('ถัดไป', groups.later, '#1f6f9c', 'ti-calendar');
+      bindStartEdit();
+      if (window.thaiDateRescan) window.thaiDateRescan();
+    }
+
+    // แก้วันเริ่มงานจากหน้า "ตารางวันเริ่มงาน" — บันทึกทันที
+    let _startBound = false;
+    function bindStartEdit() {
+      if (_startBound) return;
+      const box = document.getElementById('start-body');
+      if (!box) return;
+      _startBound = true;
+      box.addEventListener('change', async e => {
+        const el = e.target;
+        const id = el.dataset && el.dataset.startedit;
+        if (!id) return;
+        e.stopPropagation();
+        const val = el.value || null;
+        const a = getA(id); if (a) a.offerStart = val;
+        setSaveInd('saving');
+        const ok = await dbUpdate(id, { offerStart: val });
+        setSaveInd(ok ? 'saved' : '');
+        showToast(ok ? 'อัปเดตวันเริ่มงานแล้ว' : 'บันทึกไม่สำเร็จ', !ok);
+        renderStartDates();
+        if (selId === id) { const x = getA(id); if (x) renderDetail(x); }
+      });
+      box.addEventListener('click', e => {
+        if (e.target && e.target.dataset && e.target.dataset.startedit) e.stopPropagation();
+      });
     }
 
     // ═══════════════════ REPORTS ═══════════════════
