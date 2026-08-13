@@ -120,6 +120,13 @@
   #planTable th.mh{font-size:11px;padding:6px 1px;letter-spacing:-.3px}
   #planTable td.seq{text-align:center;color:var(--muted);font-weight:700}
   #planTable td.col-act .btn.sm{padding:4px 6px;font-size:12px}
+  .plan-sec{margin-bottom:20px}
+  .sec-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+  .sec-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;padding-bottom:11px;border-bottom:2px solid var(--green-soft)}
+  .sec-bar h4{font-size:15.5px;color:var(--green-dark);font-weight:700;display:flex;align-items:center;gap:8px}
+  .sec-bar h4 i{color:var(--gold)}
+  .sec-bar .cnt{font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;background:var(--green-soft);color:var(--green-dark)}
+  .sec-bar .sp{flex:1}
   .dirty-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--gold);margin-left:5px;vertical-align:middle}
 
   /* ===== BADGES / NOTES ===== */
@@ -288,42 +295,15 @@
 
     <div class="toolbar">
       <div class="fld" style="min-width:130px"><label>ปีแผนอบรม</label><select id="planYear"></select></div>
-      <button class="btn primary" id="planAdd"><i class="ti ti-plus"></i> เพิ่มหลักสูตร</button>
       <button class="btn" id="planSave"><i class="ti ti-device-floppy"></i> บันทึกทั้งหมด <span id="planDirtyCount"></span></button>
       <div style="flex:1"></div>
       <button class="btn ghost" id="planExport"><i class="ti ti-file-spreadsheet"></i> ส่งออก Excel</button>
       <button class="btn ghost" id="planPrint"><i class="ti ti-printer"></i> พิมพ์</button>
     </div>
 
-    <div class="card" style="padding:16px">
-      <p class="hint" style="margin-bottom:12px">พิมพ์ในช่องได้ทันที · คลิกช่องเดือนเพื่อกำหนดระยะเวลาอบรม (✓) · แก้เสร็จแล้วกด <b>บันทึกทั้งหมด</b></p>
-      <div class="tbl-wrap">
-        <table id="planTable">
-          <colgroup>
-            <col style="width:34px"><col><col style="width:104px"><col style="width:112px"><col style="width:84px">
-            <col style="width:30px"><col style="width:30px"><col style="width:30px"><col style="width:30px">
-            <col style="width:30px"><col style="width:30px"><col style="width:30px"><col style="width:30px">
-            <col style="width:30px"><col style="width:30px"><col style="width:30px"><col style="width:30px">
-            <col style="width:104px"><col style="width:112px"><col style="width:66px" class="col-act">
-          </colgroup>
-          <thead>
-            <tr>
-              <th rowspan="2">ที่</th>
-              <th rowspan="2">ชื่อหลักสูตร</th>
-              <th rowspan="2">ประเภท</th>
-              <th rowspan="2">ผู้อบรม</th>
-              <th rowspan="2">งบประมาณ</th>
-              <th colspan="12">ระยะเวลา</th>
-              <th rowspan="2">วิทยากร</th>
-              <th rowspan="2">หมายเหตุ</th>
-              <th rowspan="2" class="col-act">จัดการ</th>
-            </tr>
-            <tr id="planMonthHead"></tr>
-          </thead>
-          <tbody id="planBody"></tbody>
-        </table>
-      </div>
-    </div>
+    <div class="plan-sec" id="planSecIn"></div>
+    <div class="plan-sec" id="planSecOut"></div>
+
   </section>
 
   <!-- ================= TAB 3: หลักสูตรที่อบรม ================= -->
@@ -455,6 +435,10 @@
       <div class="fgrid">
         <div class="fld" style="grid-column:1/-1"><label>ชื่อหลักสูตร</label><input id="cmName"></div>
         <div class="fld"><label>ประเภท</label><select id="cmCategory"></select></div>
+        <div class="fld"><label>รูปแบบการจัดอบรม</label><select id="cmFormat"></select></div>
+        <div class="fld"><label>แผนการอบรม</label><select id="cmPlanType">
+          <option value="in">ตามแผนฝึกอบรมประจำปี</option><option value="out">นอกแผนฝึกอบรมประจำปี</option>
+        </select></div>
         <div class="fld"><label>ปี (พ.ศ.)</label><select id="cmYear"></select></div>
         <div class="fld"><label>ผู้อบรม <span class="sub">(กลุ่มเป้าหมาย)</span></label><input id="cmAudience" placeholder="เช่น พนักงานคลังสินค้า"></div>
         <div class="fld"><label>วิทยากร</label><input id="cmTrainer"></div>
@@ -539,14 +523,39 @@ try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e){
 var $ = function(id){ return document.getElementById(id); };
 var MONTH_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 var CATEGORIES = ['In House','Public'];
+var CAT_LEGACY = { 'อบรมภายใน':'In House', 'ภายใน':'In House', 'In-House':'In House',
+                   'อบรมภายนอก':'Public', 'ภายนอก':'Public', 'public':'Public', 'in house':'In House' };
+function normCat(v){
+  var t = (v==null? '' : String(v)).trim();
+  if(!t) return '';
+  if(CATEGORIES.indexOf(t)>=0) return t;
+  return CAT_LEGACY[t] || CAT_LEGACY[t.toLowerCase()] || '';
+}
 function catOptions(v){
-  var cur = v || '';
-  var list = CATEGORIES.slice();
-  if(cur && list.indexOf(cur)<0) list.push(cur);   // เก็บค่าเดิมที่เคยบันทึกไว้
+  var cur = normCat(v);
+  return '<option value="">— เลือก —</option>' + CATEGORIES.map(function(k){
+    return '<option value="'+esc(k)+'"'+(k===cur?' selected':'')+'>'+esc(k)+'</option>';
+  }).join('');
+}
+
+/* รูปแบบการจัดอบรม */
+var FORMATS = ['บรรยาย (Lecture)','เชิงปฏิบัติการ (Workshop)','สอนงานหน้างาน (OJT)',
+               'สัมมนา / ดูงาน','E-Learning / ออนไลน์','อื่น ๆ'];
+function formatOptions(v){
+  var cur = (v||'').trim();
+  var list = FORMATS.slice();
+  if(cur && list.indexOf(cur)<0) list.push(cur);
   return '<option value="">— เลือก —</option>' + list.map(function(k){
     return '<option value="'+esc(k)+'"'+(k===cur?' selected':'')+'>'+esc(k)+'</option>';
   }).join('');
 }
+
+/* แผนการอบรม: ตามแผน / นอกแผน */
+var PLAN_TYPES = [
+  { key:'in',  title:'ตามแผนฝึกอบรมประจำปี',  icon:'ti-calendar-check' },
+  { key:'out', title:'นอกแผนฝึกอบรมประจำปี', icon:'ti-calendar-plus' }
+];
+function planTypeOf(c){ return (c.plan_type==='out') ? 'out' : 'in'; }
 var THIS_YEAR = new Date().getFullYear();          // ค.ศ. (เก็บใน DB เป็น ค.ศ.)
 var EMP = [], COURSES = [], RECORDS = [], EVALS = [];
 var DIRTY = {};              // course id (หรือ tmp key) -> true
@@ -645,6 +654,9 @@ async function loadAll(){
 }
 function normCourse(c){
   c.months = Array.isArray(c.months) ? c.months.map(Number) : (c.months? String(c.months).split(',').map(Number).filter(function(n){return n>=1&&n<=12;}) : []);
+  c.category = normCat(c.category);
+  c.plan_type = (c.plan_type==='out') ? 'out' : 'in';
+  c.train_format = c.train_format || '';
   return c;
 }
 
@@ -777,53 +789,62 @@ $('empOverlay').addEventListener('click', function(ev){ if(ev.target===$('empOve
 /* ==================================================================
    TAB 2 · แผนฝึกอบรมประจำปี
    ================================================================== */
-$('planMonthHead').innerHTML = MONTH_TH.map(function(m){ return '<th class="mh">'+m+'</th>'; }).join('');
-
-function planRows(){
+function planRows(type){
   var y = +$('planYear').value;
-  return COURSES.filter(function(c){ return +c.year===y; })
+  return COURSES.filter(function(c){ return +c.year===y && (!type || planTypeOf(c)===type); })
                 .sort(function(a,b){ return (a.seq||9999)-(b.seq||9999); });
 }
 function courseJoinCount(cid){
   var n=0; RECORDS.forEach(function(r){ if(String(r.course_id)===String(cid)) n++; }); return n;
 }
-function renderPlan(){
-  var rows = planRows();
-  var budget=0, done=0, join=0;
-  rows.forEach(function(c){
-    budget += Number(c.budget)||0;
-    var n = courseJoinCount(c.id); join += n; if(n>0) done++;
-  });
-  $('kPlanCourse').innerHTML = rows.length+' <small>หลักสูตร</small>';
-  $('kPlanBudget').innerHTML = fmt(budget)+' <small>บ.</small>';
-  $('kPlanDone').innerHTML = done+' <small>หลักสูตร</small>';
-  $('kPlanJoin').innerHTML = fmt(join)+' <small>ครั้ง</small>';
+var PLAN_COLGROUP = '<colgroup>'
+  + '<col style="width:34px"><col><col style="width:104px"><col style="width:112px"><col style="width:84px">'
+  + new Array(13).join('<col style="width:30px">')
+  + '<col style="width:104px"><col style="width:112px"><col style="width:88px" class="col-act">'
+  + '</colgroup>';
+var PLAN_THEAD = '<thead><tr>'
+  + '<th rowspan="2">ที่</th><th rowspan="2">ชื่อหลักสูตร</th><th rowspan="2">ประเภท</th>'
+  + '<th rowspan="2">ผู้อบรม</th><th rowspan="2">งบประมาณ</th><th colspan="12">ระยะเวลา</th>'
+  + '<th rowspan="2">วิทยากร</th><th rowspan="2">หมายเหตุ</th><th rowspan="2" class="col-act">จัดการ</th>'
+  + '</tr><tr>' + MONTH_TH.map(function(m){ return '<th class="mh">'+m+'</th>'; }).join('') + '</tr></thead>';
 
-  if(!rows.length){
-    $('planBody').innerHTML = '<tr><td colspan="20"><div class="empty" style="border:none">ยังไม่มีหลักสูตรในแผนปี '+be(+$('planYear').value)+' — กด “เพิ่มหลักสูตร”</div></td></tr>';
-    updateDirtyUI(); return;
-  }
-  $('planBody').innerHTML = rows.map(function(c,i){
-    var mcells = MONTH_TH.map(function(_,mi){
-      var on = c.months.indexOf(mi+1)>=0;
-      return '<td class="m'+(on?' on':'')+'" data-id="'+esc(c.id)+'" data-m="'+(mi+1)+'">'+(on?'✓':'')+'</td>';
-    }).join('');
-    return '<tr data-id="'+esc(c.id)+'">'
-      + '<td class="seq">'+(i+1)+(DIRTY[c.id]?'<span class="dirty-dot"></span>':'')+'</td>'
-      + '<td><input data-f="name" value="'+esc(c.name||'')+'" placeholder="ชื่อหลักสูตร"></td>'
-      + '<td><select data-f="category">'+catOptions(c.category)+'</select></td>'
-      + '<td><input data-f="audience" value="'+esc(c.audience||'')+'" placeholder="กลุ่มผู้อบรม"></td>'
-      + '<td><input data-f="budget" type="number" min="0" step="100" value="'+(c.budget==null?'':c.budget)+'" style="text-align:right"></td>'
-      + mcells
-      + '<td><input data-f="trainer" value="'+esc(c.trainer||'')+'" placeholder="วิทยากร"></td>'
-      + '<td><input data-f="note" value="'+esc(c.note||'')+'" placeholder="-"></td>'
-      + '<td class="ctr col-act">'
-        + '<button class="btn sm ghost" data-open="'+esc(c.id)+'" title="รายละเอียด"><i class="ti ti-eye"></i></button> '
-        + '<button class="btn sm danger" data-del="'+esc(c.id)+'" title="ลบ"><i class="ti ti-trash"></i></button>'
-      + '</td></tr>';
+function planRowHTML(c, i, type){
+  var mcells = MONTH_TH.map(function(_,mi){
+    var on = c.months.indexOf(mi+1)>=0;
+    return '<td class="m'+(on?' on':'')+'" data-id="'+esc(c.id)+'" data-m="'+(mi+1)+'">'+(on?'✓':'')+'</td>';
   }).join('');
+  var moveTitle = (type==='in') ? 'ย้ายไป “นอกแผน”' : 'ย้ายไป “ตามแผน”';
+  var moveIcon  = (type==='in') ? 'ti-arrow-down' : 'ti-arrow-up';
+  return '<tr data-id="'+esc(c.id)+'">'
+    + '<td class="seq">'+(i+1)+(DIRTY[c.id]?'<span class="dirty-dot"></span>':'')+'</td>'
+    + '<td><input data-f="name" value="'+esc(c.name||'')+'" placeholder="ชื่อหลักสูตร"></td>'
+    + '<td><select data-f="category">'+catOptions(c.category)+'</select></td>'
+    + '<td><input data-f="audience" value="'+esc(c.audience||'')+'" placeholder="กลุ่มผู้อบรม"></td>'
+    + '<td><input data-f="budget" type="number" min="0" step="100" value="'+(c.budget==null?'':c.budget)+'" style="text-align:right"></td>'
+    + mcells
+    + '<td><input data-f="trainer" value="'+esc(c.trainer||'')+'" placeholder="วิทยากร"></td>'
+    + '<td><input data-f="note" value="'+esc(c.note||'')+'" placeholder="-"></td>'
+    + '<td class="ctr col-act">'
+      + '<button class="btn sm ghost" data-open="'+esc(c.id)+'" title="รายละเอียด"><i class="ti ti-eye"></i></button> '
+      + '<button class="btn sm ghost" data-move="'+esc(c.id)+'" title="'+moveTitle+'"><i class="ti '+moveIcon+'"></i></button> '
+      + '<button class="btn sm danger" data-del="'+esc(c.id)+'" title="ลบ"><i class="ti ti-trash"></i></button>'
+    + '</td></tr>';
+}
 
-  $('planBody').querySelectorAll('[data-f]').forEach(function(inp){
+function renderPlanSection(t){
+  var rows = planRows(t.key);
+  var box  = $(t.key==='in' ? 'planSecIn' : 'planSecOut');
+  var body = rows.length
+    ? rows.map(function(c,i){ return planRowHTML(c,i,t.key); }).join('')
+    : '<tr><td colspan="20"><div class="empty" style="border:none">ยังไม่มีหลักสูตรใน “'+t.title+'” ปี '+be(+$('planYear').value)+' — กด “เพิ่มหลักสูตร”</div></td></tr>';
+  box.innerHTML = '<div class="sec-card">'
+    + '<div class="sec-bar"><h4><i class="ti '+t.icon+'"></i> '+t.title+'</h4>'
+      + '<span class="cnt">'+rows.length+' หลักสูตร</span><div class="sp"></div>'
+      + '<button class="btn sm primary" data-add="'+t.key+'"><i class="ti ti-plus"></i> เพิ่มหลักสูตร</button></div>'
+    + '<div class="tbl-wrap"><table id="planTable" class="plan-table">'+PLAN_COLGROUP+PLAN_THEAD
+    + '<tbody>'+body+'</tbody></table></div></div>';
+
+  box.querySelectorAll('[data-f]').forEach(function(inp){
     var evt = (inp.tagName==='SELECT') ? 'change' : 'input';
     inp.addEventListener(evt, function(){
       var id = inp.closest('tr').dataset.id;
@@ -834,7 +855,7 @@ function renderPlan(){
       DIRTY[id]=true; updateDirtyUI();
     });
   });
-  $('planBody').querySelectorAll('td.m').forEach(function(td){
+  box.querySelectorAll('td.m').forEach(function(td){
     td.addEventListener('click', function(){
       var c = COURSES.filter(function(x){ return String(x.id)===String(td.dataset.id); })[0];
       if(!c) return;
@@ -845,13 +866,46 @@ function renderPlan(){
       DIRTY[c.id]=true; updateDirtyUI();
     });
   });
-  $('planBody').querySelectorAll('button[data-open]').forEach(function(b){
+  box.querySelectorAll('button[data-open]').forEach(function(b){
     b.addEventListener('click', function(){ openCourse(b.dataset.open); });
   });
-  $('planBody').querySelectorAll('button[data-del]').forEach(function(b){
+  box.querySelectorAll('button[data-del]').forEach(function(b){
     b.addEventListener('click', function(){ deleteCourse(b.dataset.del); });
   });
+  box.querySelectorAll('button[data-move]').forEach(function(b){
+    b.addEventListener('click', function(){ movePlanType(b.dataset.move); });
+  });
+  box.querySelectorAll('button[data-add]').forEach(function(b){
+    b.addEventListener('click', function(){ addCourse($('planYear').value, b.dataset.add); });
+  });
+}
+
+function renderPlan(){
+  var all = planRows();
+  var budget=0, done=0, join=0;
+  all.forEach(function(c){
+    budget += Number(c.budget)||0;
+    var n = courseJoinCount(c.id); join += n; if(n>0) done++;
+  });
+  $('kPlanCourse').innerHTML = all.length+' <small>หลักสูตร</small>';
+  $('kPlanBudget').innerHTML = fmt(budget)+' <small>บ.</small>';
+  $('kPlanDone').innerHTML = done+' <small>หลักสูตร</small>';
+  $('kPlanJoin').innerHTML = fmt(join)+' <small>ครั้ง</small>';
+  PLAN_TYPES.forEach(renderPlanSection);
   updateDirtyUI();
+}
+
+async function movePlanType(id){
+  var c = COURSES.filter(function(x){ return String(x.id)===String(id); })[0];
+  if(!c) return;
+  var to = (planTypeOf(c)==='in') ? 'out' : 'in';
+  try{
+    var r = await sb.from('training_courses').update({ plan_type: to }).eq('id', c.id);
+    if(r.error) throw r.error;
+    c.plan_type = to;
+    renderPlan(); renderCourses();
+    toast('ย้ายไป “'+(to==='in'?'ตามแผนฝึกอบรมประจำปี':'นอกแผนฝึกอบรมประจำปี')+'” แล้ว');
+  }catch(e){ toast('ย้ายไม่สำเร็จ — เพิ่มคอลัมน์ plan_type แล้วหรือยัง?', true); }
 }
 function updateDirtyUI(){
   var n = Object.keys(DIRTY).length;
@@ -862,11 +916,12 @@ $('courseYear').addEventListener('change', renderCourses);
 $('evalYear').addEventListener('change', renderEvalCourseOptions);
 $('histYear').addEventListener('change', renderHist);
 
-async function addCourse(year){
+async function addCourse(year, planType){
   var y = +year || THIS_YEAR;
+  var pt = (planType==='out') ? 'out' : 'in';
   var seq = COURSES.filter(function(c){ return +c.year===y; }).length + 1;
   try{
-    var r = await sb.from('training_courses').insert({ year:y, seq:seq, name:'', category:'', audience:'', budget:null, months:[], trainer:'', note:'' }).select().single();
+    var r = await sb.from('training_courses').insert({ year:y, seq:seq, name:'', category:'', audience:'', budget:null, months:[], trainer:'', note:'', plan_type:pt, train_format:'' }).select().single();
     if(r.error) throw r.error;
     COURSES.push(normCourse(r.data));
     renderPlan(); renderCourses(); renderRecCourseOptions(); renderEvalCourseOptions();
@@ -874,7 +929,6 @@ async function addCourse(year){
     return r.data;
   }catch(e){ toast('เพิ่มไม่สำเร็จ: '+errText(e), true); return null; }
 }
-$('planAdd').addEventListener('click', function(){ addCourse($('planYear').value); });
 $('planSave').addEventListener('click', async function(){
   var ids = Object.keys(DIRTY);
   if(!ids.length){ toast('ยังไม่มีการแก้ไข'); return; }
@@ -886,7 +940,8 @@ $('planSave').addEventListener('click', async function(){
     try{
       var r = await sb.from('training_courses').update({
         name:c.name||'', category:c.category||'', audience:c.audience||'', budget:c.budget,
-        months:c.months||[], trainer:c.trainer||'', note:c.note||'', seq:c.seq
+        months:c.months||[], trainer:c.trainer||'', note:c.note||'', seq:c.seq,
+        plan_type:planTypeOf(c), train_format:c.train_format||''
       }).eq('id', c.id);
       if(r.error) throw r.error;
       delete DIRTY[c.id];
@@ -910,11 +965,15 @@ async function deleteCourse(id){
   }catch(e){ toast('ลบไม่สำเร็จ: '+errText(e), true); }
 }
 $('planExport').addEventListener('click', function(){
-  var rows = planRows().map(function(c,i){
-    var o = {'ที่':i+1,'ชื่อหลักสูตร':c.name||'','ประเภท':c.category||'','ผู้อบรม':c.audience||'','งบประมาณ':Number(c.budget)||0};
-    MONTH_TH.forEach(function(m,mi){ o[m] = c.months.indexOf(mi+1)>=0 ? '✓' : ''; });
-    o['วิทยากร']=c.trainer||''; o['หมายเหตุ']=c.note||''; o['ผู้เข้าอบรม (คน)']=courseJoinCount(c.id);
-    return o;
+  var rows = [];
+  PLAN_TYPES.forEach(function(t){
+    planRows(t.key).forEach(function(c,i){
+      var o = {'แผน':t.title,'ที่':i+1,'ชื่อหลักสูตร':c.name||'','ประเภท':c.category||'',
+               'รูปแบบการจัดอบรม':c.train_format||'','ผู้อบรม':c.audience||'','งบประมาณ':Number(c.budget)||0};
+      MONTH_TH.forEach(function(m,mi){ o[m] = c.months.indexOf(mi+1)>=0 ? '✓' : ''; });
+      o['วิทยากร']=c.trainer||''; o['หมายเหตุ']=c.note||''; o['ผู้เข้าอบรม (คน)']=courseJoinCount(c.id);
+      rows.push(o);
+    });
   });
   if(!rows.length){ toast('ยังไม่มีข้อมูลในแผนปีนี้', true); return; }
   var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'แผนอบรม');
@@ -944,9 +1003,12 @@ function renderCourses(){
     return '<div class="course-card" data-id="'+esc(c.id)+'">'
       + '<div class="cc-top"><div class="cc-name">'+esc(c.name||'(ยังไม่ตั้งชื่อหลักสูตร)')+'</div>'
       + (c.category? '<span class="badge">'+esc(c.category)+'</span>':'')+'</div>'
+      + '<div style="margin-bottom:6px"><span class="badge '+(planTypeOf(c)==='in'?'ok':'warn')+'">'
+        + (planTypeOf(c)==='in'?'ตามแผนประจำปี':'นอกแผนประจำปี')+'</span></div>'
       + '<div class="cc-meta">'
         + '<div><i class="ti ti-user-star"></i> วิทยากร: '+esc(c.trainer||'-')+'</div>'
         + '<div><i class="ti ti-users"></i> ผู้อบรม: '+esc(c.audience||'-')+'</div>'
+        + '<div><i class="ti ti-presentation"></i> รูปแบบ: '+esc(c.train_format||'-')+'</div>'
         + '<div><i class="ti ti-cash"></i> งบ: '+fmt(c.budget)+' บาท'+(c.hours? ' · '+fmt(c.hours)+' ชม.':'')+'</div>'
       + '</div>'
       + '<div class="mchips">'+chips+'</div>'
@@ -971,6 +1033,7 @@ function openCourse(id){
   curCourseId = c.id;
   $('cmTitle').textContent = c.name || 'รายละเอียดหลักสูตร';
   $('cmName').value=c.name||''; $('cmCategory').innerHTML=catOptions(c.category); $('cmAudience').value=c.audience||'';
+  $('cmFormat').innerHTML=formatOptions(c.train_format); $('cmPlanType').value=planTypeOf(c);
   $('cmTrainer').value=c.trainer||''; $('cmBudget').value=(c.budget==null?'':c.budget); $('cmHours').value=(c.hours==null?'':c.hours);
   $('cmDetail').value=c.detail||''; $('cmNote').value=c.note||''; $('cmYear').value=c.year;
   $('cmMonths').innerHTML = MONTH_TH.map(function(m,mi){
@@ -1084,7 +1147,8 @@ $('cmSave').addEventListener('click', async function(){
     name:$('cmName').value.trim(), category:$('cmCategory').value.trim(), audience:$('cmAudience').value.trim(),
     trainer:$('cmTrainer').value.trim(), budget:($('cmBudget').value===''?null:+$('cmBudget').value),
     hours:($('cmHours').value===''?null:+$('cmHours').value), detail:$('cmDetail').value, note:$('cmNote').value.trim(),
-    year:+$('cmYear').value, months:months
+    year:+$('cmYear').value, months:months,
+    train_format:$('cmFormat').value, plan_type:$('cmPlanType').value
   };
   try{
     var r = await sb.from('training_courses').update(payload).eq('id', curCourseId);
