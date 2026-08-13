@@ -211,7 +211,8 @@
   .sh-title{font-size:19px;font-weight:700;letter-spacing:.5px;text-align:center}
   .sh-info{table-layout:fixed}
   .sh-info td{height:23px;overflow:hidden}
-  .sh-info .lb{font-weight:600;background:#fff;font-size:10.5px;line-height:1.2}
+  .sh-info .lb{font-weight:600;background:#fff;font-size:10px;line-height:1.15;
+    word-break:break-word;padding:2px 4px}
   .sh-info .cell{display:flex;align-items:center;gap:4px;flex-wrap:nowrap}
   .sh-info .unit{white-space:nowrap;font-size:10.5px}
   .sh-info .cell .fi{flex:1;min-width:0}
@@ -226,16 +227,20 @@
   .sh-stat{margin-top:5px;table-layout:fixed}
   .sh-stat th{background:#f0f0f0;text-align:center;font-weight:700;height:20px}
   .sh-stat td{height:22px}
-  .sh-stat .disc,.sh-stat .disc-b{width:36%}
-  .sh-stat .disc-b .fi{display:inline-block;width:46px}
+  .sh-stat .disc,.sh-stat .disc-b{width:34%}
+  .sh-stat th{font-size:10.5px;padding:2px 3px}
+  .sh-stat .disc-b{font-size:10px;line-height:1.4;white-space:normal;overflow-wrap:anywhere}
+  .sh-stat .disc-b .fi{display:inline-block;width:40px}
   .sh-stat .disc-b{vertical-align:top;padding-top:6px}
   .sh-score{margin-top:5px;table-layout:fixed}
   .sh-score th{background:#f0f0f0;text-align:center;font-weight:700}
   .sh-score .mh{font-size:10px;padding:2px 0;text-align:center}
   .sh-score th{word-break:break-word}
-  .sh-score td.gp{font-weight:600;font-size:10.5px;vertical-align:middle}
-  .sh-score td.it{font-size:10.5px;line-height:1.25}
-  .sh-score tbody td{height:20px}
+  .sh-score td.gp{font-weight:600;font-size:9.5px;line-height:1.25;vertical-align:middle;
+    white-space:normal;overflow-wrap:anywhere;padding:3px 4px}
+  .sh-score td.it{font-size:9.5px;line-height:1.25;white-space:normal;overflow-wrap:anywhere;
+    padding:3px 4px}
+  .sh-score tbody td{height:auto}
   .sh-score td.sc{text-align:center;padding:0;cursor:pointer;user-select:none}
   .sh-score td.sc:hover{background:#eef3fb}
   .sh-score td.sc.on{background:#dff0e4;font-weight:800}
@@ -527,7 +532,7 @@
       <div style="flex:1"></div>
       <button class="btn" id="fmNew"><i class="ti ti-file-plus"></i> ฟอร์มใหม่</button>
       <button class="btn primary" id="fmSave"><i class="ti ti-device-floppy"></i> บันทึกฟอร์ม</button>
-      <button class="btn ghost" id="fmPdf"><i class="ti ti-file-type-pdf"></i> ส่งออก PDF</button>
+      <button class="btn ghost" id="fmPdf" title="สร้าง PDF 2 หน้า (v2)"><i class="ti ti-file-type-pdf"></i> ส่งออก PDF</button>
       <button class="btn ghost" id="fmPrint"><i class="ti ti-printer"></i> พิมพ์</button>
     </div>
 
@@ -540,8 +545,8 @@
         </div>
 
         <table class="sh-info">
-          <colgroup><col style="width:15%"><col style="width:23%"><col style="width:10%">
-            <col style="width:20%"><col style="width:13%"><col></colgroup>
+          <colgroup><col style="width:19%"><col style="width:19%"><col style="width:10%">
+            <col style="width:19%"><col style="width:12%"><col></colgroup>
           <tr><td class="lb">ชื่อ-นามสกุล</td><td><input class="fi" id="f_name"></td>
               <td class="lb">ตำแหน่ง</td><td><input class="fi" id="f_pos"></td>
               <td class="lb">รหัสพนักงาน</td><td><input class="fi" id="f_code"></td></tr>
@@ -674,7 +679,7 @@
     </div>
   </section>
 
-  <footer>MASARU · ระบบฝึกอบรมพนักงาน — เหนือกว่า ทุกวัน</footer>
+  <footer>MASARU · ระบบฝึกอบรมพนักงาน — เหนือกว่า ทุกวัน <span style="opacity:.5">· build 2026-08-13b</span></footer>
 </main>
 
 <!-- ============ MODAL: รายละเอียดหลักสูตร ============ -->
@@ -1952,7 +1957,10 @@ $('fmPdf').addEventListener('click', async function(){
       });
       var img = canvas.toDataURL('image/jpeg', 0.95);
       if(i>0) pdf.addPage();
-      pdf.addImage(img, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
+      /* พอดี A4 เสมอ — ไม่ล้นไปหน้าถัดไป และไม่ยืดผิดสัดส่วน */
+      var w = 210, h = w * canvas.height / canvas.width, x = 0, y = 0;
+      if(h > 297){ h = 297; w = h * canvas.width / canvas.height; x = (210 - w) / 2; }
+      pdf.addImage(img, 'JPEG', x, y, w, h, undefined, 'FAST');
     }
     pdf.save(file);
     toast('บันทึก PDF แล้ว ✓ ('+pages.length+' หน้า)');
