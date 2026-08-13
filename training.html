@@ -435,7 +435,8 @@
       <div class="fgrid">
         <div class="fld" style="grid-column:1/-1"><label>ชื่อหลักสูตร</label><input id="cmName"></div>
         <div class="fld"><label>ประเภท</label><select id="cmCategory"></select></div>
-        <div class="fld"><label>รูปแบบการจัดอบรม</label><select id="cmFormat"></select></div>
+        <div class="fld"><label>รูปแบบการจัดอบรม <span class="sub">(เลือกจากรายการ หรือพิมพ์เองได้)</span></label>
+          <input id="cmFormat" list="fmtList" placeholder="เช่น บรรยาย (Lecture) หรือพิมพ์เอง" autocomplete="off"></div>
         <div class="fld"><label>แผนการอบรม</label><select id="cmPlanType">
           <option value="in">ตามแผนฝึกอบรมประจำปี</option><option value="out">นอกแผนฝึกอบรมประจำปี</option>
         </select></div>
@@ -505,6 +506,8 @@
   </div>
 </div>
 
+<datalist id="fmtList"></datalist>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -540,14 +543,14 @@ function catOptions(v){
 
 /* รูปแบบการจัดอบรม */
 var FORMATS = ['บรรยาย (Lecture)','เชิงปฏิบัติการ (Workshop)','สอนงานหน้างาน (OJT)',
-               'สัมมนา / ดูงาน','E-Learning / ออนไลน์','อื่น ๆ'];
-function formatOptions(v){
-  var cur = (v||'').trim();
-  var list = FORMATS.slice();
-  if(cur && list.indexOf(cur)<0) list.push(cur);
-  return '<option value="">— เลือก —</option>' + list.map(function(k){
-    return '<option value="'+esc(k)+'"'+(k===cur?' selected':'')+'>'+esc(k)+'</option>';
-  }).join('');
+               'สัมมนา / ดูงาน','E-Learning / ออนไลน์','ฝึกปฏิบัติจริง (Practice)','ศึกษาดูงานนอกสถานที่'];
+/* เติมรายการแนะนำใน datalist — รวมค่าที่เคยพิมพ์เองไว้แล้วด้วย */
+function fillFormatList(){
+  var set = {};
+  FORMATS.forEach(function(k){ set[k]=1; });
+  COURSES.forEach(function(c){ if(c.train_format) set[c.train_format]=1; });
+  var el = $('fmtList'); if(!el) return;
+  el.innerHTML = Object.keys(set).map(function(k){ return '<option value="'+esc(k)+'"></option>'; }).join('');
 }
 
 /* แผนการอบรม: ตามแผน / นอกแผน */
@@ -648,7 +651,7 @@ async function loadAll(){
     EVALS = re.error ? [] : (re.data||[]);
   }catch(e){ EVALS=[]; }
 
-  buildDeptOptions();
+  buildDeptOptions(); fillFormatList();
   renderEmp(); renderPlan(); renderCourses(); renderEvalCourseOptions(); renderEvalList();
   renderRecCourseOptions(); renderPicker(); renderHist();
 }
@@ -1033,7 +1036,7 @@ function openCourse(id){
   curCourseId = c.id;
   $('cmTitle').textContent = c.name || 'รายละเอียดหลักสูตร';
   $('cmName').value=c.name||''; $('cmCategory').innerHTML=catOptions(c.category); $('cmAudience').value=c.audience||'';
-  $('cmFormat').innerHTML=formatOptions(c.train_format); $('cmPlanType').value=planTypeOf(c);
+  fillFormatList(); $('cmFormat').value=c.train_format||''; $('cmPlanType').value=planTypeOf(c);
   $('cmTrainer').value=c.trainer||''; $('cmBudget').value=(c.budget==null?'':c.budget); $('cmHours').value=(c.hours==null?'':c.hours);
   $('cmDetail').value=c.detail||''; $('cmNote').value=c.note||''; $('cmYear').value=c.year;
   $('cmMonths').innerHTML = MONTH_TH.map(function(m,mi){
@@ -1148,7 +1151,7 @@ $('cmSave').addEventListener('click', async function(){
     trainer:$('cmTrainer').value.trim(), budget:($('cmBudget').value===''?null:+$('cmBudget').value),
     hours:($('cmHours').value===''?null:+$('cmHours').value), detail:$('cmDetail').value, note:$('cmNote').value.trim(),
     year:+$('cmYear').value, months:months,
-    train_format:$('cmFormat').value, plan_type:$('cmPlanType').value
+    train_format:$('cmFormat').value.trim(), plan_type:$('cmPlanType').value
   };
   try{
     var r = await sb.from('training_courses').update(payload).eq('id', curCourseId);
