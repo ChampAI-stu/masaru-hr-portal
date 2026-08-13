@@ -337,6 +337,23 @@ body.locked{overflow:hidden}
   .scard{display:flex;flex-direction:column}
   .scard .num{font-size:24px;font-weight:800;letter-spacing:-.5px}
 
+
+.pdf-stage{position:fixed;left:-12000px;top:0;width:210mm;background:#fff;z-index:-1}
+.pdf-stage .sheet{width:210mm;height:297mm;min-height:297mm;max-height:297mm;overflow:hidden;
+  box-shadow:none;border:none;margin:0}
+.fi-flat{display:inline-block;width:100%;border-bottom:1px dotted #666;padding:0 3px;
+  line-height:16px;min-height:16px;vertical-align:middle;white-space:nowrap;overflow:hidden;
+  font-size:11px;color:#000}
+.fi-flat.ctr{text-align:center}
+.fi-flat.w60{width:42px} .fi-flat.w120{width:92px}
+.sh-info .cell .fi-flat{flex:1;min-width:0}
+.sh-stat .disc-b .fi-flat{width:40px;display:inline-block}
+.fi-flat.sig{width:230px;display:inline-block}
+.cbx-flat{font-size:14px;line-height:1;margin-right:4px}
+
+  .sh-info .lb{white-space:nowrap}
+  .sh-info td .fi,.sh-stat td .fi{line-height:16px;height:18px}
+  .sh-info .cell{min-width:0}
 </style>
 </head>
 <body class="locked">
@@ -414,7 +431,12 @@ body.locked{overflow:hidden}
     <div class="toolbar no-print">
       <button class="btn ghost" id="fmBack">← กลับรายการเตือน</button>
       <div class="fld" style="min-width:190px"><label>แบบฟอร์ม</label>
-        <select id="fmType"><option value="probation">แบบประเมินผลการทดลองงาน</option></select></div>
+        <select id="fmType">
+          <option value="p30">ประเมินทดลองงาน 30 วัน (ครั้งที่ 1)</option>
+          <option value="p60">ประเมินทดลองงาน 60 วัน (ครั้งที่ 2)</option>
+          <option value="p90">ประเมินทดลองงาน 90 วัน (ครั้งที่ 3)</option>
+          <option value="pext">ต่ออายุทดลองงาน (ครั้งที่ 4)</option>
+        </select></div>
       <div class="fld" style="min-width:150px"><label>โลโก้หัวฟอร์ม</label>
         <select id="fmLogo">
           <option value="likeshop">Like Shop Mall</option>
@@ -422,7 +444,8 @@ body.locked{overflow:hidden}
           <option value="daiki">Daiki Fulfillment</option>
         </select></div>
       <div class="fld" style="min-width:230px"><label>ดึงข้อมูลพนักงาน</label>
-        <select id="fmEmp"><option value="">— เลือกพนักงาน (กรอกเองได้) —</option></select></div>
+        <input id="fmEmp" list="fmEmpList" placeholder="พิมพ์ชื่อเพื่อค้นหา..." autocomplete="off" style="min-width:250px">
+        <datalist id="fmEmpList"></datalist></div>
       <button class="btn" id="fmPull">ดึงสถิติขาด-ลา-มาสาย</button>
       <div style="flex:1"></div>
       <button class="btn" id="fmNew">ฟอร์มใหม่</button>
@@ -440,8 +463,8 @@ body.locked{overflow:hidden}
         </div>
 
         <table class="sh-info">
-          <colgroup><col style="width:19%"><col style="width:19%"><col style="width:10%">
-            <col style="width:19%"><col style="width:12%"><col></colgroup>
+          <colgroup><col style="width:18%"><col style="width:19%"><col style="width:13%">
+            <col style="width:18%"><col style="width:12%"><col></colgroup>
           <tr><td class="lb">ชื่อ-นามสกุล</td><td><input class="fi" id="pf_name"></td>
               <td class="lb">ตำแหน่ง</td><td><input class="fi" id="pf_pos"></td>
               <td class="lb">รหัสพนักงาน</td><td><input class="fi" id="pf_code"></td></tr>
@@ -1767,18 +1790,20 @@ function gradeOf(p){
 function calcForm(){
   var sc = getScores();
   var total = sc.reduce(function(a,b){ return a+b; },0);
+  var scored = sc.some(function(v){ return v>0; });     // ติ๊กคะแนนแล้วหรือยัง
   var maxi  = sc.length * 10;
   var avg   = maxi ? (total*100/maxi) : 0;
   var deduct = num('pf_sick')*0.5 + num('pf_personal')*0.5 + num('pf_absent')*2
              + num('pf_other')*0.5 + num('pf_late')*0.5 + num('pf_warn')*5;
   var fin = Math.max(0, avg - deduct);
-  $F('pf_total_cell').textContent = total;
-  $F('pf_total').textContent = total;
-  $F('pf_avg').textContent  = avg.toFixed(2);
-  $F('pf_avg2').textContent = avg.toFixed(2);
-  $F('pf_deduct').textContent = deduct.toFixed(1);
-  $F('pf_final').textContent  = fin.toFixed(2);
-  $F('pf_grade').textContent  = gradeOf(fin);
+  /* ยังไม่ได้ประเมิน → ปล่อยว่างไว้ (ไม่โชว์ 0 / ไม่ผ่าน) */
+  $F('pf_total_cell').textContent = scored ? total : '';
+  $F('pf_total').textContent      = scored ? total : '';
+  $F('pf_avg').textContent        = scored ? avg.toFixed(2) : '';
+  $F('pf_avg2').textContent       = scored ? avg.toFixed(2) : '';
+  $F('pf_deduct').textContent     = (scored || deduct>0) ? deduct.toFixed(1) : '';
+  $F('pf_final').textContent      = scored ? fin.toFixed(2) : '';
+  $F('pf_grade').textContent      = scored ? gradeOf(fin) : '';
 }
 ['pf_sick','pf_personal','pf_absent','pf_other','pf_late','pf_warn'].forEach(function(id){
   var el=$F(id); if(el) el.addEventListener('input', calcForm);
@@ -1811,58 +1836,79 @@ function applyForm(d){
 }
 function clearForm(){
   applyForm({ logo:$F('fmLogo').value });
-  $F('fmEmp').value = '';
+  $F('fmEmp').value = ''; fmEmpId = null;
   curFormId = null;
   toast('เริ่มฟอร์มใหม่แล้ว');
 }
 $F('fmNew').addEventListener('click', clearForm);
 
 /* ---------- ดึงข้อมูลพนักงานอัตโนมัติ ---------- */
+var FORM_ROUND = { p30:{r:1,d:30}, p60:{r:2,d:60}, p90:{r:3,d:90}, pext:{r:4,d:120} };
+var fmEmpId = null;
+function fmEmpLabel(e){
+  return (e.full_name||'') + (e.nickname? ' ('+e.nickname+')':'')
+       + (e.group_name? ' · '+e.group_name : '');
+}
 function renderFormEmpOptions(){
   var list = EMP.filter(function(e){ return e.is_active!==false; });
-  $F('fmEmp').innerHTML = '<option value="">— เลือกพนักงาน (กรอกเองได้) —</option>'
-    + list.map(function(e){
-        return '<option value="'+esc(e.id)+'">'+esc(e.full_name||'-')
-             + (e.group_name? ' · '+esc(e.group_name):'')+'</option>';
-      }).join('');
+  $F('fmEmpList').innerHTML = list.map(function(e){
+    return '<option value="'+esc(fmEmpLabel(e))+'"></option>';
+  }).join('');
 }
+function fmCurEmp(){
+  if(fmEmpId){
+    var byId = EMP.filter(function(x){ return String(x.id)===String(fmEmpId); })[0];
+    if(byId) return byId;
+  }
+  var v = ($F('fmEmp').value||'').trim().toLowerCase();
+  if(!v) return null;
+  return EMP.filter(function(e){ return fmEmpLabel(e).toLowerCase()===v; })[0]
+      || EMP.filter(function(e){ return (e.full_name||'').toLowerCase()===v; })[0]
+      || EMP.filter(function(e){ return fmEmpLabel(e).toLowerCase().indexOf(v)>=0; })[0]
+      || null;
+}
+function applyFormType(){
+  var t = FORM_ROUND[$F('fmType').value] || FORM_ROUND.p30;
+  $F('pf_round').value = t.r;
+  $F('pf_days').value  = t.d;
+  var e = fmCurEmp();
+  if(e && e.start_date){
+    $F('pf_start').value = thDate(e.start_date);
+    $F('pf_from').value  = thDate(e.start_date);
+    $F('pf_to').value    = fmAddDaysTh(e.start_date, t.d-1);
+  }
+}
+$F('fmType').addEventListener('change', applyFormType);
 function fmAddDaysTh(iso, n){
   var d = new Date(String(iso).slice(0,10)); if(isNaN(d)) return '';
   d.setDate(d.getDate()+n);
   return thDate(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));
 }
-$F('fmEmp').addEventListener('change', function(){
-  var e = EMP.filter(function(x){ return String(x.id)===String($F('fmEmp').value); })[0];
-  if(!e) return;
+function fmFillFromEmp(){
+  var e = fmCurEmp();
+  if(!e){ fmEmpId = null; return; }
+  fmEmpId = e.id;
   $F('pf_name').value = e.full_name || '';
   $F('pf_pos').value  = e.position || e.group_name || '';
   $F('pf_code').value = e.emp_code || '';
   $F('pf_start').value = thDate(e.start_date);
-  var days = +($F('pf_days').value) || 30;
-  if(!$F('pf_round').value) $F('pf_round').value = '1';
-  $F('pf_days').value = days;
-  if(e.start_date){
-    $F('pf_from').value = thDate(e.start_date);
-    $F('pf_to').value   = fmAddDaysTh(e.start_date, days-1);
-  }
+  applyFormType();
   toast('ดึงข้อมูล '+(e.full_name||'')+' แล้ว — กด “ดึงสถิติขาด-ลา-มาสาย” เพื่อเติมสถิติ');
+}
+$F('fmEmp').addEventListener('change', fmFillFromEmp);
+$F('fmEmp').addEventListener('input', function(){
+  fmEmpId = null;
+  if(fmCurEmp()) fmFillFromEmp();       // พิมพ์/เลือกตรงกับรายชื่อ → เติมให้ทันที
 });
 $F('pf_round').addEventListener('change', function(){
-  var r = +$F('pf_round').value;
-  var map = {1:30, 2:60, 3:90};
-  if(map[r]){
-    $F('pf_days').value = map[r];
-    var e = EMP.filter(function(x){ return String(x.id)===String($F('fmEmp').value); })[0];
-    if(e && e.start_date){
-      $F('pf_from').value = thDate(e.start_date);
-      $F('pf_to').value   = fmAddDaysTh(e.start_date, map[r]-1);
-    }
-  }
+  var map = {1:'p30', 2:'p60', 3:'p90', 4:'pext'};
+  var k = map[+$F('pf_round').value];
+  if(k){ $F('fmType').value = k; applyFormType(); }
 });
 
 /* ดึงสถิติ ขาด-ลา-สาย จากระบบบันทึกการมาทำงาน (daiki_attendance) */
 $F('fmPull').addEventListener('click', async function(){
-  var e = EMP.filter(function(x){ return String(x.id)===String($F('fmEmp').value); })[0];
+  var e = fmCurEmp();
   if(!e){ toast('เลือกพนักงานก่อน', true); return; }
   if(!e.start_date){ toast('พนักงานคนนี้ยังไม่มีวันเริ่มงานในระบบ chack', true); return; }
   var days = +($F('pf_days').value) || 30;
@@ -1891,7 +1937,7 @@ $F('fmSave').addEventListener('click', async function(){
   if(!$F('pf_name').value.trim()){ toast('กรอกชื่อ-นามสกุลก่อน', true); return; }
   var payload = {
     form_type: $F('fmType').value,
-    employee_id: $F('fmEmp').value ? +$F('fmEmp').value : null,
+    employee_id: fmEmpId ? +fmEmpId : null,
     employee_name: $F('pf_name').value.trim(),
     round: parseInt($F('pf_round').value,10) || null,
     score: parseFloat($F('pf_final').textContent) || 0,
@@ -1950,9 +1996,11 @@ function openForm(id){
   var f = FORMS.filter(function(x){ return String(x.id)===String(id); })[0];
   if(!f) return;
   curFormId = f.id;
-  if(f.form_type) $F('fmType').value = f.form_type;
+  if(f.form_type && FORM_ROUND[f.form_type]) $F('fmType').value = f.form_type;
   applyForm(f.data);
-  if(f.employee_id) $F('fmEmp').value = f.employee_id;
+  fmEmpId = f.employee_id || null;
+  var _fe = fmEmpId ? EMP.filter(function(x){ return String(x.id)===String(fmEmpId); })[0] : null;
+  $F('fmEmp').value = _fe ? fmEmpLabel(_fe) : (f.employee_name||'');
   renderFormList();
   window.scrollTo({top:0,behavior:'smooth'});
   toast('เปิดฟอร์มของ '+(f.employee_name||'')+' แล้ว');
@@ -1978,6 +2026,33 @@ function loadScript(src){
     el.src = src; el.onload = res; el.onerror = function(){ rej(new Error(src)); };
     document.head.appendChild(el);
   });
+}
+/* สร้างสำเนาหน้ากระดาษสำหรับถ่ายภาพ — แปลง <input> เป็นข้อความ
+   เพื่อกันตัวหนังสือเลื่อน/ตกขอบตอนแปลงเป็น PDF */
+function buildPdfStage(pageEl){
+  var host = document.createElement('div');
+  host.className = 'pdf-stage';
+  var clone = pageEl.cloneNode(true);
+  clone.classList.add('pdf-flat');
+  var src = pageEl.querySelectorAll('input');
+  var dst = clone.querySelectorAll('input');
+  for(var i=0;i<dst.length;i++){
+    var o = src[i], d = dst[i], rep;
+    if(o.type === 'checkbox'){
+      rep = document.createElement('span');
+      rep.className = 'cbx-flat';
+      rep.textContent = o.checked ? '\u2611' : '\u2610';
+    }else{
+      rep = document.createElement('span');
+      rep.className = (o.className || '') + ' fi-flat';
+      if(o.getAttribute('style')) rep.setAttribute('style', o.getAttribute('style'));
+      rep.textContent = o.value || '\u00A0';
+    }
+    d.parentNode.replaceChild(rep, d);
+  }
+  host.appendChild(clone);
+  document.body.appendChild(host);
+  return { page: clone, remove: function(){ if(host.parentNode) host.parentNode.removeChild(host); } };
 }
 function getJsPDF(){ return (window.jspdf && window.jspdf.jsPDF) || window.jsPDF || null; }
 async function ensurePdfLibs(){
@@ -2013,10 +2088,12 @@ $F('fmPdf').addEventListener('click', async function(){
   try{
     var pdf = new jsPDFctor({ unit:'mm', format:'a4', orientation:'portrait', compress:true });
     for(var i=0;i<pages.length;i++){
-      var canvas = await html2canvas(pages[i], {
+      var stage = buildPdfStage(pages[i]);
+      var canvas = await html2canvas(stage.page, {
         scale:2, useCORS:true, backgroundColor:'#ffffff',
-        windowWidth: pages[i].scrollWidth, scrollX:0, scrollY:-window.scrollY
+        windowWidth: stage.page.scrollWidth, scrollX:0, scrollY:0
       });
+      stage.remove();
       var img = canvas.toDataURL('image/jpeg', 0.95);
       if(i>0) pdf.addPage();
       /* พอดี A4 เสมอ — ไม่ล้นไปหน้าถัดไป และไม่ยืดผิดสัดส่วน */
@@ -2067,13 +2144,15 @@ window.openProbationForm = function(rid, n){
   $F('pf_name').value = name || '';
   var e = EMP.filter(function(x){ return (x.full_name||'')===name; })[0];
   if(e){
-    $F('fmEmp').value = e.id;
+    fmEmpId = e.id;
+    $F('fmEmp').value   = fmEmpLabel(e);
     $F('pf_pos').value  = e.position || e.group_name || '';
     $F('pf_code').value = e.emp_code || '';
   }else if(rec && rec.dept){
     $F('pf_pos').value = rec.dept;
   }
   var round = ({30:1,60:2,90:3})[+n] || 4;   /* >90 วัน = งวดต่ออายุ */
+  $F('fmType').value = ({1:'p30',2:'p60',3:'p90',4:'pext'})[round];
   $F('pf_round').value = round;
   $F('pf_days').value  = n;
   var ref = rec && rec.ref ? rec.ref : (e ? e.start_date : '');
