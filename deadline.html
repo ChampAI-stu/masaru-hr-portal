@@ -1756,7 +1756,7 @@ function setScores(arr){
 }
 
 /* ---------- คำนวณคะแนน ---------- */
-function num(id){ var v = parseFloat(($(id).value||'').replace(/[^\d.]/g,'')); return isNaN(v)?0:v; }
+function num(id){ var v = parseFloat(($F(id).value||'').replace(/[^\d.]/g,'')); return isNaN(v)?0:v; }
 function gradeOf(p){
   if(p<60)  return 'ไม่ผ่านทดลองงาน';
   if(p<70)  return 'D (ปรับปรุง) / ทดลองงานต่อ';
@@ -1781,7 +1781,7 @@ function calcForm(){
   $F('pf_grade').textContent  = gradeOf(fin);
 }
 ['pf_sick','pf_personal','pf_absent','pf_other','pf_late','pf_warn'].forEach(function(id){
-  var el=$(id); if(el) el.addEventListener('input', calcForm);
+  var el=$F(id); if(el) el.addEventListener('input', calcForm);
 });
 
 /* ---------- โลโก้ ---------- */
@@ -1797,15 +1797,15 @@ var CHK_IDS = ['pc_pass','pc_adj','pc_noadj','pc_cont','pc_fail','pc_ok','pc_not
 
 function collectForm(){
   var d = { logo:$F('fmLogo').value, scores:getScores(), text:{}, check:{} };
-  TEXT_IDS.forEach(function(id){ d.text[id] = $(id).value; });
-  CHK_IDS.forEach(function(id){ d.check[id] = $(id).checked; });
+  TEXT_IDS.forEach(function(id){ d.text[id] = $F(id).value; });
+  CHK_IDS.forEach(function(id){ d.check[id] = $F(id).checked; });
   return d;
 }
 function applyForm(d){
   d = d || {};
   if(d.logo){ $F('fmLogo').value = d.logo; applyLogo(); }
-  TEXT_IDS.forEach(function(id){ $(id).value = (d.text && d.text[id]) || ''; });
-  CHK_IDS.forEach(function(id){ $(id).checked = !!(d.check && d.check[id]); });
+  TEXT_IDS.forEach(function(id){ $F(id).value = (d.text && d.text[id]) || ''; });
+  CHK_IDS.forEach(function(id){ $F(id).checked = !!(d.check && d.check[id]); });
   setScores(d.scores);
   calcForm();
 }
