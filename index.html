@@ -177,8 +177,8 @@ const APPS_FALLBACK = [
   { key:'attendance', icon:'ti-clipboard-check', title:'ระบบบันทึกการมาทำงาน',
     desc:'กรอกการมาทำงานรายวันแบบตาราง · แดชบอร์ด · สิทธิการลา · สรุปรายปี — แยกตามแผนก',
     url:'chack.html', roles:['hr','hr_manager','executive'] },
-  { key:'deadline', icon:'ti-bell-ringing', title:'ระบบเตือน Deadline HR',
-    desc:'เตือนครบทดลองงาน 30/60/90 วัน · ติ๊กผ่าน/ไม่ผ่าน · วันพ้นสภาพ พร้อมนับถอยหลัง',
+  { key:'deadline', icon:'ti-clipboard-check', title:'ระบบประเมินทดลองงาน',
+    desc:'เตือนครบทดลองงาน 30/60/90 วัน · ต่ออายุทดลองงาน · แบบประเมินผลการทดลองงาน (PDF)',
     url:'deadline.html', roles:['hr','hr_manager','executive'] },
   { key:'dashboard', icon:'ti-chart-radar', title:'แดชบอร์ดบุคลิกภาพ',
     desc:'สรุปผลแบบทดสอบบุคลิกภาพของพนักงาน · เรดาร์ชาร์ต · ภาพรวมทีม',
@@ -235,6 +235,11 @@ async function showHub(session){
   $('appGrid').innerHTML = '<div class="empty-apps">กำลังโหลดรายการระบบ...</div>';
 
   let all = await loadApps();
+  // อัปเดตชื่อระบบประเมินทดลองงาน (เผื่อตาราง portal_apps ยังเป็นชื่อเดิม)
+  all.forEach(a => { if(a.url==='deadline.html' || a.key==='deadline'){
+    a.title = 'ระบบประเมินทดลองงาน'; a.icon = 'ti-clipboard-check';
+    a.desc = 'เตือนครบทดลองงาน 30/60/90 วัน · ต่ออายุทดลองงาน · แบบประเมินผลการทดลองงาน (PDF)';
+  }});
   // ปลดระบบเงินเดือน (payroll) ออกจากพอร์ทัล — เผื่อยังค้างอยู่ในตาราง portal_apps
   all = all.filter(a => !(a.url==='payroll.html' || a.key==='payroll'));
   // การ์ดระบบฝึกอบรมเพิ่มจากโค้ดเสมอ (เผื่อยังไม่ได้เพิ่มในตาราง portal_apps) — กันซ้ำ
