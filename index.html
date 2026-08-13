@@ -186,9 +186,9 @@ const APPS_FALLBACK = [
   { key:'hrtime', icon:'ti-calendar-time', title:'ระบบลงเวลา · ขาด-ลา-มาสาย',
     desc:'นำเข้าข้อมูลเข้างานจาก HR Cloud · ติดตามขาด ลา มาสาย OT รายบุคคลและรายทีม',
     url:'hrtime.html', roles:['hr','hr_manager','executive'] },
-  { key:'payroll', icon:'ti-cash', title:'ระบบเงินเดือน (Payroll)',
-    desc:'คำนวณเงินเดือนสุทธิ + OT − ประกันสังคม/ประกันบริษัท · ตั้งค่ายืดหยุ่น · ส่งออก Excel',
-    url:'payroll.html', roles:['hr','hr_manager','executive'], soon:true },
+  { key:'training', icon:'ti-school', title:'ระบบฝึกอบรมพนักงาน',
+    desc:'แผนอบรมประจำปี · หลักสูตรและผู้เข้าร่วม · แบบประเมิน QR · ประวัติการฝึกอบรมรายบุคคล',
+    url:'training.html', roles:['hr','hr_manager','executive'] },
 ];
 
 async function loadApps(){
@@ -234,15 +234,15 @@ async function showHub(session){
   $('rolePill').textContent = roles.length ? 'บทบาท: ' + roles.map(r => ROLE_LABEL[r]||r).join(' · ') : 'ผู้ใช้ HR';
   $('appGrid').innerHTML = '<div class="empty-apps">กำลังโหลดรายการระบบ...</div>';
 
-  const all = await loadApps();
-  // การ์ด payroll เพิ่มจากโค้ดเสมอ (ยังไม่มีในตาราง portal_apps) — กันซ้ำ
-  if(!all.some(a => a.url==='payroll.html' || a.key==='payroll')){
-    all.push({ key:'payroll', icon:'ti-cash', title:'ระบบเงินเดือน (Payroll)',
-      desc:'คำนวณเงินเดือนสุทธิ + OT − ประกันสังคม/ประกันบริษัท · ตั้งค่ายืดหยุ่น · ส่งออก Excel',
-      url:'payroll.html', roles:['hr','hr_manager','executive'], soon:true });
+  let all = await loadApps();
+  // ปลดระบบเงินเดือน (payroll) ออกจากพอร์ทัล — เผื่อยังค้างอยู่ในตาราง portal_apps
+  all = all.filter(a => !(a.url==='payroll.html' || a.key==='payroll'));
+  // การ์ดระบบฝึกอบรมเพิ่มจากโค้ดเสมอ (เผื่อยังไม่ได้เพิ่มในตาราง portal_apps) — กันซ้ำ
+  if(!all.some(a => a.url==='training.html' || a.key==='training')){
+    all.push({ key:'training', icon:'ti-school', title:'ระบบฝึกอบรมพนักงาน',
+      desc:'แผนอบรมประจำปี · หลักสูตรและผู้เข้าร่วม · แบบประเมิน QR · ประวัติการฝึกอบรมรายบุคคล',
+      url:'training.html', roles:['hr','hr_manager','executive'] });
   }
-  // บังคับกากบาท "กำลังพัฒนา" บน payroll เสมอ (เผื่อมาจากตาราง portal_apps ที่ไม่มีธง soon)
-  all.forEach(a => { if(a.url==='payroll.html' || a.key==='payroll') a.soon = true; });
   // ถ้าผู้ใช้ไม่มี role ที่กำหนด → เห็นทุกระบบ (กันล็อกเอาต์); ถ้ามี role → กรองตามสิทธิ์
   const apps = roles.length
     ? all.filter(a => !(a.roles||[]).length || a.roles.some(r => roles.includes(r)))
