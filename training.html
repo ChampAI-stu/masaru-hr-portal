@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MASARU · ระบบฝึกอบรม (Training)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/dist/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<style>
+  :root{
+    --green:#16294d; --green-dark:#0e1c38; --green-deep:#0a1428;
+    --green-soft:#e7ecf5; --green-line:#cdd6e6; --gold:#d62030;
+    --bg:#f2f4f8; --card:#ffffff; --line:#e2e7ef; --line-soft:#eef1f7;
+    --ink:#16233f; --muted:#64708a; --faint:#97a1b5; --red:#b23a48; --amber:#8a5a12; --ok:#1c7a4f;
+    --radius:16px; --shadow:0 1px 2px rgba(16,60,45,.05),0 8px 28px rgba(16,60,45,.07);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'IBM Plex Sans Thai',system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;min-height:100vh;-webkit-font-smoothing:antialiased}
+  button{font-family:inherit;cursor:pointer}
+  input,select,textarea{font-family:inherit;font-size:14px}
+  .hide{display:none!important}
+  body.locked{overflow:hidden}
+
+  /* ===== LOGIN GATE ===== */
+  .auth-gate{position:fixed;inset:0;background:#0e1c38;display:flex;align-items:center;justify-content:center;z-index:99999;padding:20px}
+  .auth-gate.hide{display:none}
+  .auth-card{background:#fff;border-radius:18px;padding:30px 28px;width:360px;max-width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+  .auth-brand{font-weight:800;font-size:20px;color:#16294d;text-align:center;letter-spacing:.5px}
+  .auth-sub{color:#7A8398;text-align:center;margin:4px 0 18px;font-size:14px}
+  .auth-fld{margin-bottom:12px}
+  .auth-fld label{display:block;font-size:12.5px;font-weight:600;color:#16294d;margin-bottom:5px}
+  .auth-fld input{width:100%;border:1px solid #e3e6ec;border-radius:10px;padding:11px 13px;font-size:15px}
+  .auth-btn{width:100%;background:var(--gold);color:#fff;border:none;border-radius:10px;padding:12px;font-weight:700;font-size:15px;margin-top:6px}
+  .auth-btn:hover{filter:brightness(1.05)} .auth-btn:disabled{opacity:.6}
+  .auth-err{background:#fdecea;color:#c0392b;border-radius:8px;padding:9px 12px;font-size:13px;margin-top:10px}
+  .auth-err.hide{display:none}
+  .auth-portal{display:block;text-align:center;margin-top:14px;color:#2E75B6;font-size:13px;text-decoration:none}
+
+  /* ===== HEADER ===== */
+  header.top{background:linear-gradient(120deg,#0e1c38,#16294d);color:#fff;padding:15px 26px;display:flex;align-items:center;gap:14px;border-bottom:4px solid var(--gold)}
+  header.top .masaru-logo{font-weight:800;letter-spacing:2px;font-size:18px}
+  header.top .hdr-label{font-weight:600;font-size:15px;opacity:.95}
+  header.top .spacer{flex:1}
+  .back{background:transparent;border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:9px;padding:8px 15px;font-size:13px;transition:.15s;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+  .back:hover{background:rgba(255,255,255,.12)}
+
+  main{max-width:1320px;margin:0 auto;padding:26px 22px 60px}
+  .page-title{font-size:23px;color:var(--green-dark);font-weight:700;margin-bottom:4px;letter-spacing:-.3px}
+  .page-sub{color:var(--muted);margin-bottom:22px;font-size:14px}
+
+  /* ===== TABS ===== */
+  .tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:22px;flex-wrap:wrap}
+  .tab{background:none;border:none;padding:11px 16px;font-size:14px;font-weight:600;color:var(--muted);border-bottom:2.5px solid transparent;margin-bottom:-1px;display:flex;align-items:center;gap:7px;transition:.15s}
+  .tab:hover{color:var(--green-dark)}
+  .tab.active{color:var(--green);border-bottom-color:var(--green)}
+  .panel{display:none} .panel.active{display:block}
+
+  /* ===== CARDS / TOOLBAR ===== */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow);margin-bottom:18px}
+  .card h3{font-size:16px;color:var(--green-dark);margin-bottom:4px}
+  .card .hint{color:var(--muted);font-size:13px;margin-bottom:16px;line-height:1.55}
+  .toolbar{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 15px;font-weight:600;font-size:14px;color:var(--ink);display:inline-flex;align-items:center;gap:7px;transition:.15s}
+  .btn:hover{background:var(--green-soft);border-color:var(--green-line)}
+  .btn.primary{background:var(--green);color:#fff;border-color:var(--green)}
+  .btn.primary:hover{background:var(--green-dark)}
+  .btn.danger{background:#fff;color:var(--red);border-color:#f0d6da}
+  .btn.danger:hover{background:#fdecef}
+  .btn.ghost{background:#f7f9fc}
+  .btn.sm{padding:6px 10px;font-size:12.5px;border-radius:8px}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:18px}
+  .kpi{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .kpi .lbl{color:var(--muted);font-size:12.5px;font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+  .kpi .val{font-size:24px;font-weight:800;color:var(--green-dark);letter-spacing:-.5px}
+  .kpi .val small{font-size:14px;color:var(--muted);font-weight:600}
+
+  /* ===== FORM ===== */
+  .fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+  .fld{display:flex;flex-direction:column;gap:6px}
+  .fld label{font-size:13px;color:var(--muted);font-weight:600}
+  .fld .sub{font-size:12px;color:var(--faint);font-weight:400}
+  .fld input,.fld select,.fld textarea{padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fbfcfe;transition:.15s;width:100%}
+  .fld textarea{min-height:84px;resize:vertical;line-height:1.6}
+  .fld input:focus,.fld select:focus,.fld textarea:focus{outline:none;border-color:var(--green);background:#fff;box-shadow:0 0 0 3px var(--green-soft)}
+
+  /* ===== TABLE ===== */
+  .tbl-wrap{overflow:auto;border:1px solid var(--line);border-radius:12px;background:#fff}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{padding:9px 11px;text-align:left;border-bottom:1px solid var(--line-soft);white-space:nowrap}
+  th{background:#f7f9fc;color:var(--muted);font-weight:600}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  td.ctr,th.ctr{text-align:center}
+  tbody tr:hover{background:#f9fbfe}
+  .empty{text-align:center;color:var(--muted);padding:40px;background:#fff;border:1px dashed var(--line);border-radius:14px}
+
+  /* ===== PLAN TABLE (ตามฟอร์มกระดาษ) ===== */
+  #planTable{min-width:1250px;font-size:13px}
+  #planTable th,#planTable td{border:1px solid var(--line);padding:5px 7px;vertical-align:middle}
+  #planTable thead th{background:#eef2f8;color:var(--green-dark);text-align:center;font-weight:700}
+  #planTable td input,#planTable td select{width:100%;border:1px solid transparent;background:transparent;border-radius:6px;padding:5px 6px;font-size:13px}
+  #planTable td input:hover,#planTable td select:hover{border-color:var(--line)}
+  #planTable td input:focus,#planTable td select:focus{outline:none;border-color:var(--green);background:#fff;box-shadow:0 0 0 2px var(--green-soft)}
+  #planTable td.m{width:40px;text-align:center;cursor:pointer;user-select:none;color:var(--faint);font-weight:800}
+  #planTable td.m:hover{background:var(--green-soft)}
+  #planTable td.m.on{background:#e3f2ea;color:var(--ok)}
+  #planTable th.mh{width:40px;font-size:12px}
+  #planTable td.seq{width:38px;text-align:center;color:var(--muted);font-weight:700}
+  .dirty-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--gold);margin-left:5px;vertical-align:middle}
+
+  /* ===== BADGES / NOTES ===== */
+  .badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:var(--green-soft);color:var(--green-dark);display:inline-block}
+  .badge.ok{background:#e3f2ea;color:var(--ok)} .badge.warn{background:#fdf2e0;color:var(--amber)} .badge.bad{background:#fdecef;color:var(--red)}
+  .badge.grey{background:#eef1f6;color:var(--muted)}
+  .note-box{border-left:3px solid var(--green);background:#f4f7fc;padding:12px 15px;border-radius:0 10px 10px 0;font-size:13px;color:var(--green-dark);line-height:1.65;margin-bottom:18px;display:flex;gap:10px;align-items:flex-start}
+  .note-box i{font-size:17px;flex-shrink:0;margin-top:1px}
+  .note-box b{color:var(--gold)}
+  .note-box a{color:#2E75B6;font-weight:600}
+
+  /* ===== COURSE CARDS ===== */
+  .course-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+  .course-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 17px;cursor:pointer;transition:.15s;box-shadow:var(--shadow)}
+  .course-card:hover{border-color:var(--green-line);transform:translateY(-2px)}
+  .course-card .cc-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px}
+  .course-card .cc-name{font-weight:700;color:var(--green-dark);font-size:15px;line-height:1.4;white-space:normal}
+  .course-card .cc-meta{color:var(--muted);font-size:12.5px;line-height:1.7}
+  .course-card .cc-meta i{width:16px;color:var(--faint)}
+  .course-card .cc-foot{margin-top:11px;padding-top:10px;border-top:1px solid var(--line-soft);display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--muted)}
+  .mchips{display:flex;gap:3px;flex-wrap:wrap;margin-top:8px}
+  .mchip{font-size:10.5px;font-weight:700;padding:2px 6px;border-radius:5px;background:#eef1f6;color:var(--faint)}
+  .mchip.on{background:var(--green);color:#fff}
+
+  /* ===== MODAL ===== */
+  .overlay{position:fixed;inset:0;background:rgba(10,20,40,.55);display:flex;align-items:flex-start;justify-content:center;z-index:900;padding:30px 16px;overflow:auto}
+  .overlay.hide{display:none}
+  .modal{background:#fff;border-radius:18px;width:100%;max-width:860px;box-shadow:0 24px 70px rgba(0,0,0,.3);overflow:hidden}
+  .modal .mhead{background:linear-gradient(120deg,#0e1c38,#16294d);color:#fff;padding:16px 22px;display:flex;align-items:center;gap:10px}
+  .modal .mhead h3{font-size:17px;font-weight:700;flex:1}
+  .modal .mhead button{background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;width:30px;height:30px;font-size:17px}
+  .modal .mbody{padding:22px;max-height:70vh;overflow:auto}
+  .modal .mfoot{padding:14px 22px;border-top:1px solid var(--line);display:flex;gap:10px;justify-content:flex-end;background:#fafbfd}
+  .sec-title{font-size:14px;font-weight:700;color:var(--green-dark);margin:20px 0 10px;display:flex;align-items:center;gap:7px;padding-bottom:7px;border-bottom:1px solid var(--line-soft)}
+  .sec-title:first-child{margin-top:0}
+
+  /* ===== EMPLOYEE PICKER ===== */
+  .picker{border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden}
+  .picker .ptop{display:flex;gap:8px;padding:9px;border-bottom:1px solid var(--line-soft);background:#fafbfd;flex-wrap:wrap}
+  .picker .ptop input,.picker .ptop select{flex:1;min-width:120px;padding:7px 10px;border:1px solid var(--line);border-radius:8px}
+  .picker .plist{max-height:230px;overflow:auto;padding:4px}
+  .picker .pitem{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:8px;cursor:pointer;font-size:13.5px}
+  .picker .pitem:hover{background:var(--green-soft)}
+  .picker .pitem input{width:16px;height:16px;accent-color:var(--green);cursor:pointer}
+  .picker .pitem .pd{color:var(--faint);font-size:12px;margin-left:auto}
+  .picker .pfoot{padding:8px 11px;border-top:1px solid var(--line-soft);font-size:12.5px;color:var(--muted);display:flex;gap:10px;align-items:center;background:#fafbfd}
+
+  /* ===== QR ===== */
+  .qr-wrap{display:grid;grid-template-columns:290px 1fr;gap:22px}
+  .qr-box{border:2px dashed var(--line);border-radius:16px;padding:18px;text-align:center;background:#fff}
+  .qr-box img,.qr-box canvas{width:240px;height:240px;object-fit:contain;display:block;margin:0 auto;background:#fff}
+  .qr-box .qr-empty{height:240px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--faint);gap:8px}
+  .qr-box .qr-empty i{font-size:44px}
+  .link-row{display:flex;gap:8px;align-items:center}
+  .link-row input{flex:1}
+  @media(max-width:760px){ .qr-wrap{grid-template-columns:1fr} }
+
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--green-dark);color:#fff;padding:12px 22px;border-radius:12px;font-weight:600;font-size:14px;opacity:0;transition:.25s;box-shadow:0 10px 30px rgba(0,0,0,.25);z-index:9999;max-width:90vw;text-align:center}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast.err{background:var(--red)}
+  footer{text-align:center;color:var(--faint);font-size:.85rem;margin-top:36px}
+  @media(max-width:560px){ header.top .hdr-label{display:none} }
+
+  @media print{
+    header.top,.tabs,.toolbar,.note-box,footer,.overlay,.kpis{display:none!important}
+    body{background:#fff} main{max-width:none;padding:0}
+    .card{box-shadow:none;border:none;padding:0}
+    #planTable{min-width:0;font-size:11px}
+    #planTable td input,#planTable td select{border:none}
+    .col-act{display:none!important}
+  }
+</style>
+</head>
+<body class="locked">
+
+<!-- ============ LOGIN GATE ============ -->
+<div id="authGate" class="auth-gate">
+  <div class="auth-card">
+    <div class="auth-brand">MASARU · ระบบฝึกอบรม</div>
+    <p class="auth-sub">เข้าสู่ระบบเพื่อใช้งาน</p>
+    <div class="auth-fld"><label>อีเมล</label><input id="authEmail" type="email" placeholder="name@masaru.co.th" autocomplete="username"></div>
+    <div class="auth-fld"><label>รหัสผ่าน</label><input id="authPass" type="password" autocomplete="current-password"></div>
+    <button class="auth-btn" id="authLoginBtn">เข้าสู่ระบบ</button>
+    <div class="auth-err hide" id="authErr"></div>
+    <a class="auth-portal" href="index.html">ยังไม่มีบัญชี? สมัคร / กลับหน้าหลัก →</a>
+  </div>
+</div>
+
+<header class="top">
+  <span class="masaru-logo">MASARU</span>
+  <span class="hdr-label">ระบบฝึกอบรมพนักงาน · Training</span>
+  <div class="spacer"></div>
+  <a class="back" href="index.html"><i class="ti ti-arrow-left"></i> กลับหน้าหลัก</a>
+</header>
+
+<main>
+  <div class="page-title">ระบบฝึกอบรมพนักงาน (Training)</div>
+  <div class="page-sub">แผนอบรมประจำปี · หลักสูตร · ผู้เข้าร่วม · แบบประเมิน QR · ประวัติการฝึกอบรมรายบุคคล</div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="emp"><i class="ti ti-users"></i> ข้อมูลพนักงาน</button>
+    <button class="tab" data-tab="plan"><i class="ti ti-calendar-stats"></i> แผนฝึกอบรมประจำปี</button>
+    <button class="tab" data-tab="course"><i class="ti ti-school"></i> หลักสูตรที่อบรม</button>
+    <button class="tab" data-tab="eval"><i class="ti ti-qrcode"></i> ประเมินผลการอบรม</button>
+    <button class="tab" data-tab="record"><i class="ti ti-history"></i> บันทึก / ประวัติการอบรม</button>
+  </div>
+
+  <!-- ================= TAB 1: ข้อมูลพนักงาน ================= -->
+  <section class="panel active" id="panel-emp">
+    <div class="note-box">
+      <i class="ti ti-info-circle"></i>
+      <div>ข้อมูลพนักงานทั้งหมดในหน้านี้ <b>ดึงมาจากระบบบันทึกการมาทำงาน (chack.html) แบบอ่านอย่างเดียว</b> —
+      หากต้องการ <b>เพิ่ม / แก้ไข / ลบ</b> พนักงาน ชื่อ แผนก หรือวันเริ่มงาน ต้องทำที่หน้านั้นเท่านั้น แล้วกลับมากดรีเฟรชที่หน้านี้
+      <a href="chack.html" target="_blank">เปิดระบบบันทึกการมาทำงาน <i class="ti ti-external-link"></i></a></div>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi"><div class="lbl"><i class="ti ti-users"></i> พนักงานทั้งหมด</div><div class="val" id="kEmpAll">0 <small>คน</small></div></div>
+      <div class="kpi"><div class="lbl"><i class="ti ti-user-check"></i> อบรมแล้ว (ปีที่เลือก)</div><div class="val" id="kEmpTrained">0 <small>คน</small></div></div>
+      <div class="kpi"><div class="lbl"><i class="ti ti-user-off"></i> ยังไม่เคยอบรม</div><div class="val" id="kEmpNone">0 <small>คน</small></div></div>
+      <div class="kpi"><div class="lbl"><i class="ti ti-clock-hour-4"></i> ชั่วโมงอบรมเฉลี่ย</div><div class="val" id="kEmpHours">0 <small>ชม./คน</small></div></div>
+    </div>
+
+    <div class="toolbar">
+      <div class="fld" style="min-width:210px"><label>ค้นหา</label><input id="empSearch" placeholder="ชื่อ / ชื่อเล่น / รหัส / ตำแหน่ง"></div>
+      <div class="fld" style="min-width:170px"><label>แผนก</label><select id="empDept"><option value="">ทุกแผนก</option></select></div>
+      <div class="fld" style="min-width:150px"><label>สถานะ</label><select id="empStatus">
+        <option value="active">ปฏิบัติงานอยู่</option><option value="all">ทั้งหมด</option><option value="resigned">ลาออกแล้ว</option>
+      </select></div>
+      <button class="btn" id="empReload"><i class="ti ti-refresh"></i> รีเฟรชข้อมูล</button>
+      <button class="btn ghost" id="empExport"><i class="ti ti-file-spreadsheet"></i> ส่งออก Excel</button>
+    </div>
+
+    <div class="tbl-wrap">
+      <table id="empTable">
+        <thead><tr>
+          <th class="ctr">ที่</th><th>รหัส</th><th>ชื่อ-นามสกุล</th><th>ชื่อเล่น</th><th>แผนก</th><th>ตำแหน่ง</th>
+          <th class="ctr">วันเริ่มงาน</th><th class="ctr">อายุงาน</th>
+          <th class="num">หลักสูตร (ปีที่เลือก)</th><th class="num">ชม.รวม</th><th class="ctr">ประวัติ</th>
+        </tr></thead>
+        <tbody id="empBody"><tr><td colspan="11"><div class="empty">กำลังโหลด...</div></td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= TAB 2: แผนฝึกอบรมประจำปี ================= -->
+  <section class="panel" id="panel-plan">
+    <div class="kpis">
+      <div class="kpi"><div class="lbl"><i class="ti ti-list-numbers"></i> หลักสูตรในแผน</div><div class="val" id="kPlanCourse">0 <small>หลักสูตร</small></div></div>
+      <div class="kpi"><div class="lbl"><i class="ti ti-cash"></i> งบประมาณรวม</div><div class="val" id="kPlanBudget">0 <small>บ.</small></div></div>
+      <div class="kpi"><div class="lbl"><i class="ti ti-circle-check"></i> อบรมแล้ว</div><div class="val" id="kPlanDone">0 <small>หลักสูตร</small></div></div>
+      <div class="kpi"><div class="lbl"><i class="ti ti-users-group"></i> ผู้เข้าอบรมสะสม</div><div class="val" id="kPlanJoin">0 <small>ครั้ง</small></div></div>
+    </div>
+
+    <div class="toolbar">
+      <div class="fld" style="min-width:130px"><label>ปีแผนอบรม</label><select id="planYear"></select></div>
+      <button class="btn primary" id="planAdd"><i class="ti ti-plus"></i> เพิ่มหลักสูตร</button>
+      <button class="btn" id="planSave"><i class="ti ti-device-floppy"></i> บันทึกทั้งหมด <span id="planDirtyCount"></span></button>
+      <div style="flex:1"></div>
+      <button class="btn ghost" id="planExport"><i class="ti ti-file-spreadsheet"></i> ส่งออก Excel</button>
+      <button class="btn ghost" id="planPrint"><i class="ti ti-printer"></i> พิมพ์</button>
+    </div>
+
+    <div class="card" style="padding:16px">
+      <p class="hint" style="margin-bottom:12px">พิมพ์ในช่องได้ทันที · คลิกช่องเดือนเพื่อกำหนดระยะเวลาอบรม (✓) · แก้เสร็จแล้วกด <b>บันทึกทั้งหมด</b></p>
+      <div class="tbl-wrap">
+        <table id="planTable">
+          <thead>
+            <tr>
+              <th rowspan="2" style="width:38px">ที่</th>
+              <th rowspan="2" style="min-width:210px">ชื่อหลักสูตร</th>
+              <th rowspan="2" style="min-width:110px">ประเภท</th>
+              <th rowspan="2" style="min-width:130px">ผู้อบรม</th>
+              <th rowspan="2" style="min-width:95px">งบประมาณ</th>
+              <th colspan="12">ระยะเวลา</th>
+              <th rowspan="2" style="min-width:120px">วิทยากร</th>
+              <th rowspan="2" style="min-width:130px">หมายเหตุ</th>
+              <th rowspan="2" class="col-act" style="width:76px">จัดการ</th>
+            </tr>
+            <tr id="planMonthHead"></tr>
+          </thead>
+          <tbody id="planBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= TAB 3: หลักสูตรที่อบรม ================= -->
+  <section class="panel" id="panel-course">
+    <div class="toolbar">
+      <div class="fld" style="min-width:130px"><label>ปี</label><select id="courseYear"></select></div>
+      <div class="fld" style="min-width:220px"><label>ค้นหาหลักสูตร</label><input id="courseSearch" placeholder="ชื่อหลักสูตร / ประเภท / วิทยากร"></div>
+      <button class="btn primary" id="courseAdd"><i class="ti ti-plus"></i> เพิ่มหลักสูตร</button>
+    </div>
+    <div id="courseGrid" class="course-grid"></div>
+  </section>
+
+  <!-- ================= TAB 4: ประเมินผลการอบรม ================= -->
+  <section class="panel" id="panel-eval">
+    <div class="note-box">
+      <i class="ti ti-qrcode"></i>
+      <div>ใช้หน้านี้แปะ/พิมพ์ <b>QR Code แบบประเมินผลการอบรม</b> ให้ผู้เข้าอบรมสแกน — อัปโหลดรูป QR ที่ทำไว้ หรือให้ระบบสร้างจากลิงก์ก็ได้
+      · ช่อง <b>ลิงก์แบบฟอร์ม</b> มีไว้สำรองกรณี QR เสีย/สแกนไม่ติด ให้ส่งลิงก์แทนได้ทันที</div>
+    </div>
+    <div class="toolbar">
+      <div class="fld" style="min-width:130px"><label>ปี</label><select id="evalYear"></select></div>
+      <div class="fld" style="min-width:280px"><label>เลือกหลักสูตร</label><select id="evalCourse"></select></div>
+      <button class="btn" id="evalReload"><i class="ti ti-refresh"></i> โหลดใหม่</button>
+    </div>
+
+    <div class="card" id="evalCard">
+      <div class="qr-wrap">
+        <div>
+          <div class="qr-box" id="qrBox">
+            <div class="qr-empty"><i class="ti ti-qrcode"></i><span>ยังไม่มี QR Code</span></div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;justify-content:center">
+            <label class="btn sm ghost" style="cursor:pointer"><i class="ti ti-upload"></i> อัปโหลดรูป QR
+              <input type="file" id="qrUpload" accept="image/*" class="hide"></label>
+            <button class="btn sm ghost" id="qrGen"><i class="ti ti-wand"></i> สร้างจากลิงก์</button>
+            <button class="btn sm ghost" id="qrPrint"><i class="ti ti-printer"></i> พิมพ์ป้าย</button>
+            <button class="btn sm danger" id="qrClear"><i class="ti ti-trash"></i> ลบ QR</button>
+          </div>
+        </div>
+        <div>
+          <div class="sec-title"><i class="ti ti-forms"></i> รายละเอียดแบบประเมิน</div>
+          <div class="fgrid">
+            <div class="fld" style="grid-column:1/-1"><label>ชื่อแบบประเมิน</label><input id="evTitle" placeholder="เช่น แบบประเมินผลการอบรม หลักสูตรความปลอดภัยในการทำงาน"></div>
+            <div class="fld" style="grid-column:1/-1">
+              <label>ลิงก์แบบฟอร์ม <span class="sub">(สำรองกรณี QR เสีย — วางลิงก์ Google Form / Microsoft Form ได้)</span></label>
+              <div class="link-row">
+                <input id="evUrl" placeholder="https://forms.gle/...">
+                <button class="btn sm ghost" id="evCopy" title="คัดลอกลิงก์"><i class="ti ti-copy"></i></button>
+                <button class="btn sm ghost" id="evOpen" title="เปิดลิงก์"><i class="ti ti-external-link"></i></button>
+              </div>
+            </div>
+            <div class="fld" style="grid-column:1/-1"><label>หมายเหตุ</label><textarea id="evNote" placeholder="เช่น เปิดให้ประเมินถึงวันที่ ..."></textarea></div>
+          </div>
+          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+            <button class="btn primary" id="evSave"><i class="ti ti-device-floppy"></i> บันทึกแบบประเมิน</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>แบบประเมินทั้งหมด</h3>
+      <p class="hint">รายการแบบประเมินที่บันทึกไว้ในระบบ — คลิกเพื่อเปิดแก้ไข</p>
+      <div class="tbl-wrap">
+        <table><thead><tr><th>หลักสูตร</th><th>ชื่อแบบประเมิน</th><th>ลิงก์</th><th class="ctr">QR</th><th class="ctr">จัดการ</th></tr></thead>
+        <tbody id="evalListBody"><tr><td colspan="5"><div class="empty">ยังไม่มีแบบประเมิน</div></td></tr></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= TAB 5: บันทึก / ประวัติการอบรม ================= -->
+  <section class="panel" id="panel-record">
+    <div class="card">
+      <h3><i class="ti ti-writing"></i> บันทึกการฝึกอบรม</h3>
+      <p class="hint">เลือกหลักสูตร → ติ๊กพนักงานที่เข้าอบรม (เลือกหลายคนพร้อมกันได้) → กดบันทึก · ระบบจะเก็บเป็นประวัติรายบุคคลอัตโนมัติ</p>
+      <div class="fgrid" style="margin-bottom:16px">
+        <div class="fld"><label>หลักสูตร</label><select id="recCourse"></select></div>
+        <div class="fld"><label>วันที่อบรม</label><input type="date" id="recDate"></div>
+        <div class="fld"><label>จำนวนชั่วโมง</label><input type="number" id="recHours" min="0" step="0.5" placeholder="6"></div>
+        <div class="fld"><label>ผลการอบรม</label><select id="recResult">
+          <option value="ผ่าน">ผ่าน</option><option value="รอประเมิน">รอประเมิน</option><option value="ไม่ผ่าน">ไม่ผ่าน</option>
+        </select></div>
+        <div class="fld"><label>คะแนน <span class="sub">(ถ้ามี)</span></label><input type="number" id="recScore" min="0" step="1" placeholder="-"></div>
+        <div class="fld"><label>วิทยากร</label><input id="recTrainer" placeholder="ชื่อวิทยากร"></div>
+        <div class="fld" style="grid-column:1/-1"><label>หมายเหตุ</label><input id="recNote" placeholder="-"></div>
+      </div>
+
+      <div class="sec-title"><i class="ti ti-users"></i> เลือกพนักงานที่เข้าอบรม</div>
+      <div class="picker" id="recPicker">
+        <div class="ptop">
+          <input id="pickSearch" placeholder="ค้นหาชื่อ / ชื่อเล่น / รหัส">
+          <select id="pickDept"><option value="">ทุกแผนก</option></select>
+          <button class="btn sm ghost" id="pickAll"><i class="ti ti-checks"></i> เลือกทั้งหมดที่กรอง</button>
+          <button class="btn sm ghost" id="pickNone"><i class="ti ti-square-off"></i> ล้าง</button>
+        </div>
+        <div class="plist" id="pickList"></div>
+        <div class="pfoot"><i class="ti ti-user-check"></i> เลือกแล้ว <b id="pickCount">0</b> คน</div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+        <button class="btn primary" id="recSave"><i class="ti ti-device-floppy"></i> บันทึกการฝึกอบรม</button>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="fld" style="min-width:120px"><label>ปี</label><select id="histYear"></select></div>
+      <div class="fld" style="min-width:170px"><label>แผนก</label><select id="histDept"><option value="">ทุกแผนก</option></select></div>
+      <div class="fld" style="min-width:220px"><label>ค้นหา</label><input id="histSearch" placeholder="ชื่อพนักงาน / หลักสูตร"></div>
+      <div style="flex:1"></div>
+      <button class="btn ghost" id="histExport"><i class="ti ti-file-spreadsheet"></i> ส่งออก Excel</button>
+    </div>
+    <div class="tbl-wrap">
+      <table><thead><tr>
+        <th class="ctr">ที่</th><th class="ctr">วันที่</th><th>ชื่อ-นามสกุล</th><th>แผนก</th><th>หลักสูตร</th>
+        <th class="num">ชม.</th><th class="ctr">ผล</th><th class="num">คะแนน</th><th>วิทยากร</th><th>หมายเหตุ</th><th class="ctr">จัดการ</th>
+      </tr></thead>
+      <tbody id="histBody"><tr><td colspan="11"><div class="empty">ยังไม่มีประวัติการอบรม</div></td></tr></tbody></table>
+    </div>
+  </section>
+
+  <footer>MASARU · ระบบฝึกอบรมพนักงาน — เหนือกว่า ทุกวัน</footer>
+</main>
+
+<!-- ============ MODAL: รายละเอียดหลักสูตร ============ -->
+<div class="overlay hide" id="courseOverlay">
+  <div class="modal">
+    <div class="mhead"><i class="ti ti-school"></i><h3 id="cmTitle">รายละเอียดหลักสูตร</h3><button id="cmClose">×</button></div>
+    <div class="mbody">
+      <div class="sec-title"><i class="ti ti-info-circle"></i> ข้อมูลหลักสูตร</div>
+      <div class="fgrid">
+        <div class="fld" style="grid-column:1/-1"><label>ชื่อหลักสูตร</label><input id="cmName"></div>
+        <div class="fld"><label>ประเภท</label><input id="cmCategory" list="catList" placeholder="อบรมภายใน / ภายนอก / ความปลอดภัย"></div>
+        <div class="fld"><label>ปี (พ.ศ.)</label><select id="cmYear"></select></div>
+        <div class="fld"><label>ผู้อบรม <span class="sub">(กลุ่มเป้าหมาย)</span></label><input id="cmAudience" placeholder="เช่น พนักงานคลังสินค้า"></div>
+        <div class="fld"><label>วิทยากร</label><input id="cmTrainer"></div>
+        <div class="fld"><label>งบประมาณ (บาท)</label><input type="number" id="cmBudget" min="0" step="100"></div>
+        <div class="fld"><label>จำนวนชั่วโมง</label><input type="number" id="cmHours" min="0" step="0.5"></div>
+        <div class="fld" style="grid-column:1/-1"><label>ระยะเวลา (เดือนที่จัดอบรม)</label><div class="mchips" id="cmMonths"></div></div>
+        <div class="fld" style="grid-column:1/-1"><label>รายละเอียด / วัตถุประสงค์หลักสูตร</label><textarea id="cmDetail" placeholder="เนื้อหาที่อบรม สิ่งที่ผู้เรียนจะได้รับ ฯลฯ"></textarea></div>
+        <div class="fld" style="grid-column:1/-1"><label>หมายเหตุ</label><input id="cmNote"></div>
+      </div>
+
+      <div class="sec-title"><i class="ti ti-users-group"></i> ผู้เข้าร่วมอบรม <span class="badge grey" id="cmJoinCount">0 คน</span></div>
+      <div class="tbl-wrap">
+        <table><thead><tr><th class="ctr">ที่</th><th>ชื่อ-นามสกุล</th><th>แผนก</th><th class="ctr">วันที่</th><th class="ctr">ผล</th><th class="num">ชม.</th><th class="ctr">ลบ</th></tr></thead>
+        <tbody id="cmJoinBody"></tbody></table>
+      </div>
+      <p class="hint" style="margin-top:10px">เพิ่มผู้เข้าร่วมได้ที่แท็บ <b>“บันทึก / ประวัติการอบรม”</b> (เลือกหลายคนพร้อมกันได้)</p>
+    </div>
+    <div class="mfoot">
+      <button class="btn danger" id="cmDelete"><i class="ti ti-trash"></i> ลบหลักสูตร</button>
+      <div style="flex:1"></div>
+      <button class="btn ghost" id="cmCancel">ปิด</button>
+      <button class="btn primary" id="cmSave"><i class="ti ti-device-floppy"></i> บันทึก</button>
+    </div>
+  </div>
+</div>
+<datalist id="catList">
+  <option value="อบรมภายใน"></option><option value="อบรมภายนอก"></option><option value="ความปลอดภัย"></option>
+  <option value="ปฐมนิเทศ"></option><option value="ทักษะเฉพาะทาง"></option><option value="ภาวะผู้นำ"></option><option value="ตามกฎหมาย"></option>
+</datalist>
+
+<!-- ============ MODAL: ประวัติรายบุคคล ============ -->
+<div class="overlay hide" id="empOverlay">
+  <div class="modal" style="max-width:760px">
+    <div class="mhead"><i class="ti ti-history"></i><h3 id="emTitle">ประวัติการฝึกอบรม</h3><button id="emClose">×</button></div>
+    <div class="mbody">
+      <div class="kpis" style="margin-bottom:16px">
+        <div class="kpi"><div class="lbl">หลักสูตรทั้งหมด</div><div class="val" id="emK1">0 <small>หลักสูตร</small></div></div>
+        <div class="kpi"><div class="lbl">ชั่วโมงสะสม</div><div class="val" id="emK2">0 <small>ชม.</small></div></div>
+        <div class="kpi"><div class="lbl">ผ่านการอบรม</div><div class="val" id="emK3">0 <small>ครั้ง</small></div></div>
+      </div>
+      <div class="tbl-wrap">
+        <table><thead><tr><th class="ctr">ที่</th><th class="ctr">วันที่</th><th>หลักสูตร</th><th class="num">ชม.</th><th class="ctr">ผล</th><th class="num">คะแนน</th><th>วิทยากร</th></tr></thead>
+        <tbody id="emBody"></tbody></table>
+      </div>
+    </div>
+    <div class="mfoot"><button class="btn ghost" id="emCancel">ปิด</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ==================================================================
+   MASARU · ระบบฝึกอบรม (training.html)
+   - พนักงาน: อ่านจากตาราง daiki_employees (หน้า chack.html เป็นเจ้าของข้อมูล)
+   - หลักสูตร/แผนปี : training_courses
+   - ประวัติอบรม     : training_records
+   - แบบประเมิน QR  : training_evals
+   ================================================================== */
+var SUPABASE_URL = 'https://iyycyvnvfmerxkcfalea.supabase.co';
+var SUPABASE_KEY = 'sb_publishable_ChkZClaeE6NCAxqyTqE4Yw_aTsz4zqi';
+var sb = null;
+try { sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e){ console.error(e); }
+
+var $ = function(id){ return document.getElementById(id); };
+var MONTH_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+var THIS_YEAR = new Date().getFullYear();          // ค.ศ. (เก็บใน DB เป็น ค.ศ.)
+var EMP = [], COURSES = [], RECORDS = [], EVALS = [];
+var DIRTY = {};              // course id (หรือ tmp key) -> true
+var curEvalCourse = null, curQrData = '', curCourseId = null;
+var pickSelected = {};
+
+function esc(s){ return (''+(s==null?'':s)).replace(/[&<>"]/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]; }); }
+function fmt(n){ return (Number(n)||0).toLocaleString('th-TH',{maximumFractionDigits:2}); }
+function be(y){ return (Number(y)||0) + 543; }      // ค.ศ. -> พ.ศ.
+function toast(msg, isErr){ var t=$('toast'); t.textContent=msg; t.className='toast show'+(isErr?' err':''); setTimeout(function(){ t.className='toast'+(isErr?' err':''); },2600); }
+function errText(e){ return (e && (e.message||e.hint||e.details)) || String(e); }
+function thDate(d){
+  if(!d) return '-';
+  var p = String(d).slice(0,10).split('-'); if(p.length<3) return '-';
+  return p[2]+'/'+p[1]+'/'+be(+p[0]);
+}
+function tenure(start){
+  if(!start) return '-';
+  var s=new Date(String(start).slice(0,10)); if(isNaN(s)) return '-';
+  var now=new Date(), m=(now.getFullYear()-s.getFullYear())*12+(now.getMonth()-s.getMonth());
+  if(now.getDate()<s.getDate()) m--;
+  if(m<0) return '-';
+  var y=Math.floor(m/12), mm=m%12;
+  return (y? y+' ปี ':'') + mm + ' ด.';
+}
+
+/* -------------------- โหลดข้อมูลแบบแบ่งหน้า (>1000 แถว) -------------------- */
+async function pageAll(table, cols, orderCol){
+  var out=[], from=0, size=1000;
+  for(;;){
+    var q = sb.from(table).select(cols).range(from, from+size-1);
+    if(orderCol) q = q.order(orderCol, { ascending:true, nullsFirst:false });
+    var r = await q;
+    if(r.error) throw r.error;
+    var d = r.data||[];
+    out = out.concat(d);
+    if(d.length < size) break;
+    from += size;
+  }
+  return out;
+}
+
+/* -------------------- TABS -------------------- */
+document.querySelectorAll('.tab').forEach(function(t){
+  t.addEventListener('click', function(){
+    document.querySelectorAll('.tab').forEach(function(x){ x.classList.remove('active'); });
+    document.querySelectorAll('.panel').forEach(function(x){ x.classList.remove('active'); });
+    t.classList.add('active');
+    $('panel-'+t.dataset.tab).classList.add('active');
+  });
+});
+function goTab(name){
+  document.querySelectorAll('.tab').forEach(function(x){ x.classList.toggle('active', x.dataset.tab===name); });
+  document.querySelectorAll('.panel').forEach(function(x){ x.classList.remove('active'); });
+  $('panel-'+name).classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* -------------------- ตัวเลือกปี -------------------- */
+function fillYearSelects(){
+  var years=[]; for(var y=THIS_YEAR-2; y<=THIS_YEAR+2; y++) years.push(y);
+  ['planYear','courseYear','evalYear','histYear','cmYear'].forEach(function(id){
+    var el=$(id); if(!el) return;
+    var extra = (id==='histYear') ? '<option value="">ทุกปี</option>' : '';
+    el.innerHTML = extra + years.map(function(y){ return '<option value="'+y+'"'+(y===THIS_YEAR?' selected':'')+'>ปี '+be(y)+'</option>'; }).join('');
+  });
+}
+
+/* ==================================================================
+   LOAD ALL
+   ================================================================== */
+async function loadAll(){
+  try{
+    EMP = await pageAll('daiki_employees','id,emp_code,full_name,nickname,position,start_date,group_name,is_active,resign_date,seq','seq');
+  }catch(e){ EMP=[]; toast('โหลดพนักงานไม่สำเร็จ: '+errText(e), true); }
+  try{
+    var r = await sb.from('training_courses').select('*').order('year',{ascending:false}).order('seq',{ascending:true,nullsFirst:false});
+    if(r.error) throw r.error;
+    COURSES = (r.data||[]).map(normCourse);
+  }catch(e){ COURSES=[]; toast('โหลดหลักสูตรไม่สำเร็จ — รัน training_setup.sql แล้วหรือยัง?', true); }
+  try{
+    RECORDS = await pageAll('training_records','*','train_date');
+  }catch(e){ RECORDS=[]; }
+  try{
+    var re = await sb.from('training_evals').select('*');
+    EVALS = re.error ? [] : (re.data||[]);
+  }catch(e){ EVALS=[]; }
+
+  buildDeptOptions();
+  renderEmp(); renderPlan(); renderCourses(); renderEvalCourseOptions(); renderEvalList();
+  renderRecCourseOptions(); renderPicker(); renderHist();
+}
+function normCourse(c){
+  c.months = Array.isArray(c.months) ? c.months.map(Number) : (c.months? String(c.months).split(',').map(Number).filter(function(n){return n>=1&&n<=12;}) : []);
+  return c;
+}
+
+/* ==================================================================
+   TAB 1 · ข้อมูลพนักงาน
+   ================================================================== */
+function buildDeptOptions(){
+  var set={};
+  EMP.forEach(function(e){ if(e.group_name) set[e.group_name]=1; });
+  var ks=Object.keys(set).sort(function(a,b){ return a.localeCompare(b,'th'); });
+  ['empDept','pickDept','histDept'].forEach(function(id){
+    var el=$(id); if(!el) return; var cur=el.value;
+    el.innerHTML='<option value="">ทุกแผนก</option>'+ks.map(function(k){ return '<option value="'+esc(k)+'">'+esc(k)+'</option>'; }).join('');
+    if(cur) el.value=cur;
+  });
+}
+function empFiltered(){
+  var q=($('empSearch').value||'').trim().toLowerCase();
+  var dept=$('empDept').value, st=$('empStatus').value;
+  return EMP.filter(function(e){
+    var active = (e.is_active!==false);
+    if(st==='active' && !active) return false;
+    if(st==='resigned' && active) return false;
+    if(dept && (e.group_name||'')!==dept) return false;
+    if(q){
+      var hay=((e.full_name||'')+' '+(e.nickname||'')+' '+(e.emp_code||'')+' '+(e.position||'')).toLowerCase();
+      if(hay.indexOf(q)<0) return false;
+    }
+    return true;
+  });
+}
+function recStatsFor(empId, year){
+  var rs = RECORDS.filter(function(r){
+    if(String(r.employee_id)!==String(empId)) return false;
+    if(year && String(r.train_date||'').slice(0,4)!==String(year)) return false;
+    return true;
+  });
+  var hrs=0; rs.forEach(function(r){ hrs += Number(r.hours)||0; });
+  return { n:rs.length, hours:hrs };
+}
+function renderEmp(){
+  var year = +$('planYear').value || THIS_YEAR;
+  var rows = empFiltered();
+  var trainedIds={}, totalHours=0;
+  RECORDS.forEach(function(r){
+    if(String(r.train_date||'').slice(0,4)===String(year)){ trainedIds[String(r.employee_id)]=1; totalHours += Number(r.hours)||0; }
+  });
+  var everIds={}; RECORDS.forEach(function(r){ everIds[String(r.employee_id)]=1; });
+  var activeCount = EMP.filter(function(e){ return e.is_active!==false; }).length;
+  var noneCount = EMP.filter(function(e){ return e.is_active!==false && !everIds[String(e.id)]; }).length;
+  $('kEmpAll').innerHTML = fmt(activeCount)+' <small>คน</small>';
+  $('kEmpTrained').innerHTML = fmt(Object.keys(trainedIds).length)+' <small>คน</small>';
+  $('kEmpNone').innerHTML = fmt(noneCount)+' <small>คน</small>';
+  $('kEmpHours').innerHTML = fmt(activeCount? (totalHours/activeCount).toFixed(1) : 0)+' <small>ชม./คน</small>';
+
+  if(!rows.length){ $('empBody').innerHTML='<tr><td colspan="11"><div class="empty">ไม่พบพนักงานตามเงื่อนไข</div></td></tr>'; return; }
+  $('empBody').innerHTML = rows.map(function(e,i){
+    var s = recStatsFor(e.id, year);
+    var active = (e.is_active!==false);
+    return '<tr>'
+      + '<td class="ctr">'+(i+1)+'</td>'
+      + '<td>'+esc(e.emp_code||'-')+'</td>'
+      + '<td>'+esc(e.full_name||'-')+(active?'':' <span class="badge bad">ลาออก</span>')+'</td>'
+      + '<td>'+esc(e.nickname||'-')+'</td>'
+      + '<td>'+esc(e.group_name||'-')+'</td>'
+      + '<td>'+esc(e.position||'-')+'</td>'
+      + '<td class="ctr">'+thDate(e.start_date)+'</td>'
+      + '<td class="ctr">'+tenure(e.start_date)+'</td>'
+      + '<td class="num">'+(s.n? '<span class="badge ok">'+s.n+'</span>' : '<span class="badge grey">0</span>')+'</td>'
+      + '<td class="num">'+fmt(s.hours)+'</td>'
+      + '<td class="ctr"><button class="btn sm ghost" data-emp="'+esc(e.id)+'"><i class="ti ti-history"></i> ดู</button></td>'
+      + '</tr>';
+  }).join('');
+  $('empBody').querySelectorAll('button[data-emp]').forEach(function(b){
+    b.addEventListener('click', function(){ openEmpHistory(b.dataset.emp); });
+  });
+}
+['empSearch','empDept','empStatus'].forEach(function(id){
+  $(id).addEventListener('input', renderEmp); $(id).addEventListener('change', renderEmp);
+});
+$('empReload').addEventListener('click', async function(){ toast('กำลังโหลดข้อมูลใหม่...'); await loadAll(); toast('โหลดข้อมูลใหม่แล้ว ✓'); });
+$('empExport').addEventListener('click', function(){
+  var year = +$('planYear').value || THIS_YEAR;
+  var rows = empFiltered().map(function(e,i){
+    var s = recStatsFor(e.id, year);
+    var o = {'ที่':i+1,'รหัส':e.emp_code||'','ชื่อ-นามสกุล':e.full_name||'','ชื่อเล่น':e.nickname||'','แผนก':e.group_name||'',
+      'ตำแหน่ง':e.position||'','วันเริ่มงาน':thDate(e.start_date),'อายุงาน':tenure(e.start_date)};
+    o['หลักสูตรปี '+be(year)] = s.n;
+    o['ชั่วโมงรวม'] = s.hours;
+    o['สถานะ'] = (e.is_active===false?'ลาออก':'ปฏิบัติงาน');
+    return o;
+  });
+  if(!rows.length){ toast('ไม่มีข้อมูลให้ส่งออก', true); return; }
+  var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'พนักงาน');
+  XLSX.writeFile(wb, 'training_employees_'+be(year)+'.xlsx');
+});
+
+/* ---- ประวัติรายบุคคล ---- */
+function openEmpHistory(empId){
+  var e = EMP.filter(function(x){ return String(x.id)===String(empId); })[0];
+  if(!e) return;
+  var rs = RECORDS.filter(function(r){ return String(r.employee_id)===String(empId); })
+                  .sort(function(a,b){ return String(b.train_date||'').localeCompare(String(a.train_date||'')); });
+  $('emTitle').textContent = 'ประวัติการฝึกอบรม · '+(e.full_name||'');
+  var hrs=0, pass=0; rs.forEach(function(r){ hrs+=Number(r.hours)||0; if(r.result==='ผ่าน') pass++; });
+  $('emK1').innerHTML = rs.length+' <small>หลักสูตร</small>';
+  $('emK2').innerHTML = fmt(hrs)+' <small>ชม.</small>';
+  $('emK3').innerHTML = pass+' <small>ครั้ง</small>';
+  $('emBody').innerHTML = rs.length ? rs.map(function(r,i){
+    return '<tr><td class="ctr">'+(i+1)+'</td><td class="ctr">'+thDate(r.train_date)+'</td><td style="white-space:normal">'+esc(r.course_name||'-')+'</td>'
+      +'<td class="num">'+fmt(r.hours)+'</td><td class="ctr">'+resultBadge(r.result)+'</td><td class="num">'+(r.score==null?'-':fmt(r.score))+'</td><td>'+esc(r.trainer||'-')+'</td></tr>';
+  }).join('') : '<tr><td colspan="7"><div class="empty">ยังไม่มีประวัติการอบรม</div></td></tr>';
+  $('empOverlay').classList.remove('hide');
+}
+function resultBadge(r){
+  if(r==='ผ่าน') return '<span class="badge ok">ผ่าน</span>';
+  if(r==='ไม่ผ่าน') return '<span class="badge bad">ไม่ผ่าน</span>';
+  return '<span class="badge warn">'+esc(r||'รอประเมิน')+'</span>';
+}
+$('emClose').addEventListener('click', function(){ $('empOverlay').classList.add('hide'); });
+$('emCancel').addEventListener('click', function(){ $('empOverlay').classList.add('hide'); });
+$('empOverlay').addEventListener('click', function(ev){ if(ev.target===$('empOverlay')) $('empOverlay').classList.add('hide'); });
+
+/* ==================================================================
+   TAB 2 · แผนฝึกอบรมประจำปี
+   ================================================================== */
+$('planMonthHead').innerHTML = MONTH_TH.map(function(m){ return '<th class="mh">'+m+'</th>'; }).join('');
+
+function planRows(){
+  var y = +$('planYear').value;
+  return COURSES.filter(function(c){ return +c.year===y; })
+                .sort(function(a,b){ return (a.seq||9999)-(b.seq||9999); });
+}
+function courseJoinCount(cid){
+  var n=0; RECORDS.forEach(function(r){ if(String(r.course_id)===String(cid)) n++; }); return n;
+}
+function renderPlan(){
+  var rows = planRows();
+  var budget=0, done=0, join=0;
+  rows.forEach(function(c){
+    budget += Number(c.budget)||0;
+    var n = courseJoinCount(c.id); join += n; if(n>0) done++;
+  });
+  $('kPlanCourse').innerHTML = rows.length+' <small>หลักสูตร</small>';
+  $('kPlanBudget').innerHTML = fmt(budget)+' <small>บ.</small>';
+  $('kPlanDone').innerHTML = done+' <small>หลักสูตร</small>';
+  $('kPlanJoin').innerHTML = fmt(join)+' <small>ครั้ง</small>';
+
+  if(!rows.length){
+    $('planBody').innerHTML = '<tr><td colspan="20"><div class="empty" style="border:none">ยังไม่มีหลักสูตรในแผนปี '+be(+$('planYear').value)+' — กด “เพิ่มหลักสูตร”</div></td></tr>';
+    updateDirtyUI(); return;
+  }
+  $('planBody').innerHTML = rows.map(function(c,i){
+    var mcells = MONTH_TH.map(function(_,mi){
+      var on = c.months.indexOf(mi+1)>=0;
+      return '<td class="m'+(on?' on':'')+'" data-id="'+esc(c.id)+'" data-m="'+(mi+1)+'">'+(on?'✓':'')+'</td>';
+    }).join('');
+    return '<tr data-id="'+esc(c.id)+'">'
+      + '<td class="seq">'+(i+1)+(DIRTY[c.id]?'<span class="dirty-dot"></span>':'')+'</td>'
+      + '<td><input data-f="name" value="'+esc(c.name||'')+'" placeholder="ชื่อหลักสูตร"></td>'
+      + '<td><input data-f="category" list="catList" value="'+esc(c.category||'')+'" placeholder="ประเภท"></td>'
+      + '<td><input data-f="audience" value="'+esc(c.audience||'')+'" placeholder="กลุ่มผู้อบรม"></td>'
+      + '<td><input data-f="budget" type="number" min="0" step="100" value="'+(c.budget==null?'':c.budget)+'" style="text-align:right"></td>'
+      + mcells
+      + '<td><input data-f="trainer" value="'+esc(c.trainer||'')+'" placeholder="วิทยากร"></td>'
+      + '<td><input data-f="note" value="'+esc(c.note||'')+'" placeholder="-"></td>'
+      + '<td class="ctr col-act">'
+        + '<button class="btn sm ghost" data-open="'+esc(c.id)+'" title="รายละเอียด"><i class="ti ti-eye"></i></button> '
+        + '<button class="btn sm danger" data-del="'+esc(c.id)+'" title="ลบ"><i class="ti ti-trash"></i></button>'
+      + '</td></tr>';
+  }).join('');
+
+  $('planBody').querySelectorAll('input[data-f]').forEach(function(inp){
+    inp.addEventListener('input', function(){
+      var id = inp.closest('tr').dataset.id;
+      var c = COURSES.filter(function(x){ return String(x.id)===String(id); })[0];
+      if(!c) return;
+      var f = inp.dataset.f;
+      c[f] = (f==='budget') ? (inp.value===''?null:+inp.value) : inp.value;
+      DIRTY[id]=true; updateDirtyUI();
+    });
+  });
+  $('planBody').querySelectorAll('td.m').forEach(function(td){
+    td.addEventListener('click', function(){
+      var c = COURSES.filter(function(x){ return String(x.id)===String(td.dataset.id); })[0];
+      if(!c) return;
+      var m = +td.dataset.m, k = c.months.indexOf(m);
+      if(k>=0) c.months.splice(k,1); else c.months.push(m);
+      c.months.sort(function(a,b){ return a-b; });
+      td.classList.toggle('on'); td.textContent = td.classList.contains('on')?'✓':'';
+      DIRTY[c.id]=true; updateDirtyUI();
+    });
+  });
+  $('planBody').querySelectorAll('button[data-open]').forEach(function(b){
+    b.addEventListener('click', function(){ openCourse(b.dataset.open); });
+  });
+  $('planBody').querySelectorAll('button[data-del]').forEach(function(b){
+    b.addEventListener('click', function(){ deleteCourse(b.dataset.del); });
+  });
+  updateDirtyUI();
+}
+function updateDirtyUI(){
+  var n = Object.keys(DIRTY).length;
+  $('planDirtyCount').innerHTML = n ? '<span class="badge" style="background:#fdecef;color:#b23a48">'+n+'</span>' : '';
+}
+$('planYear').addEventListener('change', function(){ renderPlan(); renderEmp(); });
+$('courseYear').addEventListener('change', renderCourses);
+$('evalYear').addEventListener('change', renderEvalCourseOptions);
+$('histYear').addEventListener('change', renderHist);
+
+async function addCourse(year){
+  var y = +year || THIS_YEAR;
+  var seq = COURSES.filter(function(c){ return +c.year===y; }).length + 1;
+  try{
+    var r = await sb.from('training_courses').insert({ year:y, seq:seq, name:'', category:'', audience:'', budget:null, months:[], trainer:'', note:'' }).select().single();
+    if(r.error) throw r.error;
+    COURSES.push(normCourse(r.data));
+    renderPlan(); renderCourses(); renderRecCourseOptions(); renderEvalCourseOptions();
+    toast('เพิ่มแถวหลักสูตรแล้ว — กรอกข้อมูลแล้วกดบันทึก');
+    return r.data;
+  }catch(e){ toast('เพิ่มไม่สำเร็จ: '+errText(e), true); return null; }
+}
+$('planAdd').addEventListener('click', function(){ addCourse($('planYear').value); });
+$('planSave').addEventListener('click', async function(){
+  var ids = Object.keys(DIRTY);
+  if(!ids.length){ toast('ยังไม่มีการแก้ไข'); return; }
+  var btn=this; btn.disabled=true;
+  var fail=0;
+  for(var i=0;i<ids.length;i++){
+    var c = COURSES.filter(function(x){ return String(x.id)===String(ids[i]); })[0];
+    if(!c) continue;
+    try{
+      var r = await sb.from('training_courses').update({
+        name:c.name||'', category:c.category||'', audience:c.audience||'', budget:c.budget,
+        months:c.months||[], trainer:c.trainer||'', note:c.note||'', seq:c.seq
+      }).eq('id', c.id);
+      if(r.error) throw r.error;
+      delete DIRTY[c.id];
+    }catch(e){ fail++; console.error(e); }
+  }
+  btn.disabled=false; renderPlan(); renderCourses();
+  toast(fail? ('บันทึกไม่สำเร็จ '+fail+' รายการ') : 'บันทึกแผนอบรมแล้ว ✓', !!fail);
+});
+async function deleteCourse(id){
+  var c = COURSES.filter(function(x){ return String(x.id)===String(id); })[0];
+  var n = courseJoinCount(id);
+  if(!confirm('ลบหลักสูตร "'+((c&&c.name)||'(ไม่มีชื่อ)')+'" ?'+(n? '\n\n⚠ มีประวัติผู้เข้าอบรม '+n+' รายการ ประวัติจะยังอยู่แต่จะไม่ผูกกับหลักสูตรนี้':''))) return;
+  try{
+    var r = await sb.from('training_courses').delete().eq('id', id);
+    if(r.error) throw r.error;
+    COURSES = COURSES.filter(function(x){ return String(x.id)!==String(id); });
+    delete DIRTY[id];
+    renderPlan(); renderCourses(); renderRecCourseOptions(); renderEvalCourseOptions();
+    $('courseOverlay').classList.add('hide');
+    toast('ลบหลักสูตรแล้ว');
+  }catch(e){ toast('ลบไม่สำเร็จ: '+errText(e), true); }
+}
+$('planExport').addEventListener('click', function(){
+  var rows = planRows().map(function(c,i){
+    var o = {'ที่':i+1,'ชื่อหลักสูตร':c.name||'','ประเภท':c.category||'','ผู้อบรม':c.audience||'','งบประมาณ':Number(c.budget)||0};
+    MONTH_TH.forEach(function(m,mi){ o[m] = c.months.indexOf(mi+1)>=0 ? '✓' : ''; });
+    o['วิทยากร']=c.trainer||''; o['หมายเหตุ']=c.note||''; o['ผู้เข้าอบรม (คน)']=courseJoinCount(c.id);
+    return o;
+  });
+  if(!rows.length){ toast('ยังไม่มีข้อมูลในแผนปีนี้', true); return; }
+  var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'แผนอบรม');
+  XLSX.writeFile(wb, 'แผนฝึกอบรม_'+be(+$('planYear').value)+'.xlsx');
+});
+$('planPrint').addEventListener('click', function(){ window.print(); });
+
+/* ==================================================================
+   TAB 3 · หลักสูตรที่อบรม
+   ================================================================== */
+function renderCourses(){
+  var y = +$('courseYear').value;
+  var q = ($('courseSearch').value||'').trim().toLowerCase();
+  var list = COURSES.filter(function(c){
+    if(+c.year!==y) return false;
+    if(q){
+      var hay = ((c.name||'')+' '+(c.category||'')+' '+(c.trainer||'')+' '+(c.audience||'')).toLowerCase();
+      if(hay.indexOf(q)<0) return false;
+    }
+    return true;
+  }).sort(function(a,b){ return (a.seq||9999)-(b.seq||9999); });
+
+  if(!list.length){ $('courseGrid').innerHTML = '<div class="empty" style="grid-column:1/-1">ยังไม่มีหลักสูตรในปี '+be(y)+'</div>'; return; }
+  $('courseGrid').innerHTML = list.map(function(c){
+    var n = courseJoinCount(c.id);
+    var chips = MONTH_TH.map(function(m,mi){ return '<span class="mchip'+(c.months.indexOf(mi+1)>=0?' on':'')+'">'+m.replace('.','')+'</span>'; }).join('');
+    return '<div class="course-card" data-id="'+esc(c.id)+'">'
+      + '<div class="cc-top"><div class="cc-name">'+esc(c.name||'(ยังไม่ตั้งชื่อหลักสูตร)')+'</div>'
+      + (c.category? '<span class="badge">'+esc(c.category)+'</span>':'')+'</div>'
+      + '<div class="cc-meta">'
+        + '<div><i class="ti ti-user-star"></i> วิทยากร: '+esc(c.trainer||'-')+'</div>'
+        + '<div><i class="ti ti-users"></i> ผู้อบรม: '+esc(c.audience||'-')+'</div>'
+        + '<div><i class="ti ti-cash"></i> งบ: '+fmt(c.budget)+' บาท'+(c.hours? ' · '+fmt(c.hours)+' ชม.':'')+'</div>'
+      + '</div>'
+      + '<div class="mchips">'+chips+'</div>'
+      + '<div class="cc-foot"><span><i class="ti ti-user-check"></i> เข้าร่วม '+n+' คน</span><span style="color:#2E75B6;font-weight:600">ดูรายละเอียด →</span></div>'
+      + '</div>';
+  }).join('');
+  $('courseGrid').querySelectorAll('.course-card').forEach(function(el){
+    el.addEventListener('click', function(){ openCourse(el.dataset.id); });
+  });
+}
+$('courseSearch').addEventListener('input', renderCourses);
+$('courseAdd').addEventListener('click', async function(){
+  $('planYear').value = $('courseYear').value;
+  var c = await addCourse($('courseYear').value);
+  goTab('plan');
+  if(c) toast('เพิ่มในแผนปี '+be(c.year)+' แล้ว — กรอกรายละเอียดในตาราง');
+});
+
+function openCourse(id){
+  var c = COURSES.filter(function(x){ return String(x.id)===String(id); })[0];
+  if(!c) return;
+  curCourseId = c.id;
+  $('cmTitle').textContent = c.name || 'รายละเอียดหลักสูตร';
+  $('cmName').value=c.name||''; $('cmCategory').value=c.category||''; $('cmAudience').value=c.audience||'';
+  $('cmTrainer').value=c.trainer||''; $('cmBudget').value=(c.budget==null?'':c.budget); $('cmHours').value=(c.hours==null?'':c.hours);
+  $('cmDetail').value=c.detail||''; $('cmNote').value=c.note||''; $('cmYear').value=c.year;
+  $('cmMonths').innerHTML = MONTH_TH.map(function(m,mi){
+    return '<span class="mchip'+(c.months.indexOf(mi+1)>=0?' on':'')+'" data-m="'+(mi+1)+'" style="cursor:pointer;padding:5px 10px;font-size:12px">'+m+'</span>';
+  }).join('');
+  $('cmMonths').querySelectorAll('.mchip').forEach(function(ch){
+    ch.addEventListener('click', function(){ ch.classList.toggle('on'); });
+  });
+  var rs = RECORDS.filter(function(r){ return String(r.course_id)===String(c.id); })
+                  .sort(function(a,b){ return String(a.employee_name||'').localeCompare(String(b.employee_name||''),'th'); });
+  $('cmJoinCount').textContent = rs.length+' คน';
+  $('cmJoinBody').innerHTML = rs.length ? rs.map(function(r,i){
+    return '<tr><td class="ctr">'+(i+1)+'</td><td>'+esc(r.employee_name||'-')+'</td><td>'+esc(r.department||'-')+'</td>'
+      +'<td class="ctr">'+thDate(r.train_date)+'</td><td class="ctr">'+resultBadge(r.result)+'</td><td class="num">'+fmt(r.hours)+'</td>'
+      +'<td class="ctr"><button class="btn sm danger" data-rec="'+esc(r.id)+'"><i class="ti ti-trash"></i></button></td></tr>';
+  }).join('') : '<tr><td colspan="7"><div class="empty" style="border:none">ยังไม่มีผู้เข้าร่วมอบรม</div></td></tr>';
+  $('cmJoinBody').querySelectorAll('button[data-rec]').forEach(function(b){
+    b.addEventListener('click', function(){ deleteRecord(b.dataset.rec, function(){ openCourse(curCourseId); }); });
+  });
+  $('courseOverlay').classList.remove('hide');
+}
+$('cmClose').addEventListener('click', function(){ $('courseOverlay').classList.add('hide'); });
+$('cmCancel').addEventListener('click', function(){ $('courseOverlay').classList.add('hide'); });
+$('courseOverlay').addEventListener('click', function(ev){ if(ev.target===$('courseOverlay')) $('courseOverlay').classList.add('hide'); });
+$('cmDelete').addEventListener('click', function(){ if(curCourseId) deleteCourse(curCourseId); });
+$('cmSave').addEventListener('click', async function(){
+  if(!curCourseId) return;
+  var months=[]; $('cmMonths').querySelectorAll('.mchip.on').forEach(function(ch){ months.push(+ch.dataset.m); });
+  months.sort(function(a,b){ return a-b; });
+  var payload = {
+    name:$('cmName').value.trim(), category:$('cmCategory').value.trim(), audience:$('cmAudience').value.trim(),
+    trainer:$('cmTrainer').value.trim(), budget:($('cmBudget').value===''?null:+$('cmBudget').value),
+    hours:($('cmHours').value===''?null:+$('cmHours').value), detail:$('cmDetail').value, note:$('cmNote').value.trim(),
+    year:+$('cmYear').value, months:months
+  };
+  try{
+    var r = await sb.from('training_courses').update(payload).eq('id', curCourseId);
+    if(r.error) throw r.error;
+    var c = COURSES.filter(function(x){ return String(x.id)===String(curCourseId); })[0];
+    if(c){ Object.keys(payload).forEach(function(k){ c[k]=payload[k]; }); }
+    delete DIRTY[curCourseId];
+    renderPlan(); renderCourses(); renderRecCourseOptions(); renderEvalCourseOptions();
+    $('courseOverlay').classList.add('hide');
+    toast('บันทึกหลักสูตรแล้ว ✓');
+  }catch(e){ toast('บันทึกไม่สำเร็จ: '+errText(e), true); }
+});
+
+/* ==================================================================
+   TAB 4 · ประเมินผลการอบรม (QR)
+   ================================================================== */
+function coursesOfYear(y){
+  return COURSES.filter(function(c){ return +c.year===+y; }).sort(function(a,b){ return (a.seq||9999)-(b.seq||9999); });
+}
+function renderEvalCourseOptions(){
+  var list = coursesOfYear($('evalYear').value);
+  $('evalCourse').innerHTML = list.length
+    ? list.map(function(c){ return '<option value="'+esc(c.id)+'">'+esc(c.name||'(ไม่มีชื่อ)')+'</option>'; }).join('')
+    : '<option value="">— ยังไม่มีหลักสูตรในปีนี้ —</option>';
+  if(list.length){ curEvalCourse = String(list[0].id); $('evalCourse').value = curEvalCourse; }
+  else curEvalCourse = null;
+  loadEvalForm();
+}
+$('evalCourse').addEventListener('change', function(){ curEvalCourse = this.value; loadEvalForm(); });
+$('evalReload').addEventListener('click', async function(){
+  try{ var r = await sb.from('training_evals').select('*'); EVALS = r.error?[]:(r.data||[]); }catch(e){}
+  loadEvalForm(); renderEvalList(); toast('โหลดใหม่แล้ว');
+});
+function loadEvalForm(){
+  var ev = EVALS.filter(function(x){ return String(x.course_id)===String(curEvalCourse); })[0];
+  var c = COURSES.filter(function(x){ return String(x.id)===String(curEvalCourse); })[0];
+  $('evTitle').value = (ev && ev.title) || (c? 'แบบประเมินผลการอบรม · '+(c.name||'') : '');
+  $('evUrl').value = (ev && ev.form_url) || '';
+  $('evNote').value = (ev && ev.note) || '';
+  curQrData = (ev && ev.qr_image) || '';
+  drawQr();
+}
+function drawQr(){
+  var box = $('qrBox');
+  if(curQrData){ box.innerHTML = '<img src="'+curQrData+'" alt="QR"><div style="margin-top:10px;font-size:12.5px;color:#64708a">สแกนเพื่อทำแบบประเมิน</div>'; }
+  else { box.innerHTML = '<div class="qr-empty"><i class="ti ti-qrcode"></i><span>ยังไม่มี QR Code</span></div>'; }
+}
+$('qrUpload').addEventListener('change', function(ev){
+  var f = ev.target.files[0]; if(!f) return;
+  if(f.size > 900*1024){ toast('ไฟล์ใหญ่เกินไป (ควรไม่เกิน 900KB)', true); ev.target.value=''; return; }
+  var fr = new FileReader();
+  fr.onload = function(){ curQrData = fr.result; drawQr(); toast('แนบรูป QR แล้ว — อย่าลืมกดบันทึก'); };
+  fr.readAsDataURL(f);
+  ev.target.value='';
+});
+$('qrGen').addEventListener('click', function(){
+  var url = $('evUrl').value.trim();
+  if(!url){ toast('ใส่ลิงก์แบบฟอร์มก่อน', true); return; }
+  if(typeof QRCode==='undefined' || !QRCode.toDataURL){ toast('โหลดตัวสร้าง QR ไม่ได้ (ตรวจอินเทอร์เน็ต) — ใช้วิธีอัปโหลดรูปแทน', true); return; }
+  QRCode.toDataURL(url, { width:600, margin:1, errorCorrectionLevel:'M' }, function(err, data){
+    if(err){ toast('สร้าง QR ไม่สำเร็จ', true); return; }
+    curQrData = data; drawQr(); toast('สร้าง QR จากลิงก์แล้ว — อย่าลืมกดบันทึก');
+  });
+});
+$('qrClear').addEventListener('click', function(){ curQrData=''; drawQr(); toast('ลบ QR ในหน้าจอแล้ว — กดบันทึกเพื่อยืนยัน'); });
+$('qrPrint').addEventListener('click', function(){
+  if(!curQrData){ toast('ยังไม่มี QR ให้พิมพ์', true); return; }
+  var c = COURSES.filter(function(x){ return String(x.id)===String(curEvalCourse); })[0];
+  var w = window.open('', '_blank', 'width=800,height=1000');
+  if(!w){ toast('เบราว์เซอร์บล็อกหน้าต่างใหม่', true); return; }
+  var html = '<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"><title>QR แบบประเมิน</title>'
+    + '<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">'
+    + '<style>body{font-family:"IBM Plex Sans Thai",sans-serif;text-align:center;padding:40px;color:#16294d}'
+    + '.brand{font-weight:800;letter-spacing:2px;color:#16294d;font-size:22px}'
+    + '.bar{height:5px;background:#d62030;margin:10px auto 26px;width:200px;border-radius:3px}'
+    + 'h1{font-size:26px;margin:6px 0 4px} h2{font-size:19px;font-weight:600;color:#64708a;margin-bottom:26px}'
+    + 'img{width:400px;height:400px} .url{margin-top:22px;font-size:15px;color:#2E75B6;word-break:break-all}'
+    + '.tip{margin-top:8px;font-size:13px;color:#97a1b5}</style></head><body>'
+    + '<div class="brand">MASARU</div><div class="bar"></div>'
+    + '<h1>แบบประเมินผลการอบรม</h1><h2>'+esc((c&&c.name)||'')+'</h2>'
+    + '<img src="'+curQrData+'">'
+    + ($('evUrl').value.trim()? '<div class="url">'+esc($('evUrl').value.trim())+'</div><div class="tip">หาก QR สแกนไม่ติด พิมพ์ลิงก์ด้านบนได้โดยตรง</div>':'')
+    + '</body></html>';
+  w.document.write(html); w.document.close();
+  setTimeout(function(){ try{ w.print(); }catch(e){} }, 700);
+});
+$('evCopy').addEventListener('click', function(){
+  var u = $('evUrl').value.trim(); if(!u){ toast('ยังไม่มีลิงก์', true); return; }
+  if(navigator.clipboard) navigator.clipboard.writeText(u).then(function(){ toast('คัดลอกลิงก์แล้ว'); });
+  else { $('evUrl').select(); document.execCommand('copy'); toast('คัดลอกลิงก์แล้ว'); }
+});
+$('evOpen').addEventListener('click', function(){
+  var u = $('evUrl').value.trim(); if(!u){ toast('ยังไม่มีลิงก์', true); return; }
+  window.open(u, '_blank');
+});
+$('evSave').addEventListener('click', async function(){
+  if(!curEvalCourse){ toast('เลือกหลักสูตรก่อน', true); return; }
+  var payload = { course_id: curEvalCourse, title:$('evTitle').value.trim(), form_url:$('evUrl').value.trim(),
+                  note:$('evNote').value, qr_image: curQrData||null };
+  try{
+    var r = await sb.from('training_evals').upsert(payload, { onConflict:'course_id' }).select().single();
+    if(r.error) throw r.error;
+    EVALS = EVALS.filter(function(x){ return String(x.course_id)!==String(curEvalCourse); });
+    EVALS.push(r.data);
+    renderEvalList();
+    toast('บันทึกแบบประเมินแล้ว ✓');
+  }catch(e){ toast('บันทึกไม่สำเร็จ: '+errText(e), true); }
+});
+function renderEvalList(){
+  if(!EVALS.length){ $('evalListBody').innerHTML='<tr><td colspan="5"><div class="empty" style="border:none">ยังไม่มีแบบประเมิน</div></td></tr>'; return; }
+  $('evalListBody').innerHTML = EVALS.map(function(ev){
+    var c = COURSES.filter(function(x){ return String(x.id)===String(ev.course_id); })[0];
+    return '<tr><td style="white-space:normal">'+esc((c&&c.name)||'(หลักสูตรถูกลบ)')+(c?' <span class="badge grey">ปี '+be(c.year)+'</span>':'')+'</td>'
+      + '<td style="white-space:normal">'+esc(ev.title||'-')+'</td>'
+      + '<td>'+(ev.form_url? '<a href="'+esc(ev.form_url)+'" target="_blank" style="color:#2E75B6">เปิดลิงก์ <i class="ti ti-external-link"></i></a>' : '<span class="badge grey">ไม่มีลิงก์</span>')+'</td>'
+      + '<td class="ctr">'+(ev.qr_image? '<span class="badge ok">มี QR</span>':'<span class="badge grey">ไม่มี</span>')+'</td>'
+      + '<td class="ctr"><button class="btn sm ghost" data-ev="'+esc(ev.course_id)+'"><i class="ti ti-edit"></i> แก้ไข</button></td></tr>';
+  }).join('');
+  $('evalListBody').querySelectorAll('button[data-ev]').forEach(function(b){
+    b.addEventListener('click', function(){
+      var c = COURSES.filter(function(x){ return String(x.id)===String(b.dataset.ev); })[0];
+      if(c){ $('evalYear').value = c.year; renderEvalCourseOptions(); }
+      curEvalCourse = b.dataset.ev; $('evalCourse').value = curEvalCourse; loadEvalForm();
+      window.scrollTo({top:0,behavior:'smooth'});
+    });
+  });
+}
+
+/* ==================================================================
+   TAB 5 · บันทึก / ประวัติการอบรม
+   ================================================================== */
+function renderRecCourseOptions(){
+  var list = COURSES.slice().sort(function(a,b){ return (b.year-a.year) || ((a.seq||9999)-(b.seq||9999)); });
+  $('recCourse').innerHTML = list.length
+    ? list.map(function(c){ return '<option value="'+esc(c.id)+'">['+be(c.year)+'] '+esc(c.name||'(ไม่มีชื่อ)')+'</option>'; }).join('')
+    : '<option value="">— ยังไม่มีหลักสูตร กรุณาเพิ่มในแผนอบรมก่อน —</option>';
+}
+function pickFiltered(){
+  var q=($('pickSearch').value||'').trim().toLowerCase(), dept=$('pickDept').value;
+  return EMP.filter(function(e){
+    if(e.is_active===false) return false;
+    if(dept && (e.group_name||'')!==dept) return false;
+    if(q){
+      var hay=((e.full_name||'')+' '+(e.nickname||'')+' '+(e.emp_code||'')).toLowerCase();
+      if(hay.indexOf(q)<0) return false;
+    }
+    return true;
+  });
+}
+function renderPicker(){
+  var list = pickFiltered();
+  $('pickList').innerHTML = list.length ? list.map(function(e){
+    return '<label class="pitem"><input type="checkbox" value="'+esc(e.id)+'"'+(pickSelected[e.id]?' checked':'')+'>'
+      + '<span>'+esc(e.full_name||'-')+(e.nickname? ' <span style="color:#97a1b5">('+esc(e.nickname)+')</span>':'')+'</span>'
+      + '<span class="pd">'+esc(e.group_name||'-')+'</span></label>';
+  }).join('') : '<div class="empty" style="border:none;padding:24px">ไม่พบพนักงาน</div>';
+  $('pickList').querySelectorAll('input[type=checkbox]').forEach(function(cb){
+    cb.addEventListener('change', function(){
+      if(cb.checked) pickSelected[cb.value]=true; else delete pickSelected[cb.value];
+      $('pickCount').textContent = Object.keys(pickSelected).length;
+    });
+  });
+  $('pickCount').textContent = Object.keys(pickSelected).length;
+}
+$('pickSearch').addEventListener('input', renderPicker);
+$('pickDept').addEventListener('change', renderPicker);
+$('pickAll').addEventListener('click', function(){ pickFiltered().forEach(function(e){ pickSelected[e.id]=true; }); renderPicker(); });
+$('pickNone').addEventListener('click', function(){ pickSelected={}; renderPicker(); });
+
+$('recSave').addEventListener('click', async function(){
+  var cid = $('recCourse').value;
+  var ids = Object.keys(pickSelected);
+  if(!cid){ toast('ยังไม่มีหลักสูตร — เพิ่มในแผนอบรมก่อน', true); return; }
+  if(!ids.length){ toast('เลือกพนักงานอย่างน้อย 1 คน', true); return; }
+  if(!$('recDate').value){ toast('เลือกวันที่อบรม', true); return; }
+  var c = COURSES.filter(function(x){ return String(x.id)===String(cid); })[0];
+  var rows = ids.map(function(id){
+    var e = EMP.filter(function(x){ return String(x.id)===String(id); })[0] || {};
+    return {
+      course_id: cid, course_name: (c&&c.name)||'', employee_id: e.id||null,
+      employee_name: e.full_name||'', department: e.group_name||'',
+      train_date: $('recDate').value, hours: ($('recHours').value===''? (c&&c.hours) || null : +$('recHours').value),
+      result: $('recResult').value, score: ($('recScore').value===''?null:+$('recScore').value),
+      trainer: $('recTrainer').value.trim() || (c&&c.trainer) || '', note: $('recNote').value.trim()
+    };
+  });
+  var btn=this; btn.disabled=true;
+  try{
+    var r = await sb.from('training_records').insert(rows).select();
+    if(r.error) throw r.error;
+    RECORDS = RECORDS.concat(r.data||[]);
+    pickSelected={}; renderPicker(); renderHist(); renderEmp(); renderPlan(); renderCourses();
+    toast('บันทึกการฝึกอบรมแล้ว ✓ '+rows.length+' คน');
+  }catch(e){ toast('บันทึกไม่สำเร็จ: '+errText(e), true); }
+  finally{ btn.disabled=false; }
+});
+
+function histFiltered(){
+  var y=$('histYear').value, dept=$('histDept').value, q=($('histSearch').value||'').trim().toLowerCase();
+  return RECORDS.filter(function(r){
+    if(y && String(r.train_date||'').slice(0,4)!==String(y)) return false;
+    if(dept && (r.department||'')!==dept) return false;
+    if(q){
+      var hay=((r.employee_name||'')+' '+(r.course_name||'')+' '+(r.trainer||'')).toLowerCase();
+      if(hay.indexOf(q)<0) return false;
+    }
+    return true;
+  }).sort(function(a,b){ return String(b.train_date||'').localeCompare(String(a.train_date||'')); });
+}
+function renderHist(){
+  var rows = histFiltered();
+  if(!rows.length){ $('histBody').innerHTML='<tr><td colspan="11"><div class="empty" style="border:none">ยังไม่มีประวัติตามเงื่อนไข</div></td></tr>'; return; }
+  $('histBody').innerHTML = rows.map(function(r,i){
+    return '<tr><td class="ctr">'+(i+1)+'</td><td class="ctr">'+thDate(r.train_date)+'</td>'
+      + '<td>'+esc(r.employee_name||'-')+'</td><td>'+esc(r.department||'-')+'</td>'
+      + '<td style="white-space:normal">'+esc(r.course_name||'-')+'</td>'
+      + '<td class="num">'+fmt(r.hours)+'</td><td class="ctr">'+resultBadge(r.result)+'</td>'
+      + '<td class="num">'+(r.score==null?'-':fmt(r.score))+'</td><td>'+esc(r.trainer||'-')+'</td>'
+      + '<td style="white-space:normal">'+esc(r.note||'-')+'</td>'
+      + '<td class="ctr"><button class="btn sm danger" data-rec="'+esc(r.id)+'"><i class="ti ti-trash"></i></button></td></tr>';
+  }).join('');
+  $('histBody').querySelectorAll('button[data-rec]').forEach(function(b){
+    b.addEventListener('click', function(){ deleteRecord(b.dataset.rec); });
+  });
+}
+async function deleteRecord(id, after){
+  if(!confirm('ลบรายการประวัติการอบรมนี้?')) return;
+  try{
+    var r = await sb.from('training_records').delete().eq('id', id);
+    if(r.error) throw r.error;
+    RECORDS = RECORDS.filter(function(x){ return String(x.id)!==String(id); });
+    renderHist(); renderEmp(); renderPlan(); renderCourses();
+    if(after) after();
+    toast('ลบรายการแล้ว');
+  }catch(e){ toast('ลบไม่สำเร็จ: '+errText(e), true); }
+}
+['histDept','histSearch'].forEach(function(id){
+  $(id).addEventListener('input', renderHist); $(id).addEventListener('change', renderHist);
+});
+$('histExport').addEventListener('click', function(){
+  var rows = histFiltered().map(function(r,i){
+    return {'ที่':i+1,'วันที่อบรม':thDate(r.train_date),'ชื่อ-นามสกุล':r.employee_name||'','แผนก':r.department||'',
+      'หลักสูตร':r.course_name||'','ชั่วโมง':Number(r.hours)||0,'ผลการอบรม':r.result||'','คะแนน':(r.score==null?'':r.score),
+      'วิทยากร':r.trainer||'','หมายเหตุ':r.note||''};
+  });
+  if(!rows.length){ toast('ไม่มีข้อมูลให้ส่งออก', true); return; }
+  var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'ประวัติอบรม');
+  XLSX.writeFile(wb, 'ประวัติการฝึกอบรม_'+($('histYear').value? be(+$('histYear').value):'ทุกปี')+'.xlsx');
+});
+
+/* ==================================================================
+   AUTH GATE (ใช้ session ร่วมกับพอร์ทัลเดียวกัน)
+   ================================================================== */
+function showAppReady(){ $('authGate').classList.add('hide'); document.body.classList.remove('locked'); }
+function showAuthGate(){ $('authGate').classList.remove('hide'); document.body.classList.add('locked'); }
+async function doLogin(){
+  var em=$('authEmail').value.trim(), pw=$('authPass').value, err=$('authErr'), btn=$('authLoginBtn');
+  if(!em||!pw){ err.textContent='กรอกอีเมลและรหัสผ่าน'; err.classList.remove('hide'); return; }
+  if(!sb){ err.textContent='เชื่อมต่อฐานข้อมูลไม่ได้'; err.classList.remove('hide'); return; }
+  btn.disabled=true; btn.textContent='กำลังเข้าสู่ระบบ...'; err.classList.add('hide');
+  try{
+    var r = await sb.auth.signInWithPassword({ email:em, password:pw });
+    if(r.error) throw r.error;
+    showAppReady(); init();
+  }catch(e){ err.textContent='เข้าสู่ระบบไม่สำเร็จ: '+errText(e); err.classList.remove('hide'); }
+  finally{ btn.disabled=false; btn.textContent='เข้าสู่ระบบ'; }
+}
+$('authLoginBtn').addEventListener('click', doLogin);
+$('authPass').addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
+
+var inited=false;
+function init(){
+  if(inited) return; inited=true;
+  fillYearSelects();
+  var d=new Date();
+  $('recDate').value = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  loadAll();
+}
+(async function bootAuth(){
+  if(!sb){ showAppReady(); init(); return; }
+  try{
+    var res = await sb.auth.getSession();
+    if(res && res.data && res.data.session){ showAppReady(); init(); }
+    else showAuthGate();
+  }catch(e){ showAuthGate(); }
+})();
+</script>
+
+<!--
+====================================================================
+SQL — รันใน Supabase (project iyycyvnvfmerxkcfalea) ก่อนใช้งาน
+(ดูไฟล์ training_setup.sql ที่แนบมาด้วย เนื้อหาเดียวกัน)
+====================================================================
+-->
+</body>
+</html>
