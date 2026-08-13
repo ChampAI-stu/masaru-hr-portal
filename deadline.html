@@ -354,6 +354,8 @@ body.locked{overflow:hidden}
   .sh-info .lb{white-space:nowrap}
   .sh-info td .fi,.sh-stat td .fi{line-height:16px;height:18px}
   .sh-info .cell{min-width:0}
+
+.fi.editable{background:#fffbe8;border-bottom:1px dashed #b08a00}
 </style>
 </head>
 <body class="locked">
@@ -436,6 +438,7 @@ body.locked{overflow:hidden}
           <option value="p60">ประเมินทดลองงาน 60 วัน (ครั้งที่ 2)</option>
           <option value="p90">ประเมินทดลองงาน 90 วัน (ครั้งที่ 3)</option>
           <option value="pext">ต่ออายุทดลองงาน (ครั้งที่ 4)</option>
+          <option value="pspecial">รอบพิเศษ — กำหนดวันเอง</option>
         </select></div>
       <div class="fld" style="min-width:150px"><label>โลโก้หัวฟอร์ม</label>
         <select id="fmLogo">
@@ -1727,7 +1730,7 @@ var FORM_LOGOS = {
 };
 var SCORE_GROUPS = [["1.ผลการปฏิบัติงาน", ["1.1 คุณภาพและความถูกต้องของงาน", "1.2 ปริมาณของงาน"]], ["2.ความรู้ในงานและการเรียนรู้", ["2.1 มีความรู้ ความเข้าใจในงานที่รับผิดชอบ", "2.2 เข้าใจวิธีและขั้นตอนการปฏิบัติงาน"]], ["3.ความรับผิดชอบต่องาน", ["3.1 ความขยันหมั่นเพียร และความใส่ใจงาน", "3.2 ปฏิบัติงานได้ทันตามเวลาที่กำหนด"]], ["4.การสื่อความ", ["4.1 การชี้แจง นำเสนอเรื่องต่างๆ แก่ผู้อื่นให้เกิดความเข้าใจตรงกัน", "4.2 การรับฟัง ตีความสารที่ผู้อื่นต้องการถ่ายทอดได้ถูกต้องครบถ้วน"]], ["5.การทำงานร่วมกับผู้อื่น มนุษย์สัมพันธ์ / ทัศนคติต่อองค์กรและในที่ทำงาน", ["5.1 การติดต่อประสานงานกับผู้อื่น / การให้ความร่วมมือในการทำงานกับผู้อื่น", "5.2 การคิดบวก ไม่อคติต่อเพื่อนร่วมงานและองค์กร"]], ["6.วินัยในการทำงาน", ["6.1 การปฏิบัติตามกฎระเบียบของบริษัท", "6.2 การตรงต่อเวลา ความสม่ำเสมอในการปฏิบัติงาน"]], ["7. ความสามารถในการแก้ปัญหา", ["7.1 การตัดสินใจเมื่อเกิดปัญหาหรือเหตุการณ์เฉพาะหน้าในหน่วยงาน"]], ["8. การเชื่อฟังผู้บังคับบัญชา", ["8.1 การรับฟังคำสั่งของหัวหน้าการปฏิบัติงานให้สำเร็จตามคำสั่ง"]], ["9.ความคิดริเริ่มสร้างสรรค์", ["9.1 การพัฒนาระบบงานเดิมให้มีประสิทธิภาพมากขึ้น กล้าแสดงความคิดเห็น"]]];
 
-var FORM_TYPES = { probation:'แบบประเมินผลการทดลองงาน' };
+var FORM_TYPES = { probation:'แบบประเมินผลการทดลองงาน' };   /* ของเก่า */
 var FORMS = [], curFormId = null;
 
 /* ---------- สร้างตารางให้คะแนน ---------- */
@@ -1843,7 +1846,62 @@ function clearForm(){
 $F('fmNew').addEventListener('click', clearForm);
 
 /* ---------- ดึงข้อมูลพนักงานอัตโนมัติ ---------- */
-var FORM_ROUND = { p30:{r:1,d:30}, p60:{r:2,d:60}, p90:{r:3,d:90}, pext:{r:4,d:120} };
+/* แต่ละงวดนับต่อกัน — งวด 2 เริ่มวันที่ 31, งวด 3 เริ่มวันที่ 61
+   off = วันที่เริ่มงวด (นับจากวันเริ่มงาน), len = จำนวนวันในงวด, d = ครบทดลองงานสะสม */
+var FORM_ROUND = {
+  p30 :{ r:1, d:30,  off:0,  len:30 },
+  p60 :{ r:2, d:60,  off:30, len:30 },
+  p90 :{ r:3, d:90,  off:60, len:30 },
+  pext:{ r:4, d:120, off:90, len:30 },
+  pspecial:{ r:'', d:'', custom:true }        /* รอบพิเศษ — กรอกวันเอง */
+};
+var FORM_TYPE_LABEL = {
+  p30:'ประเมินทดลองงาน 30 วัน', p60:'ประเมินทดลองงาน 60 วัน',
+  p90:'ประเมินทดลองงาน 90 วัน', pext:'ต่ออายุทดลองงาน', pspecial:'รอบพิเศษ',
+  probation:'แบบประเมินผลการทดลองงาน'
+};
+/* แปลงวันที่ไทย (16 มิ.ย. 2569 หรือ 16/06/2569) -> ISO */
+function thTextToISO(t){
+  t = ('' + (t||'')).trim();
+  if(!t) return '';
+  var m = t.match(/^(\d{1,2})\s*[\/\-.]\s*(\d{1,2})\s*[\/\-.]\s*(\d{2,4})$/);
+  if(m){
+    var yy = +m[3]; if(yy<100) yy += 2500; if(yy>2400) yy -= 543;
+    return yy+'-'+String(+m[2]).padStart(2,'0')+'-'+String(+m[1]).padStart(2,'0');
+  }
+  var p = t.split(/\s+/);
+  if(p.length>=3){
+    var d = parseInt(p[0],10);
+    var mi = THMONTH.indexOf(p[1]);
+    var y = parseInt(p[p.length-1],10);
+    if(!isNaN(d) && mi>=0 && !isNaN(y)){
+      if(y>2400) y -= 543;
+      return y+'-'+String(mi+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    }
+  }
+  return '';
+}
+/* ช่วงวันที่ของงวดปัจจุบัน (คืนเป็น ISO) */
+function fmWindowISO(){
+  if($F('fmType').value === 'pspecial'){        /* รอบพิเศษ: อ่านจากช่องที่กรอกเอง */
+    var a = thTextToISO($F('pf_from').value), b = thTextToISO($F('pf_to').value);
+    if(!a || !b) return null;
+    var len = Math.round((new Date(b) - new Date(a))/86400000) + 1;
+    return { from:a, to:b, len:len, off:0 };
+  }
+  var e = fmCurEmp();
+  if(!e || !e.start_date) return null;
+  var t = FORM_ROUND[$F('fmType').value] || FORM_ROUND.p30;
+  var total = parseInt($F('pf_days').value,10) || t.d;
+  var off = t.off;
+  var len = ($F('fmType').value==='pext') ? Math.max(1, total-90) : t.len;
+  var d0 = new Date(String(e.start_date).slice(0,10));
+  if(isNaN(d0)) return null;
+  function iso(dd){ return dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0')+'-'+String(dd.getDate()).padStart(2,'0'); }
+  var a = new Date(d0); a.setDate(a.getDate()+off);
+  var b = new Date(d0); b.setDate(b.getDate()+off+len-1);
+  return { from: iso(a), to: iso(b), len: len, off: off };
+}
 var fmEmpId = null;
 function fmEmpLabel(e){
   return (e.full_name||'') + (e.nickname? ' ('+e.nickname+')':'')
@@ -1867,18 +1925,45 @@ function fmCurEmp(){
       || EMP.filter(function(e){ return fmEmpLabel(e).toLowerCase().indexOf(v)>=0; })[0]
       || null;
 }
-function applyFormType(){
-  var t = FORM_ROUND[$F('fmType').value] || FORM_ROUND.p30;
-  $F('pf_round').value = t.r;
-  $F('pf_days').value  = t.d;
+var _fmSpecialTouched = false;
+function applyFormType(keepDays){
+  var key = $F('fmType').value;
+  var t = FORM_ROUND[key] || FORM_ROUND.p30;
   var e = fmCurEmp();
-  if(e && e.start_date){
-    $F('pf_start').value = thDate(e.start_date);
-    $F('pf_from').value  = thDate(e.start_date);
-    $F('pf_to').value    = fmAddDaysTh(e.start_date, t.d-1);
+  if(e && e.start_date) $F('pf_start').value = thDate(e.start_date);
+  if(t.custom){
+    /* รอบพิเศษ: ให้กรอก ครั้งที่ / จำนวนวัน / ตั้งแต่-ถึง เองทั้งหมด */
+    if(!keepDays && !_fmSpecialTouched){
+      $F('pf_round').value=''; $F('pf_days').value=''; $F('pf_from').value=''; $F('pf_to').value='';
+      _fmSpecialTouched = true;
+    }
+    var w0 = fmWindowISO();
+    if(w0 && !keepDays) $F('pf_days').value = w0.len;
+    $F('pf_from').classList.add('editable');
+    $F('pf_to').classList.add('editable');
+    return;
+  }
+  _fmSpecialTouched = false;
+  $F('pf_from').classList.remove('editable');
+  $F('pf_to').classList.remove('editable');
+  $F('pf_round').value = t.r;
+  if(!keepDays) $F('pf_days').value = t.d;
+  var w = fmWindowISO();
+  if(w){
+    $F('pf_from').value = thDate(w.from);
+    $F('pf_to').value   = thDate(w.to);
   }
 }
-$F('fmType').addEventListener('change', applyFormType);
+/* กรอกวันเองในรอบพิเศษ → คำนวณจำนวนวันให้ */
+['pf_from','pf_to'].forEach(function(id){
+  $F(id).addEventListener('change', function(){
+    if($F('fmType').value!=='pspecial') return;
+    var w = fmWindowISO();
+    if(w && w.len>0) $F('pf_days').value = w.len;
+  });
+});
+$F('fmType').addEventListener('change', function(){ applyFormType(false); });
+$F('pf_days').addEventListener('input', function(){ applyFormType(true); });
 function fmAddDaysTh(iso, n){
   var d = new Date(String(iso).slice(0,10)); if(isNaN(d)) return '';
   d.setDate(d.getDate()+n);
@@ -1901,6 +1986,7 @@ $F('fmEmp').addEventListener('input', function(){
   if(fmCurEmp()) fmFillFromEmp();       // พิมพ์/เลือกตรงกับรายชื่อ → เติมให้ทันที
 });
 $F('pf_round').addEventListener('change', function(){
+  if($F('fmType').value==='pspecial') return;   /* รอบพิเศษ: ใส่ครั้งที่อะไรก็ได้ */
   var map = {1:'p30', 2:'p60', 3:'p90', 4:'pext'};
   var k = map[+$F('pf_round').value];
   if(k){ $F('fmType').value = k; applyFormType(); }
@@ -1911,10 +1997,9 @@ $F('fmPull').addEventListener('click', async function(){
   var e = fmCurEmp();
   if(!e){ toast('เลือกพนักงานก่อน', true); return; }
   if(!e.start_date){ toast('พนักงานคนนี้ยังไม่มีวันเริ่มงานในระบบ chack', true); return; }
-  var days = +($F('pf_days').value) || 30;
-  var from = String(e.start_date).slice(0,10);
-  var d2 = new Date(from); d2.setDate(d2.getDate()+days-1);
-  var to = d2.getFullYear()+'-'+String(d2.getMonth()+1).padStart(2,'0')+'-'+String(d2.getDate()).padStart(2,'0');
+  var w = fmWindowISO();
+  if(!w){ toast('คำนวณช่วงวันที่ไม่ได้', true); return; }
+  var from = w.from, to = w.to;
   var btn=this; btn.disabled=true;
   try{
     var r = await sb.from('daiki_attendance').select('status_key,work_date')
@@ -1927,7 +2012,7 @@ $F('fmPull').addEventListener('click', async function(){
     if(!$F('pf_other').value) $F('pf_other').value = 0;
     if(!$F('pf_warn').value)  $F('pf_warn').value = 0;
     calcForm();
-    toast('ดึงสถิติ '+from+' ถึง '+to+' แล้ว ('+(r.data||[]).length+' วัน)');
+    toast('ดึงสถิติงวดนี้ '+thDate(from)+' – '+thDate(to)+' แล้ว ('+(r.data||[]).length+' วัน)');
   }catch(err){ toast('ดึงสถิติไม่สำเร็จ: '+errText(err), true); }
   finally{ btn.disabled=false; }
 });
@@ -1976,7 +2061,7 @@ function renderFormList(){
   $F('fmListBody').innerHTML = rows.map(function(f,i){
     return '<tr'+(String(f.id)===String(curFormId)?' style="background:#eef3fb"':'')+'>'
       + '<td class="ctr">'+(i+1)+'</td><td>'+esc(f.employee_name||'-')+'</td>'
-      + '<td>'+esc(FORM_TYPES[f.form_type]||f.form_type||'-')+'</td>'
+      + '<td>'+esc(FORM_TYPE_LABEL[f.form_type]||FORM_TYPES[f.form_type]||f.form_type||'-')+'</td>'
       + '<td class="ctr">'+(f.round||'-')+'</td>'
       + '<td class="num">'+fmt(f.score)+'</td>'
       + '<td class="ctr" style="white-space:normal">'+esc(f.result||'-')+'</td>'
@@ -2157,9 +2242,11 @@ window.openProbationForm = function(rid, n){
   $F('pf_days').value  = n;
   var ref = rec && rec.ref ? rec.ref : (e ? e.start_date : '');
   if(ref){
+    var off = (+n > 90) ? 90 : (+n - 30);          // งวด 30→0, 60→30, 90→60, ต่ออายุ→90
+    var len = (+n > 90) ? (+n - 90) : 30;
     $F('pf_start').value = thDate(ref);
-    $F('pf_from').value  = thDate(ref);
-    $F('pf_to').value    = thDate(addDays(ref, (+n)-1));
+    $F('pf_from').value  = thDate(addDays(ref, off));
+    $F('pf_to').value    = thDate(addDays(ref, off+len-1));
   }
   calcForm();
   toast('เปิดแบบประเมิน '+(name||'')+' ครบ '+n+' วัน — กด “ดึงสถิติขาด-ลา-มาสาย” เพื่อเติมสถิติ');
