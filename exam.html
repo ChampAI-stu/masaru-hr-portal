@@ -281,6 +281,7 @@
   <h3>ลิงก์เข้าสอบ</h3>
   <div class="code-chip" id="shCode" style="font-size:16px;margin-bottom:12px">—</div>
   <canvas id="shQR" style="margin:0 auto 12px;display:block"></canvas>
+  <img id="shQRimg" class="hide" alt="QR" style="margin:0 auto 12px;display:block;width:220px;height:220px">
   <div class="fld"><input id="shUrl" readonly style="text-align:center;font-size:12.5px"></div>
   <div class="m-actions" style="justify-content:center">
     <button class="btn" id="btnCopyUrl"><i class="ti ti-copy"></i> คัดลอกลิงก์</button>
@@ -678,9 +679,21 @@ window.openShare = function(id){
   const url = location.origin + location.pathname + '?code=' + encodeURIComponent(e.code);
   $('shCode').textContent = e.code;
   $('shUrl').value = url;
-  QRCode.toCanvas($('shQR'), url, { width: 220, margin: 1 }, () => {});
   $('mdShare').classList.remove('hide');
+  const cv = $('shQR'), img = $('shQRimg');
+  try{
+    if (typeof QRCode === 'undefined' || !QRCode.toCanvas) throw new Error('lib not loaded');
+    cv.classList.remove('hide'); img.classList.add('hide');
+    QRCode.toCanvas(cv, url, { width: 220, margin: 1 }, (err) => { if (err) qrFallback(url); });
+  }catch(_){ qrFallback(url); }
 };
+
+function qrFallback(url){
+  $('shQR').classList.add('hide');
+  const img = $('shQRimg');
+  img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=' + encodeURIComponent(url);
+  img.classList.remove('hide');
+}
 $('btnCopyUrl').addEventListener('click', () => {
   navigator.clipboard.writeText($('shUrl').value).then(() => toast('คัดลอกลิงก์แล้ว'));
 });
