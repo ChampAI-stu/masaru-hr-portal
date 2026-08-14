@@ -245,10 +245,12 @@
     <div class="fld"><label>สลับลำดับข้อ</label><select id="exShufQ"><option value="true">สลับ</option><option value="false">เรียงตามลำดับ</option></select></div>
     <div class="fld"><label>สลับตัวเลือก ก-ง</label><select id="exShufC"><option value="true">สลับ</option><option value="false">คงที่</option></select></div>
   </div>
-  <div class="grid2">
+  <div class="grid2" style="margin-bottom:12px">
     <div class="fld"><label>แสดงเฉลยหลังส่งคำตอบ</label><select id="exShowAns"><option value="false">ไม่แสดง</option><option value="true">แสดง</option></select></div>
     <div class="fld"><label>สอบซ้ำได้</label><select id="exRetake"><option value="false">สอบได้ครั้งเดียว</option><option value="true">สอบซ้ำได้</option></select></div>
   </div>
+  <div class="fld"><label>เชื่อมกับหลักสูตรอบรม (Training) — ผลสอบจะไปแสดงในหน้าหลักสูตรนั้น</label>
+    <select id="exLinkCourse"><option value="">— ไม่เชื่อม —</option></select></div>
   <div class="m-actions">
     <button class="btn" data-close="mdExam">ยกเลิก</button>
     <button class="btn primary" id="btnSaveExam"><i class="ti ti-device-floppy"></i> บันทึก</button>
@@ -558,7 +560,21 @@ function enterAdmin(){
   $('authGate').classList.add('hide');
   document.body.classList.remove('locked');
   $('adminApp').classList.remove('hide');
-  loadExams(); loadResults();
+  loadExams(); loadResults(); loadCourses();
+}
+
+let COURSES = [];
+async function loadCourses(){
+  try{
+    const { data, error } = await sb.from('training_courses').select('id, year, name')
+      .order('year', { ascending: false }).order('seq', { ascending: true });
+    if (error) throw error;
+    COURSES = (data || []).filter((c) => (c.name || '').trim());
+    const cur = $('exLinkCourse').value;
+    $('exLinkCourse').innerHTML = '<option value="">— ไม่เชื่อม —</option>' +
+      COURSES.map((c) => '<option value="' + String(c.id) + '">[ปี ' + esc(c.year) + '] ' + esc(c.name) + '</option>').join('');
+    if (cur) $('exLinkCourse').value = cur;
+  }catch(e){ /* ไม่มีสิทธิ์/ไม่มีตาราง — ข้ามได้ */ }
 }
 
 $('btnLogout').addEventListener('click', async () => { await sb.auth.signOut(); location.reload(); });
@@ -631,6 +647,7 @@ window.openExamModal = function(id){
   $('exShufC').value = String(editingExam ? editingExam.shuffle_choices : true);
   $('exShowAns').value = String(editingExam ? editingExam.show_answers : false);
   $('exRetake').value = String(editingExam ? editingExam.allow_retake : false);
+  $('exLinkCourse').value = editingExam && editingExam.training_course_id ? String(editingExam.training_course_id) : '';
   $('mdExam').classList.remove('hide');
 };
 
@@ -647,7 +664,8 @@ $('btnSaveExam').addEventListener('click', async () => {
     shuffle_questions: $('exShufQ').value === 'true',
     shuffle_choices: $('exShufC').value === 'true',
     show_answers: $('exShowAns').value === 'true',
-    allow_retake: $('exRetake').value === 'true'
+    allow_retake: $('exRetake').value === 'true',
+    training_course_id: $('exLinkCourse').value || null
   };
   let error;
   if (editingExam) ({ error } = await sb.from('exams').update(row).eq('id', editingExam.id));
