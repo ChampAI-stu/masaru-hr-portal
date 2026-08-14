@@ -459,6 +459,11 @@
         <table><thead><tr><th class="ctr">ที่</th><th>ชื่อ-นามสกุล</th><th>แผนก</th><th class="ctr">วันที่</th><th class="ctr">ผล</th><th class="num">ชม.</th><th class="ctr">ลบ</th></tr></thead>
         <tbody id="cmJoinBody"></tbody></table>
       </div>
+      <div class="sec-title" style="margin-top:20px"><i class="ti ti-file-certificate"></i> ผลสอบที่เชื่อมกับหลักสูตรนี้ <span class="badge grey" id="cmExamCount">—</span></div>
+      <div class="tbl-wrap">
+        <table><thead><tr><th class="ctr">ที่</th><th>ชื่อ-นามสกุล</th><th>ชื่อเล่น</th><th>แผนก</th><th>ชุดข้อสอบ</th><th class="ctr">คะแนน</th><th class="ctr">%</th><th class="ctr">ผล</th><th class="ctr">วันเวลา</th></tr></thead>
+        <tbody id="cmExamBody"><tr><td colspan="9"><div class="empty" style="border:none">—</div></td></tr></tbody></table>
+      </div>
       <div class="add-join">
         <div class="aj-head"><i class="ti ti-user-plus"></i> เพิ่มผู้เข้าร่วมอบรม
           <span class="hint" style="margin:0 0 0 auto;font-size:12.5px">พิมพ์ชื่อเพื่อค้นหา แล้วติ๊กเลือก (เลือกหลายคนได้)</span></div>
@@ -1066,6 +1071,54 @@ function openCourse(id){
   $('cmJoinHours').value = (c.hours==null? '' : c.hours);
   renderCmPicker();
   $('courseOverlay').classList.remove('hide');
+  loadCourseExams(curCourseId);
+}
+/* ---- ผลสอบที่เชื่อมกับหลักสูตร (จาก exam.html) ---- */
+async function loadCourseExams(courseId){
+  var body = document.getElementById('cmExamBody');
+  var cnt = document.getElementById('cmExamCount');
+  if(!body || !cnt) return;
+  cnt.textContent = '—';
+  body.innerHTML = '<tr><td colspan="9"><div class="empty" style="border:none">กำลังโหลด…</div></td></tr>';
+  try{
+    var ex = await sb.from('exams').select('id, title').eq('training_course_id', String(courseId));
+    if(ex.error) throw ex.error;
+    var exams = ex.data || [];
+    if(!exams.length){
+      cnt.textContent = 'ไม่มีข้อสอบ';
+      body.innerHTML = '<tr><td colspan="9"><div class="empty" style="border:none">ยังไม่มีชุดข้อสอบเชื่อมกับหลักสูตรนี้ — ไปที่ระบบทดสอบความรู้ &gt; แก้ไขชุดข้อสอบ &gt; เลือก "เชื่อมกับหลักสูตรอบรม"</div></td></tr>';
+      return;
+    }
+    var ids = exams.map(function(e){ return e.id; });
+    var rs = await sb.from('exam_results').select('*').in('exam_id', ids).order('submitted_at', {ascending:false});
+    if(rs.error) throw rs.error;
+    var rows = rs.data || [];
+    var pass = rows.filter(function(r){ return r.passed; }).length;
+    cnt.textContent = rows.length + ' คน · ผ่าน ' + pass + ' · ไม่ผ่าน ' + (rows.length - pass);
+    if(!rows.length){
+      body.innerHTML = '<tr><td colspan="9"><div class="empty" style="border:none">ยังไม่มีผู้เข้าสอบ</div></td></tr>';
+      return;
+    }
+    function escX(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+    body.innerHTML = rows.map(function(r, i){
+      var d = new Date(r.submitted_at);
+      var dt = d.toLocaleDateString('th-TH',{day:'2-digit',month:'2-digit',year:'2-digit'}) + ' ' + d.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+      return '<tr>'
+        + '<td class="ctr">' + (i+1) + '</td>'
+        + '<td><b>' + escX(r.first_name) + ' ' + escX(r.last_name) + '</b></td>'
+        + '<td>' + escX(r.nickname || '—') + '</td>'
+        + '<td>' + escX(r.department || '—') + '</td>'
+        + '<td>' + escX(r.exam_title || '') + '</td>'
+        + '<td class="ctr">' + r.score + '/' + r.total + '</td>'
+        + '<td class="ctr">' + r.percent + '%</td>'
+        + '<td class="ctr">' + (r.passed ? '<span class="badge ok">ผ่าน</span>' : '<span class="badge bad">ไม่ผ่าน</span>') + '</td>'
+        + '<td class="ctr" style="white-space:nowrap">' + dt + '</td>'
+        + '</tr>';
+    }).join('');
+  }catch(e){
+    cnt.textContent = '—';
+    body.innerHTML = '<tr><td colspan="9"><div class="empty" style="border:none">โหลดผลสอบไม่สำเร็จ: ' + (e.message || e) + '</div></td></tr>';
+  }
 }
 /* ---- เพิ่มผู้เข้าร่วมจากหน้ารายละเอียดหลักสูตร ---- */
 var cmPickSelected = {};
