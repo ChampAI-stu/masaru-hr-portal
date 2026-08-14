@@ -1027,6 +1027,7 @@
           <div class="field"><label>รูปแบบการสัมภาษณ์</label><div class="imode" id="f-modeseg" data-link="f-linkwrap"><button type="button" class="mbtn active" data-mode="onsite" onclick="pickMode(this)"><i class="ti ti-building"></i>ออนไซต์</button><button type="button" class="mbtn" data-mode="online" onclick="pickMode(this)"><i class="ti ti-video"></i>ออนไลน์</button></div></div>
           <div class="field" id="f-linkwrap" style="display:none"><label>ลิงก์ประชุม (Google Meet / Zoom)</label><input class="inp" id="f-intlink" placeholder="วางลิงก์เข้าห้องสัมภาษณ์..."></div>
           <div class="btn-row">
+            ${stepBackBtn(a)}
             <button class="btn btn-danger btn-ghost" onclick="actReject('${a.id}','ไม่ผ่านการคัดกรอง')"><i class="ti ti-x"></i>ไม่ผ่าน</button>
             <button class="btn btn-primary" onclick="actSchedule('${a.id}')"><i class="ti ti-calendar-check"></i>บันทึกนัดสัมภาษณ์</button>
           </div>
@@ -1038,6 +1039,7 @@
           <div class="field"><label>รายละเอียดผลสัมภาษณ์</label><textarea id="f-resnote" data-af="resultNote" placeholder="สรุปผล จุดเด่น ข้อสังเกต...">${esc(a.resultNote)}</textarea><div class="autosave-hint"><i class="ti ti-cloud-check"></i>บันทึกอัตโนมัติขณะพิมพ์</div></div>
           <div class="field"><label>เงินเดือนที่ตกลงกับผู้สมัคร (บาท)</label><input class="inp" id="f-agreedsal" data-af="agreedSalary" inputmode="numeric" placeholder="เช่น 25,000" value="${money(a.agreedSalary)}" oninput="fmtMoney(this)"></div>
           <div class="btn-row">
+            ${stepBackBtn(a)}
             <button class="btn btn-danger" onclick="actResult('${a.id}','fail')"><i class="ti ti-x"></i>ไม่ผ่าน</button>
             <button class="btn btn-primary" onclick="actResult('${a.id}','pass')"><i class="ti ti-check"></i>ผ่าน → เตรียม Offer</button>
           </div>
@@ -1076,7 +1078,7 @@
               <div class="field" id="email-field"><label>Email ผู้สมัคร</label><input class="inp" id="f-oemail" data-af="offerEmail" placeholder="email@example.com" value="${esc(a.offerEmail)}"></div>
             </div>
             <div class="field"><label>หมายเหตุ</label><textarea id="f-osentnote" data-af="offerSentNote" placeholder="เช่น ส่งแล้ว รอตอบกลับภายใน 3 วัน">${esc(a.offerSentNote)}</textarea></div>
-            <div class="btn-row"><button class="btn btn-danger" onclick="actReject('${a.id}','ไม่ผ่าน (ขั้น Offer)')"><i class="ti ti-x"></i>ไม่ผ่าน</button><button class="btn btn-primary" onclick="actSendOffer('${a.id}')"><i class="ti ti-send"></i>บันทึกว่าส่ง Offer แล้ว</button></div>
+            <div class="btn-row">${stepBackBtn(a)}<button class="btn btn-danger" onclick="actReject('${a.id}','ไม่ผ่าน (ขั้น Offer)')"><i class="ti ti-x"></i>ไม่ผ่าน</button><button class="btn btn-primary" onclick="actSendOffer('${a.id}')"><i class="ti ti-send"></i>บันทึกว่าส่ง Offer แล้ว</button></div>
           </div>`;
         } else {
           flowCard = `<div class="card">
@@ -1256,6 +1258,21 @@
       if (a.hrBy || a.hrNote) return 'screening';
       return 'new';
     }
+    // ── ย้อนกลับไปขั้นตอนก่อนหน้า (ใช้ในการ์ดขั้นตอน) ──
+    const STEP_BACK = { screening: 'new', interview: 'screening', offer: 'interview' };
+    function stepBackBtn(a) {
+      const prev = STEP_BACK[statusOf(a)];
+      if (!prev) return '';
+      return `<button class="btn btn-back" onclick="actStepBack('${a.id}')" title="ย้อนกลับไปขั้น “${stMeta(prev).label}”"><i class="ti ti-arrow-back-up"></i>ย้อนกลับ</button>`;
+    }
+    async function actStepBack(id) {
+      const a = getA(id); if (!a) return;
+      const prev = STEP_BACK[statusOf(a)];
+      if (!prev) return;
+      if (!await askConfirm(`ย้อน <b>${esc(a.name)}</b> กลับไปขั้น “${stMeta(prev).label}”?<br><span style="color:#7A8398;font-size:12.5px">ข้อมูลที่กรอกไว้ยังอยู่ครบ</span>`,
+          { title: 'ย้อนกลับขั้นตอน', okText: 'ย้อนกลับ' })) return;
+      if (await dbUpdate(id, { status: prev })) { showToast(`ย้อนกลับไปขั้น “${stMeta(prev).label}” แล้ว`); await refresh(); }
+    }
     async function restoreCancelled(id) {
       const a = getA(id); if (!a) return;
       const cur = statusOf(a);
@@ -1432,6 +1449,9 @@
     .stag.tag-bk { background:#fff2dc; color:#8a5a12; }
     .fchip.fchip-bk.on { background:#8a5a12; border-color:#8a5a12; color:#fff; }
     .fchip.fchip-bk { color:#8a5a12; }
+
+    .btn.btn-back { background:#fff; border:1px solid var(--line); color:var(--muted); }
+    .btn.btn-back:hover { background:var(--bg); color:var(--ink); border-color:var(--green-line); }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"><\/script>
