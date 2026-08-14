@@ -116,6 +116,9 @@
     /* ── Main ────────────────────────────────────────── */
     #main { flex: 1; display: flex; overflow: hidden; }
     .pg { display: none; flex: 1; overflow: hidden; }
+    /* หน้าที่เป็นคอลัมน์เดียว ให้เลื่อนดูได้เมื่อเนื้อหายาว */
+    #pg-int, #pg-start, #pg-rep { overflow-y: auto; overflow-x: hidden; }
+    #pg-int .rep-wrap, #pg-start .rep-wrap, #pg-rep .rep-wrap { padding-bottom: 60px; }
     .pg.on { display: flex; }
 
     /* ── Candidate list column ───────────────────────── */
