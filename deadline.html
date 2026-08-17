@@ -198,6 +198,9 @@ body.locked{overflow:hidden}
   .pg-no{margin-top:auto;padding-top:6px;text-align:right;font-size:9.5px;color:#666}
   #formDoc.pdfing{gap:0}
   #formDoc.pdfing .sheet{height:297mm;min-height:297mm;max-height:297mm;overflow:hidden;box-shadow:none;border:none;margin:0}
+  #formDoc.pdfing #formPage1 .sh-score{flex:1 1 auto;height:auto}
+  #formDoc.pdfing #formPage2 > .sh-band:not(:first-of-type){margin-top:auto}
+  #formDoc.pdfing #formPage2 .sh-sign1,#formDoc.pdfing #formPage2 .sh-sign2{margin-top:auto}
   .sheet{width:210mm;min-height:297mm;display:flex;flex-direction:column;background:#fff;color:#000;padding:11mm 10mm 9mm;
     box-shadow:0 10px 40px rgba(16,35,63,.18);border:1px solid var(--line);
     font-family:'IBM Plex Sans Thai',sans-serif;font-size:11px;line-height:1.35}
@@ -311,6 +314,10 @@ body.locked{overflow:hidden}
     margin:0!important;border:none!important;box-shadow:none!important;overflow:hidden!important;
     page-break-after:always;break-after:page}
   .sheet:last-child{page-break-after:auto;break-after:auto}
+  /* ยืดเนื้อหาให้เต็มความสูง A4 */
+  #formPage1 .sh-score{flex:1 1 auto;height:auto}
+  #formPage2 > .sh-band:not(:first-of-type){margin-top:auto}
+  #formPage2 .sh-sign1,#formPage2 .sh-sign2{margin-top:auto}
 }
 
 
@@ -350,6 +357,9 @@ body.locked{overflow:hidden}
 .pdf-stage{position:fixed;left:-12000px;top:0;width:210mm;background:#fff;z-index:-1}
 .pdf-stage .sheet{width:210mm;height:297mm;min-height:297mm;max-height:297mm;overflow:hidden;
   box-shadow:none;border:none;margin:0}
+.pdf-stage .sheet .sh-score{flex:1 1 auto;height:auto}
+.pdf-stage .sheet > .sh-band:not(:first-of-type){margin-top:auto}
+.pdf-stage .sheet .sh-sign1,.pdf-stage .sheet .sh-sign2{margin-top:auto}
 .fi-flat{display:inline-block;width:100%;border-bottom:1px dotted #666;padding:0 3px;
   line-height:16px;min-height:16px;vertical-align:middle;white-space:nowrap;overflow:hidden;
   font-size:11px;color:#000}
