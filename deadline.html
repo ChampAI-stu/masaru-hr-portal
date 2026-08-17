@@ -300,8 +300,17 @@ body.locked{overflow:hidden}
   cursor:pointer;font-family:inherit;font-size:12px;font-weight:600}
 .gm-form:hover{background:#dde5f2}
 @media print{
+  @page{size:A4 portrait;margin:0}
+  html,body{margin:0!important;padding:0!important;background:#fff!important}
   body>*:not(#formView){display:none!important}
   #formView .toolbar,#formView .card,#formView .no-print{display:none!important}
+  #formView{margin:0!important;padding:0!important;max-width:none!important}
+  .sheet-wrap{overflow:visible!important;padding:0!important;display:block!important}
+  #formDoc{display:block!important;gap:0!important}
+  .sheet{width:210mm!important;height:297mm!important;min-height:297mm!important;max-height:297mm!important;
+    margin:0!important;border:none!important;box-shadow:none!important;overflow:hidden!important;
+    page-break-after:always;break-after:page}
+  .sheet:last-child{page-break-after:auto;break-after:auto}
 }
 
 
