@@ -411,6 +411,7 @@ body.locked{overflow:hidden}
     <div class="spacer"></div>
     <button class="btn ghost" id="toggleDone">แสดงที่เสร็จแล้ว</button>
     <button class="btn ghost" id="exportXlsxBtn">📤 ส่งออก Excel</button>
+    <button class="btn" id="tmplBtn">📄 ไฟล์แม่แบบ</button>
     <button class="btn gold" id="importBtn">📥 นำเข้า / กู้ข้อมูล</button>
     <button class="btn" id="addBtn">+ เพิ่มรายการ</button>
     <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" class="hide">
@@ -1592,7 +1593,23 @@ async function init(){
   await sbLoad();  // then fetch fresh from Supabase
 
   _q("addBtn").onclick=()=>openModal(null);
-  _q("importBtn").onclick=()=>_q("fileInput").click();
+  function downloadTemplate(){
+  var rows=[
+    ["คำแนะนำ: กรอกข้อมูลใต้หัวตาราง แล้วลบแถวตัวอย่างออกก่อนนำเข้า · ประเภทใช้คำว่า ทดลองงาน / ลาคลอด / สัญญา / เอกสาร · วันที่ใช้ dd/mm/yyyy (พ.ศ. หรือ ค.ศ. ก็ได้)","","","","",""],
+    ["ชื่อพนักงาน","ประเภท","วันที่ (เริ่มงาน/เริ่มลา หรือ วันครบกำหนด)","จำนวนวัน (เฉพาะลาคลอด)","แผนก","หมายเหตุ"],
+    ["สมชาย ใจดี (ตัวอย่าง-ลบทิ้ง)","ทดลองงาน","01/08/2569","","คลังสินค้า","วันที่ = วันเริ่มงาน"],
+    ["สมหญิง รักงาน (ตัวอย่าง-ลบทิ้ง)","ลาคลอด","15/07/2569","45","บัญชี","วันที่ = วันเริ่มลา"],
+    ["บจก.ตัวอย่าง (ตัวอย่าง-ลบทิ้ง)","สัญญา","31/12/2569","","จัดซื้อ","วันที่ = วันครบกำหนด"],
+    ["ใบอนุญาต (ตัวอย่าง-ลบทิ้ง)","เอกสาร","30/09/2569","","HR","วันที่ = วันครบกำหนด"]
+  ];
+  var ws=XLSX.utils.aoa_to_sheet(rows);
+  ws["!cols"]=[{wch:30},{wch:12},{wch:34},{wch:18},{wch:14},{wch:26}];
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"template");
+  XLSX.writeFile(wb,"MASARU_Deadline_Template.xlsx");
+}
+_q("tmplBtn").onclick=downloadTemplate;
+_q("importBtn").onclick=()=>_q("fileInput").click();
   _q("fileInput").onchange=e=>{
     if(e.target.files[0]) handleFile(e.target.files[0]);
     e.target.value="";
