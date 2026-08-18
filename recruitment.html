@@ -897,7 +897,7 @@
         return `<div class="banner banner-err"><i class="ti ti-circle-x"></i><div><b>ไม่ผ่าน</b>${a.closeReason ? ' — ' + esc(a.closeReason) : ''}${a.closedAt ? ` · เมื่อ ${esc(a.closedAt)}` : ''}</div></div>`;
       }
       if (st === 'cancelled') {
-        return `<div class="banner banner-cancel"><i class="ti ti-user-x"></i><div><b>ยกเลิก</b>${a.closeReason ? ' — ' + esc(a.closeReason) : ''}${a.closedAt ? ` · เมื่อ ${esc(a.closedAt)}` : ''}</div></div>`;
+        return `<div class="banner banner-cancel"><i class="ti ti-user-x"></i><div><b>ยกเลิก</b>${a.closeReason ? ' — ' + esc(a.closeReason) : ''}${a.closedAt ? ` · เมื่อ ${esc(a.closedAt)}` : ''}${a.prevStatus ? ` · สถานะก่อนยกเลิก: <b>${stMeta(a.prevStatus).label}</b>` : ''}</div></div>`;
       }
       const curIdx = FLOW.indexOf(st);
       return `<div class="stepper">${FLOW.map((s, i) => {
@@ -992,7 +992,7 @@
             ${interestBtn(a)}
             ${isExec ? '' : backupBtn(a)}
             ${isExec ? '' : `${['cancelled','rejected','hired'].includes(st) ? `<button class="icon-btn restore" onclick="restoreCancelled('${a.id}')" title="ย้อนกลับไปสถานะก่อนหน้า"><i class="ti ti-arrow-back-up"></i>ย้อนกลับ</button>` : ''}
-            ${!['rejected','cancelled','hired'].includes(st) ? `<button class="icon-btn warn" onclick="doWithdraw('${a.id}')"><i class="ti ti-user-x"></i>ผู้สมัครยกเลิก</button>` : ''}
+            ${!['rejected','cancelled'].includes(st) ? `<button class="icon-btn warn" onclick="doWithdraw('${a.id}')"><i class="ti ti-user-x"></i>ผู้สมัครยกเลิก</button>` : ''}
             <button class="icon-btn danger" onclick="doDelete('${a.id}')"><i class="ti ti-trash"></i></button>`}
           </div>
         </div>
@@ -1248,8 +1248,12 @@
     }
     async function doWithdraw(id) {
       const a = getA(id); if (!a) return;
-      if (!await askConfirm('บันทึกว่าผู้สมัครยกเลิก / ถอนตัว?', { title: 'ผู้สมัครยกเลิก', okText: 'ยืนยัน', danger: true })) return;
-      if (await dbUpdate(id, { status: 'cancelled', closeReason: 'ผู้สมัครยกเลิก/ถอนตัว', closedAt: todayTh(), prevStatus: statusOf(a) })) { showToast('บันทึกว่ายกเลิกแล้ว'); await refresh(); }
+      const st = statusOf(a);
+      let reason = prompt('เหตุผลการยกเลิก (แก้ไขได้):', st === 'hired' ? 'ผู้สมัครยกเลิกกะทันหันก่อนเริ่มงาน' : 'ผู้สมัครยกเลิก/ถอนตัว');
+      if (reason === null) return;
+      reason = reason.trim() || 'ผู้สมัครยกเลิก/ถอนตัว';
+      if (!await askConfirm(`ย้ายผู้สมัคร <b>${esc(a.name)}</b> ไปหมวด "ยกเลิก"?<br><span style="color:var(--muted);font-size:13px">เหตุผล: ${esc(reason)}<br>ข้อมูลและความคืบหน้าทั้งหมดจะถูกเก็บไว้ สามารถกด "ย้อนกลับ" คืนสถานะเดิม (${stMeta(st).label}) ได้ภายหลัง</span>`, { title: 'ผู้สมัครยกเลิก', okText: 'ยืนยันยกเลิก', danger: true })) return;
+      if (await dbUpdate(id, { status: 'cancelled', closeReason: reason, closedAt: todayTh(), prevStatus: st })) { showToast('ย้ายไปหมวดยกเลิกแล้ว'); await refresh(); }
     }
     function inferPrev(a) {
       if (a.offerResult === 'rejected' || a.offerSentAt || a.offerSalary) return 'offer';
