@@ -1987,12 +1987,14 @@ function fmWindowISO(){
     return { from:a, to:b, len:len, off:0 };
   }
   var e = fmCurEmp();
-  if(!e || !e.start_date) return null;
+  var startISO = (e && e.start_date) ? String(e.start_date).slice(0,10)
+               : thTextToISO($F('pf_start').value);   /* ไม่พบในระบบ → ใช้วันเริ่มงานที่กรอกในฟอร์ม */
+  if(!startISO) return null;
   var t = FORM_ROUND[$F('fmType').value] || FORM_ROUND.p30;
   var total = parseInt($F('pf_days').value,10) || t.d;
   var off = 0;                             /* เริ่มนับจากวันเริ่มงานเสมอ */
   var len = Math.max(1, total || t.len);   /* สะสมถึงวันครบตามจำนวนวันที่กรอก */
-  var d0 = new Date(String(e.start_date).slice(0,10));
+  var d0 = new Date(startISO);
   if(isNaN(d0)) return null;
   function iso(dd){ return dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0')+'-'+String(dd.getDate()).padStart(2,'0'); }
   var a = new Date(d0); a.setDate(a.getDate()+off);
@@ -2060,6 +2062,7 @@ function applyFormType(keepDays){
   });
 });
 $F('fmType').addEventListener('change', function(){ applyFormType(false); });
+$F('pf_start').addEventListener('change', function(){ applyFormType(true); });
 $F('pf_days').addEventListener('input', function(){ applyFormType(true); });
 function fmAddDaysTh(iso, n){
   var d = new Date(String(iso).slice(0,10)); if(isNaN(d)) return '';
