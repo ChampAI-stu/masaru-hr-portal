@@ -199,8 +199,12 @@ body.locked{overflow:hidden}
   #formDoc.pdfing{gap:0}
   #formDoc.pdfing .sheet{height:297mm;min-height:297mm;max-height:297mm;overflow:hidden;box-shadow:none;border:none;margin:0}
   #formDoc.pdfing #formPage1 .sh-score{flex:1 1 auto;height:auto}
-  #formDoc.pdfing #formPage2 > .sh-band:not(:first-of-type){margin-top:auto}
-  #formDoc.pdfing #formPage2 .sh-sign1,#formDoc.pdfing #formPage2 .sh-sign2{margin-top:auto}
+  #formDoc.pdfing #formPage2 .sh-band{margin-top:6mm}
+  #formDoc.pdfing #formPage2 .sh-band:first-of-type{margin-top:0}
+  #formDoc.pdfing #formPage2 .sh-sum > div{padding:5px 0}
+  #formDoc.pdfing #formPage2 .sh-sign1{margin-top:10mm;margin-bottom:4mm}
+  #formDoc.pdfing #formPage2 .sh-sign2 td{height:22mm;vertical-align:bottom;padding-bottom:4mm}
+  #formDoc.pdfing #formPage2 .sh-note{margin-top:auto}
   .sheet{width:210mm;min-height:297mm;display:flex;flex-direction:column;background:#fff;color:#000;padding:11mm 10mm 9mm;
     box-shadow:0 10px 40px rgba(16,35,63,.18);border:1px solid var(--line);
     font-family:'IBM Plex Sans Thai',sans-serif;font-size:11px;line-height:1.35}
@@ -316,8 +320,12 @@ body.locked{overflow:hidden}
   .sheet:last-child{page-break-after:auto;break-after:auto}
   /* ยืดเนื้อหาให้เต็มความสูง A4 */
   #formPage1 .sh-score{flex:1 1 auto;height:auto}
-  #formPage2 > .sh-band:not(:first-of-type){margin-top:auto}
-  #formPage2 .sh-sign1,#formPage2 .sh-sign2{margin-top:auto}
+  #formPage2 .sh-band{margin-top:6mm}
+  #formPage2 .sh-band:first-of-type{margin-top:0}
+  #formPage2 .sh-sum > div{padding:5px 0}
+  #formPage2 .sh-sign1{margin-top:10mm;margin-bottom:4mm}
+  #formPage2 .sh-sign2 td{height:22mm;vertical-align:bottom;padding-bottom:4mm}
+  #formPage2 .sh-note{margin-top:auto}
 }
 
 
@@ -358,8 +366,12 @@ body.locked{overflow:hidden}
 .pdf-stage .sheet{width:210mm;height:297mm;min-height:297mm;max-height:297mm;overflow:hidden;
   box-shadow:none;border:none;margin:0}
 .pdf-stage .sheet .sh-score{flex:1 1 auto;height:auto}
-.pdf-stage .sheet > .sh-band:not(:first-of-type){margin-top:auto}
-.pdf-stage .sheet .sh-sign1,.pdf-stage .sheet .sh-sign2{margin-top:auto}
+.pdf-stage #formPage2 .sh-band{margin-top:6mm}
+.pdf-stage #formPage2 .sh-band:first-of-type{margin-top:0}
+.pdf-stage #formPage2 .sh-sum > div{padding:5px 0}
+.pdf-stage #formPage2 .sh-sign1{margin-top:10mm;margin-bottom:4mm}
+.pdf-stage #formPage2 .sh-sign2 td{height:22mm;vertical-align:bottom;padding-bottom:4mm}
+.pdf-stage #formPage2 .sh-note{margin-top:auto}
 .fi-flat{display:inline-block;width:100%;border-bottom:1px dotted #666;padding:0 3px;
   line-height:16px;min-height:16px;vertical-align:middle;white-space:nowrap;overflow:hidden;
   font-size:11px;color:#000}
