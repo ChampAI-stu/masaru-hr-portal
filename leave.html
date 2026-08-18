@@ -86,7 +86,7 @@ tbody tr:hover{background:#F7F7F3}
 
 .act{display:flex;gap:6px;white-space:nowrap}
 .mini{padding:6px 12px;font-size:12.5px;border-radius:8px;border:none;color:#fff}
-.m-ok{background:var(--present)} .m-bad{background:var(--absent)} .m-ack{background:var(--navy)}
+.m-ok{background:var(--present)} .m-bad{background:var(--absent)} .m-ack{background:var(--navy)} .m-doc{background:var(--vacation);padding:4px 9px}
 .mini:hover{filter:brightness(1.08)}
 
 .empty{padding:46px;text-align:center;color:var(--muted)}
@@ -232,6 +232,18 @@ async function act(id, what){
   await loadAll();
 }
 
+/* ---------- ดูไฟล์หลักฐาน ---------- */
+async function viewDocs(id){
+  const r = rows.find(x=>x.id===id);
+  const list = (r && Array.isArray(r.attachments)) ? r.attachments : [];
+  if(!list.length){ toast("ไม่มีไฟล์แนบ"); return; }
+  for(const p of list){
+    const {data, error} = await db.storage.from("leave-docs").createSignedUrl(p, 3600);
+    if(error){ toast("เปิดไฟล์ไม่สำเร็จ: "+error.message); return; }
+    window.open(data.signedUrl, "_blank");
+  }
+}
+
 /* ---------- Render ---------- */
 function tagOf(t){ return `<span class="tag ${TAGC[t]||'t-etc'}">${esc(t)}</span>`; }
 
@@ -249,7 +261,7 @@ function rowHtml(r, withAct){
     <td class="emp"><b>${esc(r.emp_name)}</b><div class="mut">${esc(r.emp_code)} • ${esc(r.department||"-")}</div></td>
     <td>${tagOf(r.leave_type)}</td>
     <td>${range(r)}</td>
-    <td>${esc(r.reason||"-")}${r.has_document?' <span class="doc">📎</span>':''}</td>
+    <td>${esc(r.reason||"-")}${(r.attachments&&r.attachments.length)?` <button class="btn mini m-doc" onclick="viewDocs(${r.id})" title="ดูหลักฐาน">📎 ${r.attachments.length}</button>`:(r.has_document?' <span class="doc" title="แจ้งว่ามีเอกสาร แต่ยังไม่ส่งไฟล์">📎รอไฟล์</span>':'')}</td>
     <td>${pipeline(r)}</td>
     <td class="mut">${esc(r.approved_by||"-")}</td>
     ${withAct?`<td><div class="act">${actions}</div></td>`:""}
@@ -346,7 +358,7 @@ function exportExcel(){
   const list = tab==="all" ? applyFilter(rows) : rows;
   const data = list.map(r=>({ "ID":r.id, "รหัสพนักงาน":r.emp_code, "ชื่อ":r.emp_name, "แผนก":r.department||"",
     "ประเภท":r.leave_type, "ตั้งแต่":thD(r.date_from), "ถึง":thD(r.date_to), "เหตุผล":r.reason||"",
-    "เอกสารแนบ":r.has_document?"มี":"ไม่มี", "สถานะ":stage(r), "ผู้อนุมัติ":r.approved_by||"",
+    "เอกสารแนบ":r.has_document?"มี":"ไม่มี", "จำนวนไฟล์":(r.attachments||[]).length, "สถานะ":stage(r), "ผู้อนุมัติ":r.approved_by||"",
     "HR รับทราบโดย":r.hr_ack_by||"", "ข้อความต้นฉบับ":r.raw_message||"" }));
   const ws = XLSX.utils.json_to_sheet(data);
   ws["!cols"] = [{wch:5},{wch:12},{wch:22},{wch:14},{wch:10},{wch:10},{wch:10},{wch:24},{wch:9},{wch:18},{wch:14},{wch:14},{wch:30}];
