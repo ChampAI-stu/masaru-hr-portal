@@ -445,7 +445,7 @@
           <option value="in">ตามแผนฝึกอบรมประจำปี</option><option value="out">นอกแผนฝึกอบรมประจำปี</option>
         </select></div>
         <div class="fld"><label>ปี (พ.ศ.)</label><select id="cmYear"></select></div>
-        <div class="fld"><label>ผู้อบรม <span class="sub">(กลุ่มเป้าหมาย)</span></label><input id="cmAudience" placeholder="เช่น พนักงานคลังสินค้า"></div>
+        <div class="fld"><label>ผู้เข้าร่วมอบรม <span class="sub">(กลุ่มเป้าหมาย)</span></label><input id="cmAudience" placeholder="เช่น พนักงานคลังสินค้า"></div>
         <div class="fld"><label>วิทยากร</label><input id="cmTrainer"></div>
         <div class="fld"><label>งบประมาณ (บาท)</label><input type="number" id="cmBudget" min="0" step="100"></div>
         <div class="fld"><label>จำนวนชั่วโมง</label><input type="number" id="cmHours" min="0" step="0.5"></div>
@@ -816,7 +816,7 @@ var PLAN_COLGROUP = '<colgroup>'
   + '</colgroup>';
 var PLAN_THEAD = '<thead><tr>'
   + '<th rowspan="2">ที่</th><th rowspan="2">ชื่อหลักสูตร</th><th rowspan="2">ประเภท</th>'
-  + '<th rowspan="2">ผู้อบรม</th><th rowspan="2">งบประมาณ</th><th colspan="12">ระยะเวลา</th>'
+  + '<th rowspan="2">ผู้เข้าร่วมอบรม</th><th rowspan="2">งบประมาณ</th><th colspan="12">ระยะเวลา</th>'
   + '<th rowspan="2">วิทยากร</th><th rowspan="2">หมายเหตุ</th><th rowspan="2" class="col-act">จัดการ</th>'
   + '</tr><tr>' + MONTH_TH.map(function(m){ return '<th class="mh">'+m+'</th>'; }).join('') + '</tr></thead>';
 
@@ -831,7 +831,7 @@ function planRowHTML(c, i, type){
     + '<td class="seq">'+(i+1)+(DIRTY[c.id]?'<span class="dirty-dot"></span>':'')+'</td>'
     + '<td><input data-f="name" value="'+esc(c.name||'')+'" placeholder="ชื่อหลักสูตร"></td>'
     + '<td><select data-f="category">'+catOptions(c.category)+'</select></td>'
-    + '<td><input data-f="audience" value="'+esc(c.audience||'')+'" placeholder="กลุ่มผู้อบรม"></td>'
+    + '<td><input data-f="audience" value="'+esc(c.audience||'')+'" placeholder="กลุ่มผู้เข้าร่วมอบรม"></td>'
     + '<td><input data-f="budget" type="number" min="0" step="100" value="'+(c.budget==null?'':c.budget)+'" style="text-align:right"></td>'
     + mcells
     + '<td><input data-f="trainer" value="'+esc(c.trainer||'')+'" placeholder="วิทยากร"></td>'
@@ -981,7 +981,7 @@ $('planExport').addEventListener('click', function(){
   PLAN_TYPES.forEach(function(t){
     planRows(t.key).forEach(function(c,i){
       var o = {'แผน':t.title,'ที่':i+1,'ชื่อหลักสูตร':c.name||'','ประเภท':c.category||'',
-               'รูปแบบการจัดอบรม':c.train_format||'','ผู้อบรม':c.audience||'','งบประมาณ':Number(c.budget)||0};
+               'รูปแบบการจัดอบรม':c.train_format||'','ผู้เข้าร่วมอบรม':c.audience||'','งบประมาณ':Number(c.budget)||0};
       MONTH_TH.forEach(function(m,mi){ o[m] = c.months.indexOf(mi+1)>=0 ? '✓' : ''; });
       o['วิทยากร']=c.trainer||''; o['หมายเหตุ']=c.note||''; o['ผู้เข้าอบรม (คน)']=courseJoinCount(c.id);
       rows.push(o);
@@ -1019,7 +1019,7 @@ function renderCourses(){
         + (planTypeOf(c)==='in'?'ตามแผนประจำปี':'นอกแผนประจำปี')+'</span></div>'
       + '<div class="cc-meta">'
         + '<div><i class="ti ti-user-star"></i> วิทยากร: '+esc(c.trainer||'-')+'</div>'
-        + '<div><i class="ti ti-users"></i> ผู้อบรม: '+esc(c.audience||'-')+'</div>'
+        + '<div><i class="ti ti-users"></i> ผู้เข้าร่วมอบรม: '+esc(c.audience||'-')+'</div>'
         + '<div><i class="ti ti-presentation"></i> รูปแบบ: '+esc(c.train_format||'-')+'</div>'
         + '<div><i class="ti ti-cash"></i> งบ: '+fmt(c.budget)+' บาท'+(c.hours? ' · '+fmt(c.hours)+' ชม.':'')+'</div>'
       + '</div>'
