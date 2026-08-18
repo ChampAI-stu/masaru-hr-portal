@@ -86,7 +86,7 @@ tbody tr:hover{background:#F7F7F3}
 
 .act{display:flex;gap:6px;white-space:nowrap}
 .mini{padding:6px 12px;font-size:12.5px;border-radius:8px;border:none;color:#fff}
-.m-ok{background:var(--present)} .m-bad{background:var(--absent)} .m-ack{background:var(--navy)} .m-doc{background:var(--vacation);padding:4px 9px}
+.m-ok{background:var(--present)} .m-bad{background:var(--absent)} .m-ack{background:var(--navy)} .m-doc{background:var(--vacation);padding:4px 9px} .m-deldoc{background:var(--muted)} .m-delreq{background:var(--absent)}
 .mini:hover{filter:brightness(1.08)}
 
 .empty{padding:46px;text-align:center;color:var(--muted)}
@@ -244,17 +244,51 @@ async function viewDocs(id){
   }
 }
 
+/* ---------- ลบไฟล์แนบ / ลบคำขอ ---------- */
+async function delDocs(id){
+  const r = rows.find(x=>x.id===id);
+  const list = (r && Array.isArray(r.attachments)) ? r.attachments : [];
+  if(!list.length){ toast("ไม่มีไฟล์แนบ"); return; }
+  if(!confirm(`ลบไฟล์แนบ ${list.length} ไฟล์ ของคำขอ #${id}?\nข้อมูลคำขอยังอยู่ แต่ไฟล์กู้คืนไม่ได้`)) return;
+  const {error: se} = await db.storage.from("leave-docs").remove(list);
+  if(se){ toast("ลบไฟล์ไม่สำเร็จ: "+se.message); return; }
+  const {error} = await db.from("leave_requests")
+    .update({ attachments: [], purged_at: new Date().toISOString() }).eq("id", id);
+  if(error){ toast("อัปเดตไม่สำเร็จ: "+error.message); return; }
+  toast(`ลบไฟล์แนบคำขอ #${id} เรียบร้อย ✅`);
+  await loadAll();
+}
+
+async function delReq(id){
+  const r = rows.find(x=>x.id===id);
+  if(!confirm(`ลบคำขอ #${id}${r?` ของ ${r.emp_name}`:""} ทั้งรายการ?\nไฟล์แนบจะถูกลบด้วย และกู้คืนไม่ได้`)) return;
+  const list = (r && Array.isArray(r.attachments)) ? r.attachments : [];
+  if(list.length){
+    const {error: se} = await db.storage.from("leave-docs").remove(list);
+    if(se){ toast("ลบไฟล์ไม่สำเร็จ: "+se.message); return; }
+  }
+  const {error} = await db.from("leave_requests").delete().eq("id", id);
+  if(error){ toast("ลบคำขอไม่สำเร็จ: "+error.message); return; }
+  toast(`ลบคำขอ #${id} เรียบร้อย ✅`);
+  await loadAll();
+}
+
 /* ---------- Render ---------- */
 function tagOf(t){ return `<span class="tag ${TAGC[t]||'t-etc'}">${esc(t)}</span>`; }
 
-function rowHtml(r, withAct){
+function rowHtml(r, mode){
+  const withAct = !!mode;
   let actions = "";
-  if(withAct){
+  if(mode==="act"){
     if(r.status==="pending")
       actions = `<button class="btn mini m-ok" onclick="act(${r.id},'approve')">✅ อนุมัติ</button>
                  <button class="btn mini m-bad" onclick="act(${r.id},'reject')">❌ ไม่อนุมัติ</button>`;
     else if(!r.hr_ack_at)
       actions = `<button class="btn mini m-ack" onclick="act(${r.id},'ack')">👁 รับทราบ</button>`;
+  } else if(mode==="del"){
+    const nDocs = (r.attachments||[]).length;
+    actions = `${nDocs?`<button class="btn mini m-deldoc" onclick="delDocs(${r.id})" title="ลบเฉพาะไฟล์แนบ คำขอยังอยู่">🗑 ไฟล์ (${nDocs})</button>`:""}
+               <button class="btn mini m-delreq" onclick="delReq(${r.id})" title="ลบคำขอทั้งรายการ">🗑 คำขอ</button>`;
   }
   return `<tr>
     <td class="mut">#${r.id}</td>
@@ -268,11 +302,11 @@ function rowHtml(r, withAct){
   </tr>`;
 }
 
-function table(list, withAct){
+function table(list, mode){
   if(list.length===0) return `<div class="card"><div class="empty"><div class="big">🎉</div>ไม่มีรายการ</div></div>`;
   return `<div class="card"><table>
-    <thead><tr><th>#</th><th>พนักงาน</th><th>ประเภท</th><th>วันที่</th><th>เหตุผล</th><th>สถานะ</th><th>ผู้อนุมัติ</th>${withAct?"<th>จัดการ</th>":""}</tr></thead>
-    <tbody>${list.map(r=>rowHtml(r,withAct)).join("")}</tbody>
+    <thead><tr><th>#</th><th>พนักงาน</th><th>ประเภท</th><th>วันที่</th><th>เหตุผล</th><th>สถานะ</th><th>ผู้อนุมัติ</th>${mode?"<th>จัดการ</th>":""}</tr></thead>
+    <tbody>${list.map(r=>rowHtml(r,mode)).join("")}</tbody>
   </table></div>`;
 }
 
@@ -345,10 +379,10 @@ function render(){
   const k = kpis();
   if(tab==="pending"){
     const list = rows.filter(r=>r.status==="pending" || !r.hr_ack_at);
-    c.innerHTML = k + `<div class="count">รายการคงค้างที่ต้องดำเนินการ • กดปุ่มในตารางเพื่อจัดการแทนได้ (ไม่ส่งแจ้งเตือน LINE)</div>` + table(list,true);
+    c.innerHTML = k + `<div class="count">รายการคงค้างที่ต้องดำเนินการ • กดปุ่มในตารางเพื่อจัดการแทนได้ (ไม่ส่งแจ้งเตือน LINE)</div>` + table(list,"act");
   } else if(tab==="all"){
     const list = applyFilter(rows);
-    c.innerHTML = k + filterBar() + `<div class="count">แสดง ${list.length} จาก ${rows.length} รายการ</div>` + table(list,false);
+    c.innerHTML = k + filterBar() + `<div class="count">แสดง ${list.length} จาก ${rows.length} รายการ • 🗑 ลบไฟล์แนบ/ลบคำขอได้จากคอลัมน์จัดการ</div>` + table(list,"del");
   } else {
     c.innerHTML = k + summary();
   }
