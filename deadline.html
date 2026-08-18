@@ -1006,6 +1006,15 @@ function autoMilestones(){
   });
   return out;
 }
+/* แสดงชื่อรูปแบบเดียวกันทุกการ์ด: ชื่อเล่น (ชื่อ-นามสกุล) */
+function displayName(nm){
+  nm = ('' + (nm||'')).trim();
+  var m = nm.match(/^((?:นาย|นางสาว|นาง|น\.ส\.|ด\.ช\.|ด\.ญ\.)\s*.+?)\s*\(([^)]+)\)\s*$/);
+  if(m && !/^(?:นาย|นางสาว|นาง|น\.ส\.)/.test(m[2].trim())){
+    return m[2].trim() + ' (' + m[1].trim() + ')';   /* สลับ ชื่อจริง (ชื่อเล่น) -> ชื่อเล่น (ชื่อจริง) */
+  }
+  return nm;
+}
 function milestones(){
   const out=[];
   state.records.forEach(r=>{
@@ -1215,7 +1224,7 @@ function groupHTML(g){
   const dept = g.dept?' <span class="tag">'+escapeH(g.dept)+'</span>':'';
   const head = `<div class="ghead">
       <div class="icon">${typeIcon(g.type)}</div>
-      <div class="gtitle"><span class="tag">${typeName(g.type)}</span>${escapeH(g.name)}${dept}</div>
+      <div class="gtitle"><span class="tag">${typeName(g.type)}</span>${escapeH(displayName(g.name))}${dept}</div>
       <div class="glead">${ g.allDone ? '\u2705 เสร็จครบ' : daysText(g.leadDays)+' <span class="badge '+g.lead.st.k+'">'+g.lead.st.label+'</span>' }</div>
       ${ g.type==="probation" ? '<button class="gm-ext" data-ext-open="'+g.rid+'" title="ต่ออายุทดลองงาน">\u23F1 ต่ออายุ</button>' : '' }
       ${ String(g.rid).indexOf("auto:")===0 ? '<span class="auto-tag">อัตโนมัติ</span>' : '<button class="iconbtn" title="แก้ไข" onclick="editRec(\''+g.rid+'\')">\u270E</button>' }
