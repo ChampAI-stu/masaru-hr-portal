@@ -220,18 +220,19 @@ async function pageAll(table, orderCol){
   return all;
 }
 
-let emps=[], links=[], apprs=[], regs=[], uq="", adminCode="", showCode=false, lineQuota=null;
+let emps=[], links=[], apprs=[], regs=[], uq="", adminCode="", showCode=false, lineQuota=null, regCmd="ลงทะเบียน";
 const BOT_URL = "https://iyycyvnvfmerxkcfalea.supabase.co/functions/v1/dynamic-processor";
 async function loadAll(){
-  const [a,b,c,d,e,f] = await Promise.all([
+  const [a,b,c,d,e,f,g] = await Promise.all([
     pageAll("leave_requests","created_at"),
     db.from("employees").select("*").order("emp_code"),
     db.from("line_users").select("*").order("registered_at",{ascending:false}),
     db.from("approvers").select("*").order("id"),
     db.from("registration_requests").select("*").eq("status","pending").order("requested_at"),
     db.from("system_kv").select("v").eq("k","admin_code").maybeSingle(),
+    db.from("system_kv").select("v").eq("k","reg_command").maybeSingle(),
   ]);
-  rows = a; emps = b.data||[]; links = c.data||[]; apprs = d.data||[]; regs = e.data||[]; adminCode = (f.data&&f.data.v)||"";
+  rows = a; emps = b.data||[]; links = c.data||[]; apprs = d.data||[]; regs = e.data||[]; adminCode = (f.data&&f.data.v)||""; regCmd = (g.data&&g.data.v)||"ลงทะเบียน";
   fetchLineQuota();
   render();
 }
@@ -410,6 +411,17 @@ async function fetchLineQuota(){
   quotaFetching = false;
 }
 
+async function changeRegCmd(){
+  const nc = prompt("ตั้งคำสั่งลงทะเบียนใหม่\n(4-20 ตัวอักษร ห้ามมีเว้นวรรค เช่น สมัครMASARU)", regCmd);
+  if(nc===null) return;
+  const v = nc.trim();
+  if(v.length < 4 || v.length > 20 || /\s/.test(v)){ toast("ต้องยาว 4-20 ตัว และห้ามมีเว้นวรรค ❌"); return; }
+  const {error} = await db.from("system_kv").upsert({ k:"reg_command", v });
+  if(error){ toast("บันทึกไม่สำเร็จ: "+error.message); return; }
+  toast("เปลี่ยนคำสั่งลงทะเบียนเรียบร้อย ✅ มีผลทันที");
+  await loadAll();
+}
+
 function toggleCode(){ showCode = !showCode; render(); }
 async function changeCode(){
   const nc = prompt("ตั้งโค้ดลับผู้อนุมัติใหม่\n(อย่างน้อย 6 ตัวอักษร ห้ามมีเว้นวรรค)", adminCode);
@@ -495,6 +507,12 @@ function usersView(){
       <button class="btn mini m-ack" onclick="toggleCode()">${showCode?"🙈 ซ่อน":"👁 แสดง"}</button>
       <button class="btn mini m-delreq" onclick="changeCode()">✏️ เปลี่ยนโค้ด</button>
       <span class="mut">ใช้ตอนลงทะเบียนหัวหน้า/HR ในไลน์ — ส่งให้เฉพาะคนที่ไว้ใจ</span>
+      <div style="width:100%;border-top:1px solid var(--line);margin-top:11px;padding-top:11px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <b style="font-family:'Anuphan'">🗝 คำสั่งลงทะเบียน</b>
+        <code style="background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 12px;font-size:14px">${esc(regCmd)}</code>
+        <button class="btn mini m-delreq" onclick="changeRegCmd()">✏️ เปลี่ยนคำสั่ง</button>
+        <span class="mut">พนักงาน: <b>${esc(regCmd)} รหัส ชื่อ</b> • หัวหน้า: <b>${esc(regCmd)}หัวหน้า โค้ด แผนก</b> • HR: <b>${esc(regCmd)}HR โค้ด</b></span>
+      </div>
     </div>`;
 
   let lineSec = "";
