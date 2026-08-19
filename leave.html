@@ -220,7 +220,8 @@ async function pageAll(table, orderCol){
   return all;
 }
 
-let emps=[], links=[], apprs=[], regs=[], uq="", adminCode="", showCode=false;
+let emps=[], links=[], apprs=[], regs=[], uq="", adminCode="", showCode=false, lineQuota=null;
+const BOT_URL = "https://iyycyvnvfmerxkcfalea.supabase.co/functions/v1/dynamic-processor";
 async function loadAll(){
   const [a,b,c,d,e,f] = await Promise.all([
     pageAll("leave_requests","created_at"),
@@ -231,6 +232,7 @@ async function loadAll(){
     db.from("system_kv").select("v").eq("k","admin_code").maybeSingle(),
   ]);
   rows = a; emps = b.data||[]; links = c.data||[]; apprs = d.data||[]; regs = e.data||[]; adminCode = (f.data&&f.data.v)||"";
+  fetchLineQuota();
   render();
 }
 
@@ -397,6 +399,17 @@ async function delAppr(id){
   toast("ลบเรียบร้อย ✅"); await loadAll();
 }
 
+let quotaFetching = false;
+async function fetchLineQuota(){
+  if(!adminCode || quotaFetching) return;
+  quotaFetching = true;
+  try{
+    const res = await fetch(`${BOT_URL}?quota=${encodeURIComponent(adminCode)}`);
+    if(res.ok){ lineQuota = await res.json(); if(tab==="users") render(); }
+  }catch(e){ /* เงียบไว้ ไม่กวนหน้าจอ */ }
+  quotaFetching = false;
+}
+
 function toggleCode(){ showCode = !showCode; render(); }
 async function changeCode(){
   const nc = prompt("ตั้งโค้ดลับผู้อนุมัติใหม่\n(อย่างน้อย 6 ตัวอักษร ห้ามมีเว้นวรรค)", adminCode);
@@ -484,7 +497,28 @@ function usersView(){
       <span class="mut">ใช้ตอนลงทะเบียนหัวหน้า/HR ในไลน์ — ส่งให้เฉพาะคนที่ไว้ใจ</span>
     </div>`;
 
-  return codeSec + regSec + `
+  let lineSec = "";
+  if(lineQuota && lineQuota.quota){
+    const limit = lineQuota.quota.type==="none" ? null : (lineQuota.quota.value||0);
+    const used = (lineQuota.used&&lineQuota.used.totalUsage)||0;
+    const pct = limit ? Math.min(100, Math.round(used/limit*100)) : 0;
+    const barColor = pct>=90 ? "var(--absent)" : pct>=70 ? "var(--late)" : "var(--present)";
+    lineSec = `
+    <div class="card" style="margin-bottom:20px;padding:13px 16px">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <b style="font-family:'Anuphan'">📨 โควตาข้อความ LINE เดือนนี้</b>
+        ${limit===null
+          ? `<span class="tag" style="background:var(--present)">ไม่จำกัด</span>`
+          : `<span>ใช้ไป <b>${used.toLocaleString()}</b> / ${limit.toLocaleString()} ข้อความ (เหลือ ${(limit-used).toLocaleString()})</span>`}
+        <span class="mut">นับเฉพาะ push (แจ้งหัวหน้า/HR/ผลอนุมัติ) — ข้อความตอบกลับไม่นับ</span>
+      </div>
+      ${limit!==null?`<div style="margin-top:10px;height:8px;background:var(--bg);border-radius:99px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${barColor};border-radius:99px"></div>
+      </div>${pct>=90?'<div style="margin-top:6px;color:var(--absent);font-size:12.5px;font-weight:600">⚠️ ใกล้เต็มโควตา — พิจารณาอัปเกรดแพ็กเกจ OA</div>':""}`:""}
+    </div>`;
+  }
+
+  return codeSec + lineSec + regSec + `
     <div class="bar">
       <input type="search" placeholder="🔍 ค้นหา รหัส / ชื่อ / แผนก" value="${esc(uq)}" oninput="uq=this.value;render()">
       <button class="btn btn-red" onclick="openEmpModal(null)">➕ เพิ่มพนักงาน</button>
