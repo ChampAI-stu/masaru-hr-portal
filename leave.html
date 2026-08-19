@@ -214,16 +214,17 @@ async function pageAll(table, orderCol){
   return all;
 }
 
-let emps=[], links=[], apprs=[], regs=[], uq="";
+let emps=[], links=[], apprs=[], regs=[], uq="", adminCode="", showCode=false;
 async function loadAll(){
-  const [a,b,c,d,e] = await Promise.all([
+  const [a,b,c,d,e,f] = await Promise.all([
     pageAll("leave_requests","created_at"),
     db.from("employees").select("*").order("emp_code"),
     db.from("line_users").select("*").order("registered_at",{ascending:false}),
     db.from("approvers").select("*").order("id"),
     db.from("registration_requests").select("*").eq("status","pending").order("requested_at"),
+    db.from("system_kv").select("v").eq("k","admin_code").maybeSingle(),
   ]);
-  rows = a; emps = b.data||[]; links = c.data||[]; apprs = d.data||[]; regs = e.data||[];
+  rows = a; emps = b.data||[]; links = c.data||[]; apprs = d.data||[]; regs = e.data||[]; adminCode = (f.data&&f.data.v)||"";
   render();
 }
 
@@ -384,6 +385,18 @@ async function delAppr(id){
   toast("ลบเรียบร้อย ✅"); await loadAll();
 }
 
+function toggleCode(){ showCode = !showCode; render(); }
+async function changeCode(){
+  const nc = prompt("ตั้งโค้ดลับผู้อนุมัติใหม่\n(อย่างน้อย 6 ตัวอักษร ห้ามมีเว้นวรรค)", adminCode);
+  if(nc===null) return;
+  const v = nc.trim();
+  if(v.length < 6 || /\s/.test(v)){ toast("โค้ดต้องยาวอย่างน้อย 6 ตัว และห้ามมีเว้นวรรค ❌"); return; }
+  const {error} = await db.from("system_kv").upsert({ k:"admin_code", v });
+  if(error){ toast("บันทึกไม่สำเร็จ: "+error.message); return; }
+  toast("เปลี่ยนโค้ดลับเรียบร้อย ✅ มีผลทันที");
+  await loadAll();
+}
+
 async function regDecide(id, ok){
   const g = regs.find(x=>x.id===id); if(!g) return;
   if(!confirm(`${ok?"ยืนยันตัวตน":"ปฏิเสธ"} "${g.emp_name}" (${g.emp_code})?\n(การกดจากเว็บจะไม่แจ้งเตือน LINE - พนักงานทราบเมื่อลองใช้งาน)`)) return;
@@ -450,7 +463,16 @@ function usersView(){
       </tr>`).join("")}</tbody>
     </table></div>` : "";
 
-  return regSec + `
+  const codeSec = `
+    <div class="card" style="margin-bottom:20px;padding:13px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <b style="font-family:'Anuphan'">🔑 โค้ดลับผู้อนุมัติ</b>
+      <code style="background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 12px;font-size:14px;letter-spacing:1px">${showCode ? esc(adminCode||"(ยังไม่ตั้ง)") : "••••••••"}</code>
+      <button class="btn mini m-ack" onclick="toggleCode()">${showCode?"🙈 ซ่อน":"👁 แสดง"}</button>
+      <button class="btn mini m-delreq" onclick="changeCode()">✏️ เปลี่ยนโค้ด</button>
+      <span class="mut">ใช้ตอนลงทะเบียนหัวหน้า/HR ในไลน์ — ส่งให้เฉพาะคนที่ไว้ใจ</span>
+    </div>`;
+
+  return codeSec + regSec + `
     <div class="bar">
       <input type="search" placeholder="🔍 ค้นหา รหัส / ชื่อ / แผนก" value="${esc(uq)}" oninput="uq=this.value;render()">
       <button class="btn btn-red" onclick="openEmpModal(null)">➕ เพิ่มพนักงาน</button>
