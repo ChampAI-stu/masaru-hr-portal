@@ -127,6 +127,14 @@ body.locked{overflow:hidden}
 .modal-b label{display:block;font-size:12.5px;font-weight:600;color:var(--ink);margin:12px 0 5px}
 .modal-b input{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-family:inherit;font-size:14px;box-sizing:border-box}
 .modal-f{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}
+/* ===== หน้าต่างประวัติแชท ===== */
+.chat-modal{background:#fff;border-radius:16px;width:480px;max-width:100%;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.35);display:flex;flex-direction:column;max-height:82vh}
+.chat-body{padding:14px;overflow-y:auto;background:var(--bg);display:flex;flex-direction:column;gap:8px;min-height:200px}
+.bub{max-width:78%;padding:8px 12px;border-radius:14px;font-size:13.5px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
+.bub .bt{font-size:10.5px;color:var(--muted);margin-top:3px}
+.bub.in{align-self:flex-start;background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px}
+.bub.out{align-self:flex-end;background:var(--navy);color:#fff;border-bottom-right-radius:4px}
+.bub.out .bt{color:#AEB8CF}
 </style>
 </head>
 <body class="locked">
@@ -187,6 +195,14 @@ body.locked{overflow:hidden}
       <button class="btn btn-line" onclick="closeModal()">ยกเลิก</button>
       <button class="btn btn-red" id="mSave">บันทึก</button>
     </div>
+  </div>
+</div>
+
+<div class="modal-bg hide" id="chatBg" onclick="if(event.target===this)closeChat()">
+  <div class="chat-modal">
+    <div class="modal-h" id="chatTitle">💬 ประวัติแชท</div>
+    <div class="chat-body" id="chatBody"></div>
+    <div class="modal-f"><span class="mut" style="margin-right:auto" id="chatInfo"></span><button class="btn btn-line" onclick="closeChat()">ปิด</button></div>
   </div>
 </div>
 
@@ -451,6 +467,28 @@ async function regDecide(id, ok){
   await loadAll();
 }
 
+async function openChat(code){
+  const l = links.find(x=>x.emp_code===code);
+  const e = emps.find(x=>x.emp_code===code);
+  if(!l){ toast("พนักงานคนนี้ยังไม่ผูก LINE"); return; }
+  document.getElementById("chatTitle").textContent = `💬 ${e?e.emp_name:code} (${code})`;
+  document.getElementById("chatBody").innerHTML = '<div class="mut" style="text-align:center;padding:20px">กำลังโหลด...</div>';
+  document.getElementById("chatBg").classList.remove("hide");
+  const {data, error} = await db.from("chat_logs").select("*")
+    .eq("line_user_id", l.line_user_id)
+    .order("created_at", {ascending:false}).limit(200);
+  if(error){ document.getElementById("chatBody").innerHTML = `<div class="mut">โหลดไม่สำเร็จ: ${esc(error.message)}</div>`; return; }
+  const list = (data||[]).reverse();
+  document.getElementById("chatInfo").textContent = `แสดง ${list.length} ข้อความล่าสุด (เก็บย้อนหลัง 180 วัน)`;
+  document.getElementById("chatBody").innerHTML = list.length ? list.map(m=>{
+    const t = String(m.created_at||"").slice(0,16).replace("T"," ");
+    const icon = m.msg_type==="image"?"🖼 ":m.msg_type==="file"?"📄 ":m.msg_type==="postback"?"👆 ":m.msg_type==="flex"?"🧾 ":"";
+    return `<div class="bub ${m.direction==="in"?"in":"out"}">${icon}${esc(m.content||"")}<div class="bt">${t}</div></div>`;
+  }).join("") : '<div class="mut" style="text-align:center;padding:20px">ยังไม่มีประวัติแชท<br>(ระบบเริ่มบันทึกหลังติดตั้งเวอร์ชันนี้)</div>';
+  const cb = document.getElementById("chatBody"); cb.scrollTop = cb.scrollHeight;
+}
+function closeChat(){ document.getElementById("chatBg").classList.add("hide"); }
+
 function usersView(){
   const q = uq.toLowerCase();
   const list = emps.filter(e=>!q || `${e.emp_code} ${e.emp_name} ${e.department}`.toLowerCase().includes(q));
@@ -466,7 +504,8 @@ function usersView(){
       <td>${l?`✅ <span class="mut">${String(l.registered_at||"").slice(0,10)}</span>`:'<span class="mut">-</span>'}</td>
       <td><div class="act">
         <button class="btn mini m-ack" onclick="openEmpModal('${esc(e.emp_code)}')">✏️ แก้ไข</button>
-        ${l?`<button class="btn mini m-deldoc" onclick="unbind('${esc(e.emp_code)}')">🔓 ปลดผูก</button>`:""}
+        ${l?`<button class="btn mini m-doc" onclick="openChat('${esc(e.emp_code)}')">💬 แชท</button>
+        <button class="btn mini m-deldoc" onclick="unbind('${esc(e.emp_code)}')">🔓 ปลดผูก</button>`:""}
         <button class="btn mini ${e.is_active?'m-bad':'m-ok'}" onclick="toggleEmp('${esc(e.emp_code)}')">${e.is_active?'⛔ พ้นสภาพ':'↩️ คืนสถานะ'}</button>
         <button class="btn mini m-delreq" onclick="delEmp('${esc(e.emp_code)}')">🗑</button>
       </div></td>
