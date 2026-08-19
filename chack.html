@@ -2207,15 +2207,27 @@ function renderShifts(){
   var tb=$('shBody');
   if(!SHIFTS.length){ tb.innerHTML='<tr><td colspan="5" class="muted">ยังไม่มีกะ — กรอกด้านบนแล้วกด "+ เพิ่มกะ"</td></tr>'; }
   else tb.innerHTML=SHIFTS.map(function(s){
+    if(String(editingId)===String(s.id)){
+      /* แถวโหมดแก้ไข: กรอกในแถวตัวเอง เห็นชัดว่ากำลังแก้ตัวไหน */
+      return '<tr data-id="'+s.id+'" style="background:#FFFBEB">'
+        +'<td><input id="edName" value="'+esc(s.name)+'" style="width:150px"></td>'
+        +'<td><input type="time" id="edIn" value="'+hm(s.time_in)+'"> – <input type="time" id="edOut" value="'+hm(s.time_out)+'"></td>'
+        +'<td><input id="edNote" value="'+esc(s.note||'')+'" style="width:95%"></td>'
+        +'<td>'+countBy(s.id)+'</td>'
+        +'<td style="white-space:nowrap"><button class="btn go" data-save="'+s.id+'">💾 บันทึก</button> <button class="btn" data-cancel="1">ยกเลิก</button></td></tr>';
+    }
     return '<tr data-id="'+s.id+'">'
       +'<td><b>'+esc(s.name)+'</b></td>'
       +'<td><span class="chip">'+hm(s.time_in)+' – '+hm(s.time_out)+'</span></td>'
       +'<td>'+esc(s.note||'')+'</td>'
       +'<td>'+countBy(s.id)+'</td>'
-      +'<td><button class="btn" data-edit="'+s.id+'">แก้ไข</button> <button class="btn danger" data-del="'+s.id+'">ลบ</button></td></tr>';
+      +'<td><button class="btn" data-edit="'+s.id+'"'+(editingId?' disabled':'')+'>แก้ไข</button> <button class="btn danger" data-del="'+s.id+'"'+(editingId?' disabled':'')+'>ลบ</button></td></tr>';
   }).join('');
-  tb.querySelectorAll('[data-edit]').forEach(function(b){ b.onclick=function(){ editShift(b.dataset.edit); }; });
+  tb.querySelectorAll('[data-edit]').forEach(function(b){ b.onclick=function(){ editingId=b.dataset.edit; renderShifts(); }; });
   tb.querySelectorAll('[data-del]').forEach(function(b){ b.onclick=function(){ delShift(b.dataset.del); }; });
+  tb.querySelectorAll('[data-cancel]').forEach(function(b){ b.onclick=function(){ editingId=null; renderShifts(); }; });
+  tb.querySelectorAll('[data-save]').forEach(function(b){ b.onclick=function(){ saveInlineEdit(b.dataset.save); }; });
+  var ed=tb.querySelector('#edName'); if(ed) ed.focus();
   var opts='<option value="">— ไม่กำหนดกะ —</option>'+SHIFTS.map(function(s){
     return '<option value="'+s.id+'">'+esc(s.name)+' ('+hm(s.time_in)+'-'+hm(s.time_out)+')</option>'; }).join('');
   $('asBulk').innerHTML=opts;
@@ -2225,21 +2237,24 @@ var editingId=null;
 $('shAdd').onclick=async function(){
   var name=$('shName').value.trim(), tin=$('shIn').value, tout=$('shOut').value, note=$('shNote').value.trim();
   if(!name||!tin||!tout){ msg('shMsg','กรอกชื่อกะ + เวลาเข้า/ออก',false); return; }
-  var row={name:name, time_in:tin, time_out:tout, note:note||null};
-  var r = editingId ? await sb().from('daiki_shifts').update(row).eq('id',editingId)
-                    : await sb().from('daiki_shifts').insert(row);
+  var dup=SHIFTS.some(function(s){ return s.name.trim().toLowerCase()===name.toLowerCase(); });
+  if(dup){ msg('shMsg','มีกะชื่อ "'+name+'" อยู่แล้ว',false); return; }
+  var r=await sb().from('daiki_shifts').insert({name:name, time_in:tin, time_out:tout, note:note||null});
   if(r.error){ msg('shMsg','บันทึกไม่สำเร็จ: '+r.error.message,false); return; }
-  msg('shMsg', editingId?'แก้ไขแล้ว ✓':'เพิ่มกะแล้ว ✓', true);
-  editingId=null; $('shAdd').textContent='+ เพิ่มกะ';
+  msg('shMsg','เพิ่มกะแล้ว ✓',true);
   $('shName').value=''; $('shNote').value='';
   window.__shiftActivate();
 };
-function editShift(id){
-  var s=SHIFTS.filter(function(x){return String(x.id)===String(id);})[0]; if(!s) return;
-  editingId=s.id;
-  $('shName').value=s.name; $('shIn').value=hm(s.time_in); $('shOut').value=hm(s.time_out); $('shNote').value=s.note||'';
-  $('shAdd').textContent='💾 บันทึกการแก้ไข';
-  $('shName').focus();
+async function saveInlineEdit(id){
+  var name=$('edName').value.trim(), tin=$('edIn').value, tout=$('edOut').value, note=$('edNote').value.trim();
+  if(!name||!tin||!tout){ msg('shMsg','กรอกชื่อกะ + เวลาเข้า/ออกให้ครบ',false); return; }
+  var dup=SHIFTS.some(function(s){ return String(s.id)!==String(id) && s.name.trim().toLowerCase()===name.toLowerCase(); });
+  if(dup){ msg('shMsg','มีกะชื่อ "'+name+'" อยู่แล้ว',false); return; }
+  var r=await sb().from('daiki_shifts').update({name:name, time_in:tin, time_out:tout, note:note||null}).eq('id',id);
+  if(r.error){ msg('shMsg','บันทึกไม่สำเร็จ: '+r.error.message,false); return; }
+  editingId=null;
+  msg('shMsg','แก้ไขแล้ว ✓',true);
+  window.__shiftActivate();
 }
 async function delShift(id){
   var s=SHIFTS.filter(function(x){return String(x.id)===String(id);})[0]; if(!s) return;
