@@ -466,6 +466,7 @@
       </div>
       <div class="add-join">
         <div class="aj-head"><i class="ti ti-user-plus"></i> เพิ่มผู้เข้าร่วมอบรม
+          <button id="cmQrCheckin" class="btn" style="margin-left:10px;padding:5px 11px;font-size:12.5px"><i class="ti ti-qrcode"></i> QR ลงทะเบียน</button>
           <span class="hint" style="margin:0 0 0 auto;font-size:12.5px">พิมพ์ชื่อเพื่อค้นหา แล้วติ๊กเลือก (เลือกหลายคนได้)</span></div>
         <div class="fgrid" style="margin-bottom:12px">
           <div class="fld"><label>วันที่อบรม</label><input type="date" id="cmJoinDate"></div>
@@ -1273,6 +1274,30 @@ $('qrGen').addEventListener('click', function(){
     curQrData = data; drawQr(); toast('สร้าง QR จากลิงก์แล้ว — อย่าลืมกดบันทึก');
   });
 });
+document.getElementById('cmQrCheckin').addEventListener('click', function(){
+  if(!curCourseId){ toast('เปิดหลักสูตรก่อน', true); return; }
+  var c = COURSES.filter(function(x){ return String(x.id)===String(curCourseId); })[0];
+  var url = location.origin + location.pathname + '?checkin=' + encodeURIComponent(curCourseId);
+  var qrImg = 'https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=10&data=' + encodeURIComponent(url);
+  var w = window.open('', '_blank', 'width=800,height=1000');
+  if(!w){ toast('เบราว์เซอร์บล็อกหน้าต่างใหม่', true); return; }
+  var html = '<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"><title>QR ลงทะเบียนเข้าอบรม</title>'
+    + '<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">'
+    + '<style>body{font-family:"IBM Plex Sans Thai",sans-serif;text-align:center;padding:40px;color:#16294d}'
+    + '.brand{font-weight:800;letter-spacing:2px;color:#16294d;font-size:22px}'
+    + '.bar{height:5px;background:#d62030;margin:10px auto 26px;width:200px;border-radius:3px}'
+    + 'h1{font-size:26px;margin:6px 0 4px} h2{font-size:19px;font-weight:600;color:#64708a;margin-bottom:26px}'
+    + 'img{width:400px;height:400px} .url{margin-top:22px;font-size:15px;color:#2E75B6;word-break:break-all}'
+    + '.tip{margin-top:8px;font-size:13px;color:#97a1b5}</style></head><body>'
+    + '<div class="brand">MASARU</div><div class="bar"></div>'
+    + '<h1>ลงทะเบียนเข้าอบรม</h1><h2>'+esc((c&&c.name)||'')+'</h2>'
+    + '<img src="'+qrImg+'">'
+    + '<div class="url">'+esc(url)+'</div>'
+    + '<div class="tip">สแกน QR หรือพิมพ์ลิงก์ กรอกชื่อ-แผนก ระบบบันทึกเข้าประวัติการอบรมทันที (ผลอบรม: รอประเมิน)</div>'
+    + '</body></html>';
+  w.document.write(html); w.document.close();
+  setTimeout(function(){ try{ w.print(); }catch(e){} }, 900);
+});
 $('qrClear').addEventListener('click', function(){ curQrData=''; drawQr(); toast('ลบ QR ในหน้าจอแล้ว — กดบันทึกเพื่อยืนยัน'); });
 $('qrPrint').addEventListener('click', function(){
   if(!curQrData){ toast('ยังไม่มี QR ให้พิมพ์', true); return; }
@@ -1487,7 +1512,68 @@ function init(){
   $('recDate').value = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   loadAll();
 }
+/* ---------- QR Check-in mode (สาธารณะ ไม่ต้องล็อกอิน) ---------- */
+var CHECKIN_ID = new URLSearchParams(location.search).get('checkin');
+function ciRender(){
+  document.body.classList.remove('locked');
+  document.body.innerHTML = '<div id="ciWrap" style="max-width:520px;margin:0 auto;padding:28px 18px;font-family:\'IBM Plex Sans Thai\',sans-serif">'
+    + '<div style="background:linear-gradient(135deg,#0e1c38,#16294d);border-radius:18px;padding:24px;color:#fff;border-bottom:4px solid #d62030;margin-bottom:18px">'
+    + '<div style="font-weight:800;letter-spacing:2px;font-size:15px">MASARU</div>'
+    + '<h1 id="ciTitle" style="font-size:20px;margin:10px 0 4px">กำลังโหลด…</h1>'
+    + '<div id="ciMeta" style="font-size:13px;opacity:.85"></div></div>'
+    + '<div id="ciCard" style="background:#fff;border:1px solid #e2e7ef;border-radius:16px;padding:22px;box-shadow:0 8px 28px rgba(16,60,45,.07)">'
+    + '<h3 style="color:#0e1c38;font-size:16px;margin:0 0 4px">ลงทะเบียนเข้าอบรม</h3>'
+    + '<div style="color:#64708a;font-size:13px;margin-bottom:16px">กรอกชื่อ-นามสกุลจริงตามทะเบียนพนักงาน ระบบจะบันทึกเข้าประวัติการอบรมทันที</div>'
+    + '<label style="display:block;font-size:12.5px;font-weight:600;color:#16294d;margin-bottom:5px">ชื่อ-นามสกุล *</label>'
+    + '<input id="ciName" style="width:100%;border:1px solid #e2e7ef;border-radius:10px;padding:11px 13px;font-size:15px;font-family:inherit;box-sizing:border-box;margin-bottom:12px" placeholder="เช่น นายสมชาย ใจดี">'
+    + '<label style="display:block;font-size:12.5px;font-weight:600;color:#16294d;margin-bottom:5px">แผนก</label>'
+    + '<input id="ciDept" list="ciDeptList" style="width:100%;border:1px solid #e2e7ef;border-radius:10px;padding:11px 13px;font-size:15px;font-family:inherit;box-sizing:border-box;margin-bottom:16px" placeholder="เลือกหรือพิมพ์">'
+    + '<datalist id="ciDeptList"><option value="HR"><option value="บัญชี"><option value="จัดซื้อ"><option value="คลังสินค้า"><option value="CS"><option value="After-sale"><option value="Marketing"><option value="ขายส่ง"><option value="Live/ไลฟ์สด"><option value="Graphic"><option value="IT"></datalist>'
+    + '<button id="ciBtn" style="width:100%;background:#16294d;color:#fff;border:none;border-radius:10px;padding:13px;font-weight:700;font-size:15px;font-family:inherit;cursor:pointer">ลงทะเบียน</button>'
+    + '<div id="ciErr" style="display:none;background:#fdecea;color:#c0392b;border-radius:8px;padding:9px 12px;font-size:13px;margin-top:12px"></div>'
+    + '</div></div>';
+  ciLoad();
+  document.getElementById('ciBtn').addEventListener('click', ciSubmit);
+}
+function ciErrShow(msg){ var el=document.getElementById('ciErr'); el.textContent=msg; el.style.display='block'; }
+async function ciLoad(){
+  try{
+    var r = await sb.rpc('training_checkin_info', { p_course: CHECKIN_ID });
+    if(r.error) throw r.error;
+    var d = r.data;
+    if(!d || !d.ok){ document.getElementById('ciTitle').textContent='ไม่พบหลักสูตรนี้'; document.getElementById('ciCard').style.display='none'; return; }
+    document.getElementById('ciTitle').textContent = d.name || '';
+    document.getElementById('ciMeta').textContent =
+      (d.trainer ? 'วิทยากร: '+d.trainer+' · ' : '') + (d.hours ? d.hours+' ชม. · ' : '') + 'ปี '+(d.year||'');
+  }catch(e){ document.getElementById('ciTitle').textContent='โหลดข้อมูลไม่สำเร็จ'; ciErrShow(errText(e)); }
+}
+async function ciSubmit(){
+  var nm=document.getElementById('ciName').value.trim(), dp=document.getElementById('ciDept').value.trim();
+  var el=document.getElementById('ciErr'); el.style.display='none';
+  if(!nm){ ciErrShow('กรุณากรอกชื่อ-นามสกุล'); return; }
+  var btn=document.getElementById('ciBtn'); btn.disabled=true; btn.textContent='กำลังบันทึก…';
+  try{
+    var r = await sb.rpc('training_checkin', { p_course: CHECKIN_ID, p_name: nm, p_dept: dp });
+    if(r.error) throw r.error;
+    var d = r.data;
+    if(!d.ok){
+      btn.disabled=false; btn.textContent='ลงทะเบียน';
+      if(d.error==='duplicate') ciErrShow('ชื่อนี้ลงทะเบียนหลักสูตรนี้ไปแล้ว');
+      else if(d.error==='missing_name') ciErrShow('กรุณากรอกชื่อ-นามสกุล');
+      else ciErrShow('ไม่พบหลักสูตร หรือหลักสูตรถูกลบไปแล้ว');
+      return;
+    }
+    document.getElementById('ciCard').innerHTML =
+      '<div style="text-align:center;padding:18px 6px">'
+      + '<div style="font-size:52px">✅</div>'
+      + '<h3 style="color:#1c7a4f;font-size:19px;margin:10px 0 6px">ลงทะเบียนสำเร็จ</h3>'
+      + '<div style="color:#64708a;font-size:14px">'+ nm +'<br>หลักสูตร: '+ (d.course||'') +'<br>วันที่ '+ (d.date||'') +'</div>'
+      + '<div style="color:#97a1b5;font-size:12.5px;margin-top:14px">ปิดหน้านี้ได้เลย — ข้อมูลถูกบันทึกเข้าประวัติการอบรมแล้ว</div></div>';
+  }catch(e){ btn.disabled=false; btn.textContent='ลงทะเบียน'; ciErrShow('บันทึกไม่สำเร็จ: '+errText(e)); }
+}
+
 (async function bootAuth(){
+  if(CHECKIN_ID){ ciRender(); return; }
   if(!sb){ showAppReady(); init(); return; }
   try{
     var res = await sb.auth.getSession();
