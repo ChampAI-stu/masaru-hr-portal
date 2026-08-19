@@ -220,7 +220,7 @@ const F = { status:"", type:"", dept:"", q:"", from:"", to:"" };
 const TAGC = {"ลาป่วย":"t-sick","ลากิจ":"t-biz","ลาพักร้อน":"t-vac","มาสาย":"t-late","ขาดงาน":"t-abs"};
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const thD = iso => { if(!iso) return "-"; const [y,m,d]=iso.split("-"); return `${d}/${m}/${(+y+543)%100}`; };
-const range = r => r.date_from===r.date_to ? thD(r.date_from) : `${thD(r.date_from)} - ${thD(r.date_to)}`;
+const range = r => (r.date_from===r.date_to ? thD(r.date_from) : `${thD(r.date_from)} - ${thD(r.date_to)}`) + (r.day_part && r.day_part!=="เต็มวัน" ? ` (${r.day_part})` : "");
 const toast = t => { const el=document.getElementById("toast"); el.textContent=t; el.classList.add("show"); setTimeout(()=>el.classList.remove("show"),2200); };
 
 /* โหลดข้อมูลทั้งหมด (เกิน 1000 แถวก็ครบ ด้วยการแบ่งหน้า) */
@@ -737,11 +737,11 @@ function render(){
 function exportExcel(){
   const list = tab==="all" ? applyFilter(rows) : rows;
   const data = list.map(r=>({ "ID":r.id, "รหัสพนักงาน":r.emp_code, "ชื่อ":r.emp_name, "แผนก":r.department||"",
-    "ประเภท":r.leave_type, "ตั้งแต่":thD(r.date_from), "ถึง":thD(r.date_to), "เหตุผล":r.reason||"",
+    "ประเภท":r.leave_type, "ตั้งแต่":thD(r.date_from), "ถึง":thD(r.date_to), "ช่วง":r.day_part||"เต็มวัน", "เหตุผล":r.reason||"",
     "เอกสารแนบ":r.has_document?"มี":"ไม่มี", "จำนวนไฟล์":(r.attachments||[]).length, "สถานะ":stage(r), "ผู้อนุมัติ":r.approved_by||"",
     "HR รับทราบโดย":r.hr_ack_by||"", "ข้อความต้นฉบับ":r.raw_message||"" }));
   const ws = XLSX.utils.json_to_sheet(data);
-  ws["!cols"] = [{wch:5},{wch:12},{wch:22},{wch:14},{wch:10},{wch:10},{wch:10},{wch:24},{wch:9},{wch:18},{wch:14},{wch:14},{wch:30}];
+  ws["!cols"] = [{wch:5},{wch:12},{wch:22},{wch:14},{wch:10},{wch:10},{wch:10},{wch:9},{wch:24},{wch:9},{wch:18},{wch:14},{wch:14},{wch:30}];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "คำขอลา");
   const d = new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Bangkok"}).replaceAll("-","");
