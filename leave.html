@@ -119,6 +119,14 @@ body.locked{overflow:hidden}
 .auth-portal{display:block;text-align:center;margin-top:14px;color:#2E75B6;font-size:13px;text-decoration:none}
 .back-home{background:rgba(255,255,255,.12);border:none;color:#fff;border-radius:9px;padding:8px 13px;cursor:pointer;font-family:inherit;font-size:13.5px;text-decoration:none;font-weight:600}
 .back-home:hover{background:rgba(255,255,255,.2)}
+/* ===== Modal ===== */
+.modal-bg{position:fixed;inset:0;background:rgba(16,31,54,.55);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px}
+.modal{background:#fff;border-radius:16px;width:410px;max-width:100%;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.modal-h{background:var(--navy);color:#fff;font-family:'Anuphan';font-weight:700;font-size:16px;padding:13px 16px;border-bottom:3px solid var(--orange)}
+.modal-b{padding:6px 16px 16px}
+.modal-b label{display:block;font-size:12.5px;font-weight:600;color:var(--ink);margin:12px 0 5px}
+.modal-b input{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-family:inherit;font-size:14px;box-sizing:border-box}
+.modal-f{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}
 </style>
 </head>
 <body class="locked">
@@ -152,11 +160,28 @@ body.locked{overflow:hidden}
     <button id="tb-pending" class="tab on" onclick="setTab('pending')">คงค้าง <span class="n" id="nPending">0</span></button>
     <button id="tb-all" class="tab" onclick="setTab('all')">ทั้งหมด</button>
     <button id="tb-sum" class="tab" onclick="setTab('sum')">สรุปเดือนนี้</button>
+    <button id="tb-users" class="tab" onclick="setTab('users')">ผู้ใช้ระบบ</button>
   </div>
 </div></div>
 
 <div class="wrap">
   <div id="content"></div>
+</div>
+
+<div class="modal-bg hide" id="modalBg">
+  <div class="modal">
+    <div class="modal-h" id="mTitle">แก้ไขพนักงาน</div>
+    <div class="modal-b">
+      <label>รหัสพนักงาน</label><input id="mCode" placeholder="MS001">
+      <label>ชื่อ-สกุล</label><input id="mName" placeholder="สมชาย ใจดี">
+      <label>แผนก</label><input id="mDept" list="deptList" placeholder="คลังสินค้า">
+      <datalist id="deptList"></datalist>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-line" onclick="closeModal()">ยกเลิก</button>
+      <button class="btn btn-red" id="mSave">บันทึก</button>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -189,14 +214,21 @@ async function pageAll(table, orderCol){
   return all;
 }
 
+let emps=[], links=[], apprs=[], uq="";
 async function loadAll(){
-  rows = await pageAll("leave_requests","created_at");
+  const [a,b,c,d] = await Promise.all([
+    pageAll("leave_requests","created_at"),
+    db.from("employees").select("*").order("emp_code"),
+    db.from("line_users").select("*").order("registered_at",{ascending:false}),
+    db.from("approvers").select("*").order("id"),
+  ]);
+  rows = a; emps = b.data||[]; links = c.data||[]; apprs = d.data||[];
   render();
 }
 
 function setTab(t){
   tab = t;
-  ["pending","all","sum"].forEach(x=>document.getElementById("tb-"+x).classList.toggle("on",x===t));
+  ["pending","all","sum","users"].forEach(x=>document.getElementById("tb-"+x).classList.toggle("on",x===t));
   render();
 }
 
@@ -271,6 +303,134 @@ async function delReq(id){
   if(error){ toast("ลบคำขอไม่สำเร็จ: "+error.message); return; }
   toast(`ลบคำขอ #${id} เรียบร้อย ✅`);
   await loadAll();
+}
+
+/* ---------- จัดการผู้ใช้ระบบ ---------- */
+let editingCode = null;
+function openEmpModal(code){
+  editingCode = code;
+  const e = code ? emps.find(x=>x.emp_code===code) : null;
+  document.getElementById("mTitle").textContent = code ? "แก้ไขพนักงาน" : "เพิ่มพนักงาน";
+  document.getElementById("mCode").value = e ? e.emp_code : "";
+  document.getElementById("mName").value = e ? e.emp_name : "";
+  document.getElementById("mDept").value = e ? e.department : "";
+  document.getElementById("deptList").innerHTML =
+    [...new Set(emps.map(x=>x.department))].sort().map(d=>`<option value="${esc(d)}">`).join("");
+  document.getElementById("modalBg").classList.remove("hide");
+}
+function closeModal(){ document.getElementById("modalBg").classList.add("hide"); }
+
+async function saveEmp(){
+  const code = document.getElementById("mCode").value.trim().toUpperCase();
+  const name = document.getElementById("mName").value.trim();
+  const dept = document.getElementById("mDept").value.trim();
+  if(!code || !name || !dept){ toast("กรอกให้ครบทุกช่อง ❌"); return; }
+  if(editingCode){
+    const {error} = await db.from("employees")
+      .update({emp_code:code, emp_name:name, department:dept}).eq("emp_code", editingCode);
+    if(error){ toast("บันทึกไม่สำเร็จ: "+error.message); return; }
+    // sync ไปที่การผูก LINE ด้วย (บอทจะใช้ข้อมูลใหม่ทันที)
+    await db.from("line_users")
+      .update({emp_code:code, emp_name:name, department:dept}).eq("emp_code", editingCode);
+  }else{
+    const {error} = await db.from("employees").insert({emp_code:code, emp_name:name, department:dept});
+    if(error){ toast("เพิ่มไม่สำเร็จ: "+error.message); return; }
+  }
+  closeModal(); toast("บันทึกเรียบร้อย ✅"); await loadAll();
+}
+
+async function toggleEmp(code){
+  const e = emps.find(x=>x.emp_code===code); if(!e) return;
+  const to = !e.is_active;
+  const msg = to ? `คืนสถานะ "${e.emp_name}" ให้กลับมาใช้งานระบบได้?`
+    : `ให้ "${e.emp_name}" พ้นสภาพ?\nระบบจะปลดการผูก LINE ด้วย (แจ้งลาไม่ได้จนกว่าจะคืนสถานะ)`;
+  if(!confirm(msg)) return;
+  const {error} = await db.from("employees").update({is_active:to}).eq("emp_code", code);
+  if(error){ toast("ไม่สำเร็จ: "+error.message); return; }
+  if(!to) await db.from("line_users").delete().eq("emp_code", code);
+  toast("อัปเดตเรียบร้อย ✅"); await loadAll();
+}
+
+async function delEmp(code){
+  const e = emps.find(x=>x.emp_code===code);
+  if(!confirm(`ลบ "${e?e.emp_name:code}" ออกจากทะเบียนถาวร?\n(ใช้กรณีเพิ่มข้อมูลผิดเท่านั้น — ถ้าลาออกให้ใช้ "พ้นสภาพ" เพื่อเก็บประวัติ)`)) return;
+  await db.from("line_users").delete().eq("emp_code", code);
+  const {error} = await db.from("employees").delete().eq("emp_code", code);
+  if(error){ toast("ลบไม่สำเร็จ: "+error.message); return; }
+  toast("ลบเรียบร้อย ✅"); await loadAll();
+}
+
+async function unbind(code){
+  if(!confirm(`ปลดการผูก LINE ของรหัส ${code}?\nใช้กรณีพนักงานเปลี่ยนเครื่อง/เปลี่ยนบัญชี — แล้วให้พิมพ์ "ลงทะเบียน" ใหม่`)) return;
+  const {error} = await db.from("line_users").delete().eq("emp_code", code);
+  if(error){ toast("ไม่สำเร็จ: "+error.message); return; }
+  toast("ปลดผูกเรียบร้อย ✅ ให้พนักงานลงทะเบียนใหม่ได้เลย"); await loadAll();
+}
+
+async function toggleAppr(id){
+  const a = apprs.find(x=>x.id===id); if(!a) return;
+  if(!confirm(`${a.is_active?"ปิด":"เปิด"}การใช้งานผู้อนุมัติ "${a.name}"?`)) return;
+  const {error} = await db.from("approvers").update({is_active:!a.is_active}).eq("id", id);
+  if(error){ toast("ไม่สำเร็จ: "+error.message); return; }
+  toast("อัปเดตเรียบร้อย ✅"); await loadAll();
+}
+
+async function delAppr(id){
+  const a = apprs.find(x=>x.id===id);
+  if(!confirm(`ลบผู้อนุมัติ "${a?a.name:id}" ออกจากระบบ?`)) return;
+  const {error} = await db.from("approvers").delete().eq("id", id);
+  if(error){ toast("ลบไม่สำเร็จ: "+error.message); return; }
+  toast("ลบเรียบร้อย ✅"); await loadAll();
+}
+
+function usersView(){
+  const q = uq.toLowerCase();
+  const list = emps.filter(e=>!q || `${e.emp_code} ${e.emp_name} ${e.department}`.toLowerCase().includes(q));
+  const lmap = {}; links.forEach(l=>lmap[l.emp_code]=l);
+
+  const empRows = list.map(e=>{
+    const l = lmap[e.emp_code];
+    return `<tr>
+      <td><b>${esc(e.emp_code)}</b></td>
+      <td>${esc(e.emp_name)}</td>
+      <td>${esc(e.department)}</td>
+      <td>${e.is_active?'<span class="tag" style="background:var(--present)">ทำงาน</span>':'<span class="tag" style="background:var(--muted)">พ้นสภาพ</span>'}</td>
+      <td>${l?`✅ <span class="mut">${String(l.registered_at||"").slice(0,10)}</span>`:'<span class="mut">-</span>'}</td>
+      <td><div class="act">
+        <button class="btn mini m-ack" onclick="openEmpModal('${esc(e.emp_code)}')">✏️ แก้ไข</button>
+        ${l?`<button class="btn mini m-deldoc" onclick="unbind('${esc(e.emp_code)}')">🔓 ปลดผูก</button>`:""}
+        <button class="btn mini ${e.is_active?'m-bad':'m-ok'}" onclick="toggleEmp('${esc(e.emp_code)}')">${e.is_active?'⛔ พ้นสภาพ':'↩️ คืนสถานะ'}</button>
+        <button class="btn mini m-delreq" onclick="delEmp('${esc(e.emp_code)}')">🗑</button>
+      </div></td>
+    </tr>`;
+  }).join("");
+
+  const apRows = apprs.map(a=>`<tr>
+    <td><b>${esc(a.name)}</b></td>
+    <td>${a.role==="hr"?'<span class="tag" style="background:var(--navy)">HR</span>':'<span class="tag" style="background:var(--vacation)">หัวหน้าแผนก</span>'}</td>
+    <td>${esc(a.department||"ทุกแผนก")}</td>
+    <td>${a.is_active?'<span class="tag" style="background:var(--present)">ใช้งาน</span>':'<span class="tag" style="background:var(--muted)">ปิด</span>'}</td>
+    <td><div class="act">
+      <button class="btn mini ${a.is_active?'m-bad':'m-ok'}" onclick="toggleAppr(${a.id})">${a.is_active?'⛔ ปิด':'✅ เปิด'}</button>
+      <button class="btn mini m-delreq" onclick="delAppr(${a.id})">🗑</button>
+    </div></td>
+  </tr>`).join("") || '<tr><td colspan="5" class="empty">ยังไม่มีผู้อนุมัติ — ให้หัวหน้า/HR ลงทะเบียนผ่านไลน์</td></tr>';
+
+  return `
+    <div class="bar">
+      <input type="search" placeholder="🔍 ค้นหา รหัส / ชื่อ / แผนก" value="${esc(uq)}" oninput="uq=this.value;render()">
+      <button class="btn btn-red" onclick="openEmpModal(null)">➕ เพิ่มพนักงาน</button>
+      <span class="count">พนักงาน ${emps.length} คน • ผูก LINE แล้ว ${links.length} คน</span>
+    </div>
+    <div class="card" style="margin-bottom:20px"><table>
+      <thead><tr><th>รหัส</th><th>ชื่อ-สกุล</th><th>แผนก</th><th>สถานะ</th><th>LINE</th><th>จัดการ</th></tr></thead>
+      <tbody>${empRows || '<tr><td colspan="6" class="empty">ไม่พบพนักงาน</td></tr>'}</tbody>
+    </table></div>
+    <div class="count" style="font-weight:700;color:var(--ink);font-size:14px">👥 ผู้อนุมัติ (หัวหน้าแผนก / HR)</div>
+    <div class="card"><table>
+      <thead><tr><th>ชื่อ</th><th>บทบาท</th><th>แผนก</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
+      <tbody>${apRows}</tbody>
+    </table></div>`;
 }
 
 /* ---------- Render ---------- */
@@ -383,6 +543,8 @@ function render(){
   } else if(tab==="all"){
     const list = applyFilter(rows);
     c.innerHTML = k + filterBar() + `<div class="count">แสดง ${list.length} จาก ${rows.length} รายการ • 🗑 ลบไฟล์แนบ/ลบคำขอได้จากคอลัมน์จัดการ</div>` + table(list,"del");
+  } else if(tab==="users"){
+    c.innerHTML = usersView();
   } else {
     c.innerHTML = k + summary();
   }
@@ -432,6 +594,7 @@ async function doLogin(){
 }
 $g("authLoginBtn").onclick = doLogin;
 $g("authPass").addEventListener("keydown", e => { if(e.key==="Enter") doLogin(); });
+$g("mSave").onclick = saveEmp;
 
 (async function bootAuth(){
   try{
