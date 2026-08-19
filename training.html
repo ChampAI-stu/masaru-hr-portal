@@ -1040,6 +1040,19 @@ $('courseAdd').addEventListener('click', async function(){
   if(c) toast('เพิ่มในแผนปี '+be(c.year)+' แล้ว — กรอกรายละเอียดในตาราง');
 });
 
+function renderCmJoin(){
+  var rs = RECORDS.filter(function(r){ return String(r.course_id)===String(curCourseId); })
+                  .sort(function(a,b){ return String(a.employee_name||'').localeCompare(String(b.employee_name||''),'th'); });
+  $('cmJoinCount').textContent = rs.length+' คน';
+  $('cmJoinBody').innerHTML = rs.length ? rs.map(function(r,i){
+    return '<tr><td class="ctr">'+(i+1)+'</td><td>'+esc(r.employee_name||'-')+'</td><td>'+esc(r.department||'-')+'</td>'
+      +'<td class="ctr">'+thDate(r.train_date)+'</td><td class="ctr">'+resultBadge(r.result)+'</td><td class="num">'+fmt(r.hours)+'</td>'
+      +'<td class="ctr"><button class="btn sm danger" data-rec="'+esc(r.id)+'"><i class="ti ti-trash"></i></button></td></tr>';
+  }).join('') : '<tr><td colspan="7"><div class="empty" style="border:none">ยังไม่มีผู้เข้าร่วมอบรม</div></td></tr>';
+  $('cmJoinBody').querySelectorAll('button[data-rec]').forEach(function(b){
+    b.addEventListener('click', function(){ deleteRecord(b.dataset.rec, function(){ openCourse(curCourseId); }); });
+  });
+}
 function openCourse(id){
   var c = COURSES.filter(function(x){ return String(x.id)===String(id); })[0];
   if(!c) return;
@@ -1055,17 +1068,7 @@ function openCourse(id){
   $('cmMonths').querySelectorAll('.mchip').forEach(function(ch){
     ch.addEventListener('click', function(){ ch.classList.toggle('on'); });
   });
-  var rs = RECORDS.filter(function(r){ return String(r.course_id)===String(c.id); })
-                  .sort(function(a,b){ return String(a.employee_name||'').localeCompare(String(b.employee_name||''),'th'); });
-  $('cmJoinCount').textContent = rs.length+' คน';
-  $('cmJoinBody').innerHTML = rs.length ? rs.map(function(r,i){
-    return '<tr><td class="ctr">'+(i+1)+'</td><td>'+esc(r.employee_name||'-')+'</td><td>'+esc(r.department||'-')+'</td>'
-      +'<td class="ctr">'+thDate(r.train_date)+'</td><td class="ctr">'+resultBadge(r.result)+'</td><td class="num">'+fmt(r.hours)+'</td>'
-      +'<td class="ctr"><button class="btn sm danger" data-rec="'+esc(r.id)+'"><i class="ti ti-trash"></i></button></td></tr>';
-  }).join('') : '<tr><td colspan="7"><div class="empty" style="border:none">ยังไม่มีผู้เข้าร่วมอบรม</div></td></tr>';
-  $('cmJoinBody').querySelectorAll('button[data-rec]').forEach(function(b){
-    b.addEventListener('click', function(){ deleteRecord(b.dataset.rec, function(){ openCourse(curCourseId); }); });
-  });
+  renderCmJoin();
   cmPickSelected = {};
   if($('cmPickSearch')) $('cmPickSearch').value='';
   if(!$('cmJoinDate').value){ var d=new Date(); $('cmJoinDate').value = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
@@ -1073,6 +1076,7 @@ function openCourse(id){
   renderCmPicker();
   $('courseOverlay').classList.remove('hide');
   loadCourseExams(curCourseId);
+  startCoursePoll();
 }
 /* ---- ผลสอบที่เชื่อมกับหลักสูตร (จาก exam.html) ---- */
 async function loadCourseExams(courseId){
@@ -1196,9 +1200,35 @@ $('cmAddJoin').addEventListener('click', async function(){
   finally{ btn.disabled=false; }
 });
 
-$('cmClose').addEventListener('click', function(){ $('courseOverlay').classList.add('hide'); });
-$('cmCancel').addEventListener('click', function(){ $('courseOverlay').classList.add('hide'); });
-$('courseOverlay').addEventListener('click', function(ev){ if(ev.target===$('courseOverlay')) $('courseOverlay').classList.add('hide'); });
+/* ---- Auto-refresh ผู้เข้าร่วม: เช็คทุก 7 วิ ระหว่างเปิดหน้าหลักสูตร (รองรับลงทะเบียน QR สด) ---- */
+var _coursePollT = null, _coursePollBusy = false;
+function startCoursePoll(){
+  stopCoursePoll();
+  _coursePollT = setInterval(async function(){
+    if(_coursePollBusy || !curCourseId || $('courseOverlay').classList.contains('hide')) return;
+    _coursePollBusy = true;
+    try{
+      var r = await sb.from('training_records').select('*').eq('course_id', curCourseId);
+      if(!r.error && r.data){
+        var have = {}; RECORDS.forEach(function(x){ if(String(x.course_id)===String(curCourseId)) have[x.id]=1; });
+        var fresh = r.data.filter(function(x){ return !have[x.id]; });
+        var gone  = Object.keys(have).length - (r.data.length - fresh.length);
+        if(fresh.length || gone > 0){
+          RECORDS = RECORDS.filter(function(x){ return String(x.course_id)!==String(curCourseId); }).concat(r.data);
+          renderHist(); renderEmp(); renderPlan(); renderCourses();
+          renderCmJoin();
+          if(fresh.length) toast('มีผู้ลงทะเบียนใหม่ +' + fresh.length + ' คน');
+        }
+      }
+    }catch(e){}
+    _coursePollBusy = false;
+  }, 7000);
+}
+function stopCoursePoll(){ if(_coursePollT){ clearInterval(_coursePollT); _coursePollT = null; } }
+
+$('cmClose').addEventListener('click', function(){ stopCoursePoll(); $('courseOverlay').classList.add('hide'); });
+$('cmCancel').addEventListener('click', function(){ stopCoursePoll(); $('courseOverlay').classList.add('hide'); });
+$('courseOverlay').addEventListener('click', function(ev){ if(ev.target===$('courseOverlay')){ stopCoursePoll(); $('courseOverlay').classList.add('hide'); } });
 $('cmDelete').addEventListener('click', function(){ if(curCourseId) deleteCourse(curCourseId); });
 $('cmSave').addEventListener('click', async function(){
   if(!curCourseId) return;
