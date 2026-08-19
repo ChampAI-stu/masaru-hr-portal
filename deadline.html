@@ -926,23 +926,47 @@ async function sbSetDone(mid, done, meta){
   else { const {error}=await _sb.from("hr_deadline_done").delete().eq("milestone_id", mid); if(error) throw error; }
 }
 // push entire local state to Supabase (used by import / restore)
+function _validRow(row){
+  /* กันแถวเสียลากทั้งชุดล้ม: ต้องมีชื่อ + วันที่รูปแบบ YYYY-MM-DD */
+  var okDate = function(s){ return !s || /^\d{4}-\d{2}-\d{2}$/.test(""+s); };
+  return row && row.name && okDate(row.ref_date) && okDate(row.due_date);
+}
 async function sbSyncAll(){
   if(!_sb) return;
-  if(state.records.length){
-    const {error}=await _sb.from("hr_deadlines").upsert(state.records.map(recToRow));
-    if(error) throw error;
+  var rows = state.records.map(recToRow);
+  var bad = rows.filter(function(r){ return !_validRow(r); });
+  rows = rows.filter(_validRow);
+  /* ส่งเป็นชุดละ 400 แถว กัน payload ใหญ่เกิน */
+  for(var i=0;i<rows.length;i+=400){
+    const {error}=await _sb.from("hr_deadlines").upsert(rows.slice(i,i+400));
+    if(error){ error.message = "อัปโหลดรายการ (แถว "+(i+1)+"–"+Math.min(i+400,rows.length)+"): "+error.message; throw error; }
   }
-  const {data:dbRecs}=await _sb.from("hr_deadlines").select("id");
+  const {data:dbRecs, error:selErr}=await _sb.from("hr_deadlines").select("id");
+  if(selErr){ selErr.message = "อ่านรายการเดิม: "+selErr.message; throw selErr; }
   const keep=new Set(state.records.map(r=>r.id));
   const del=(dbRecs||[]).map(r=>r.id).filter(id=>!keep.has(id));
-  if(del.length) await _sb.from("hr_deadlines").delete().in("id", del);
-  // reconcile done: clear then insert current
-  await _sb.from("hr_deadline_done").delete().neq("milestone_id","__none__");
-  if(state.done.length) await _sb.from("hr_deadline_done").upsert(state.done.map(m=>({milestone_id:m})));
+  if(del.length){
+    const {error}=await _sb.from("hr_deadlines").delete().in("id", del);
+    if(error){ error.message = "ลบรายการเก่า: "+error.message; throw error; }
+  }
+  // reconcile done: clear then insert current (เก็บ sent_date/eval_date/note เดิมไว้ด้วย)
+  {
+    const {error}=await _sb.from("hr_deadline_done").delete().neq("milestone_id","__none__");
+    if(error){ error.message = "ล้างสถานะเสร็จ: "+error.message; throw error; }
+  }
+  if(state.done.length){
+    const doneRows = state.done.map(function(m){
+      var meta = (state.doneMeta && state.doneMeta[m]) || {};
+      return { milestone_id:m, sent_date:meta.sent_date||null, eval_date:meta.eval_date||null, note:meta.note||null };
+    });
+    const {error}=await _sb.from("hr_deadline_done").upsert(doneRows,{onConflict:"milestone_id"});
+    if(error){ error.message = "บันทึกสถานะเสร็จ: "+error.message; throw error; }
+  }
+  if(bad.length) alert("⚠️ ข้าม "+bad.length+" รายการที่ข้อมูลไม่สมบูรณ์ (ชื่อ/วันที่ผิดรูปแบบ):\n"+bad.slice(0,5).map(function(r){return "- "+(r.name||"(ไม่มีชื่อ)");}).join("\n"));
 }
 async function guard(fn){
   try{ await fn(); setStatus(true); }
-  catch(err){ console.warn(err); setStatus(false); alert("⚠️ บันทึกขึ้น Supabase ไม่สำเร็จ (ออฟไลน์?)\nข้อมูลถูกเก็บในเครื่องไว้ก่อน จะซิงค์เมื่อออนไลน์"); }
+  catch(err){ console.warn(err); setStatus(false); alert("⚠️ บันทึกขึ้น Supabase ไม่สำเร็จ\nสาเหตุ: "+errText(err)+"\n\nข้อมูลถูกเก็บในเครื่องไว้ก่อน กด \"นำเข้า/กู้ข้อมูล\" ซ้ำหรือรีเฟรชเพื่อซิงค์ใหม่หลังแก้ปัญหา"); }
 }
 
 /* ---------- date helpers ---------- */
