@@ -226,11 +226,6 @@ body.locked{overflow:hidden}
   .sh-info .cell .fi{flex:1;min-width:0}
   .fi.w60{flex:0 0 42px!important;width:42px}
   .fi.w120{flex:0 0 92px!important;width:92px}
-  /* แถวช่วงวันที่ทดลองงาน: จัดพื้นที่ให้วันที่แสดงเต็ม ปีไม่ตกหาย */
-  .cell.rng{gap:3px}
-  .cell.rng .unit{font-size:10.5px}
-  .cell.rng .fi.w60,.cell.rng .fi-flat.w60{flex:0 0 34px!important;width:34px}
-  .cell.rng .fi.w120,.cell.rng .fi-flat.w120{flex:1 1 92px!important;width:auto;min-width:88px;font-size:12px}
   .fi{border:none;border-bottom:1px dotted #666;background:transparent;font-family:inherit;
     font-size:12.5px;width:100%;padding:1px 3px;color:#000;outline:none}
   .fi:focus{background:#fff8d6;border-bottom-color:#000}
@@ -518,7 +513,7 @@ body.locked{overflow:hidden}
         </div>
 
         <table class="sh-info">
-          <colgroup><col style="width:18%"><col style="width:24%"><col style="width:12%">
+          <colgroup><col style="width:18%"><col style="width:28%"><col style="width:12%">
             <col style="width:16%"><col style="width:12%"><col></colgroup>
           <tr><td class="lb">ชื่อ-นามสกุล</td><td><input class="fi" id="pf_name"></td>
               <td class="lb">ตำแหน่ง</td><td><input class="fi" id="pf_pos"></td>
@@ -528,7 +523,7 @@ body.locked{overflow:hidden}
               <td class="lb">วันเริ่มงาน</td><td colspan="3"><input class="fi" id="pf_start"></td></tr>
           <tr><td class="lb">ประเมินผลทดลองงาน ครั้งที่</td><td><input class="fi ctr" id="pf_round"></td>
               <td class="lb">ครบทดลองงาน</td>
-              <td colspan="3"><div class="cell rng">
+              <td colspan="3"><div class="cell">
                   <input class="fi ctr w60" id="pf_days"><span class="unit">วัน</span>
                   <span class="unit">ตั้งแต่วันที่</span><input class="fi ctr w120" id="pf_from">
                   <span class="unit">ถึง</span><input class="fi ctr w120" id="pf_to"></div></td></tr>
