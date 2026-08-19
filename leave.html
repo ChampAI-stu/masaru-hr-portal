@@ -176,6 +176,12 @@ body.locked{overflow:hidden}
       <label>ชื่อ-สกุล</label><input id="mName" placeholder="สมชาย ใจดี">
       <label>แผนก</label><input id="mDept" list="deptList" placeholder="คลังสินค้า">
       <datalist id="deptList"></datalist>
+      <label>โควตาวันลา/ปี — ป่วย / กิจ / พักร้อน</label>
+      <div style="display:flex;gap:8px">
+        <input id="mQS" type="number" min="0" title="ลาป่วย">
+        <input id="mQP" type="number" min="0" title="ลากิจ">
+        <input id="mQV" type="number" min="0" title="ลาพักร้อน">
+      </div>
     </div>
     <div class="modal-f">
       <button class="btn btn-line" onclick="closeModal()">ยกเลิก</button>
@@ -316,6 +322,9 @@ function openEmpModal(code){
   document.getElementById("mCode").value = e ? e.emp_code : "";
   document.getElementById("mName").value = e ? e.emp_name : "";
   document.getElementById("mDept").value = e ? e.department : "";
+  document.getElementById("mQS").value = e ? (e.quota_sick ?? 30) : 30;
+  document.getElementById("mQP").value = e ? (e.quota_personal ?? 3) : 3;
+  document.getElementById("mQV").value = e ? (e.quota_vacation ?? 6) : 6;
   document.getElementById("deptList").innerHTML =
     [...new Set(emps.map(x=>x.department))].sort().map(d=>`<option value="${esc(d)}">`).join("");
   document.getElementById("modalBg").classList.remove("hide");
@@ -327,15 +336,18 @@ async function saveEmp(){
   const name = document.getElementById("mName").value.trim();
   const dept = document.getElementById("mDept").value.trim();
   if(!code || !name || !dept){ toast("กรอกให้ครบทุกช่อง ❌"); return; }
+  const qs = parseInt(document.getElementById("mQS").value)||0;
+  const qp = parseInt(document.getElementById("mQP").value)||0;
+  const qv = parseInt(document.getElementById("mQV").value)||0;
   if(editingCode){
     const {error} = await db.from("employees")
-      .update({emp_code:code, emp_name:name, department:dept}).eq("emp_code", editingCode);
+      .update({emp_code:code, emp_name:name, department:dept, quota_sick:qs, quota_personal:qp, quota_vacation:qv}).eq("emp_code", editingCode);
     if(error){ toast("บันทึกไม่สำเร็จ: "+error.message); return; }
     // sync ไปที่การผูก LINE ด้วย (บอทจะใช้ข้อมูลใหม่ทันที)
     await db.from("line_users")
       .update({emp_code:code, emp_name:name, department:dept}).eq("emp_code", editingCode);
   }else{
-    const {error} = await db.from("employees").insert({emp_code:code, emp_name:name, department:dept});
+    const {error} = await db.from("employees").insert({emp_code:code, emp_name:name, department:dept, quota_sick:qs, quota_personal:qp, quota_vacation:qv});
     if(error){ toast("เพิ่มไม่สำเร็จ: "+error.message); return; }
   }
   closeModal(); toast("บันทึกเรียบร้อย ✅"); await loadAll();
@@ -628,10 +640,28 @@ function exportExcel(){
 db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const $g = id => document.getElementById(id);
 
+let liveStarted = false, liveTimer = null;
+function queueReload(){ clearTimeout(liveTimer); liveTimer = setTimeout(loadAll, 600); }
+function startLive(){
+  if(liveStarted) return; liveStarted = true;
+  // Realtime: ข้อมูลเปลี่ยนใน DB -> หน้าเว็บอัปเดตทันที
+  try{
+    db.channel("live-hr")
+      .on("postgres_changes", {event:"*", schema:"public", table:"leave_requests"}, queueReload)
+      .on("postgres_changes", {event:"*", schema:"public", table:"registration_requests"}, queueReload)
+      .on("postgres_changes", {event:"*", schema:"public", table:"line_users"}, queueReload)
+      .subscribe();
+  }catch(e){ console.error("realtime error:", e); }
+  // Fallback: รีเฟรชเองทุก 60 วิ + ตอนสลับกลับมาที่แท็บ
+  setInterval(()=>{ if(!document.hidden) loadAll(); }, 60000);
+  document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) loadAll(); });
+}
+
 function unlock(){
   $g("authGate").classList.add("hide");
   document.body.classList.remove("locked");
   loadAll();
+  startLive();
 }
 async function doLogin(){
   const btn = $g("authLoginBtn"), err = $g("authErr");
