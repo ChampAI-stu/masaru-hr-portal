@@ -160,7 +160,7 @@ body.locked{overflow:hidden}
     <button id="tb-pending" class="tab on" onclick="setTab('pending')">คงค้าง <span class="n" id="nPending">0</span></button>
     <button id="tb-all" class="tab" onclick="setTab('all')">ทั้งหมด</button>
     <button id="tb-sum" class="tab" onclick="setTab('sum')">สรุปเดือนนี้</button>
-    <button id="tb-users" class="tab" onclick="setTab('users')">ผู้ใช้ระบบ</button>
+    <button id="tb-users" class="tab" onclick="setTab('users')">ผู้ใช้ระบบ<span class="n hide" id="nRegs">0</span></button>
   </div>
 </div></div>
 
@@ -214,15 +214,16 @@ async function pageAll(table, orderCol){
   return all;
 }
 
-let emps=[], links=[], apprs=[], uq="";
+let emps=[], links=[], apprs=[], regs=[], uq="";
 async function loadAll(){
-  const [a,b,c,d] = await Promise.all([
+  const [a,b,c,d,e] = await Promise.all([
     pageAll("leave_requests","created_at"),
     db.from("employees").select("*").order("emp_code"),
     db.from("line_users").select("*").order("registered_at",{ascending:false}),
     db.from("approvers").select("*").order("id"),
+    db.from("registration_requests").select("*").eq("status","pending").order("requested_at"),
   ]);
-  rows = a; emps = b.data||[]; links = c.data||[]; apprs = d.data||[];
+  rows = a; emps = b.data||[]; links = c.data||[]; apprs = d.data||[]; regs = e.data||[];
   render();
 }
 
@@ -383,6 +384,23 @@ async function delAppr(id){
   toast("ลบเรียบร้อย ✅"); await loadAll();
 }
 
+async function regDecide(id, ok){
+  const g = regs.find(x=>x.id===id); if(!g) return;
+  if(!confirm(`${ok?"ยืนยันตัวตน":"ปฏิเสธ"} "${g.emp_name}" (${g.emp_code})?\n(การกดจากเว็บจะไม่แจ้งเตือน LINE - พนักงานทราบเมื่อลองใช้งาน)`)) return;
+  if(ok){
+    const {error: le} = await db.from("line_users").upsert(
+      { line_user_id: g.line_user_id, emp_code: g.emp_code, emp_name: g.emp_name, department: g.department },
+      { onConflict: "line_user_id" });
+    if(le){ toast("ผูกบัญชีไม่สำเร็จ: "+le.message); return; }
+  }
+  const {error} = await db.from("registration_requests")
+    .update({ status: ok?"approved":"rejected", decided_by:"HR (เว็บ)", decided_at:new Date().toISOString() })
+    .eq("id", id);
+  if(error){ toast("อัปเดตไม่สำเร็จ: "+error.message); return; }
+  toast(`${ok?"ยืนยัน":"ปฏิเสธ"}เรียบร้อย ✅`);
+  await loadAll();
+}
+
 function usersView(){
   const q = uq.toLowerCase();
   const list = emps.filter(e=>!q || `${e.emp_code} ${e.emp_name} ${e.department}`.toLowerCase().includes(q));
@@ -416,7 +434,23 @@ function usersView(){
     </div></td>
   </tr>`).join("") || '<tr><td colspan="5" class="empty">ยังไม่มีผู้อนุมัติ — ให้หัวหน้า/HR ลงทะเบียนผ่านไลน์</td></tr>';
 
-  return `
+  const regSec = regs.length ? `
+    <div class="count" style="font-weight:700;color:var(--orange);font-size:14px">🪪 คำขอลงทะเบียนรอยืนยันตัวตน (${regs.length})</div>
+    <div class="card" style="margin-bottom:20px;border-left:4px solid var(--orange)"><table>
+      <thead><tr><th>รหัส</th><th>ชื่อ-สกุล</th><th>แผนก</th><th>ขอเมื่อ</th><th>จัดการ</th></tr></thead>
+      <tbody>${regs.map(g=>`<tr>
+        <td><b>${esc(g.emp_code)}</b></td>
+        <td>${esc(g.emp_name)}</td>
+        <td>${esc(g.department||"-")}</td>
+        <td class="mut">${String(g.requested_at||"").slice(0,16).replace("T"," ")}</td>
+        <td><div class="act">
+          <button class="btn mini m-ok" onclick="regDecide(${g.id},true)">✅ ยืนยัน</button>
+          <button class="btn mini m-bad" onclick="regDecide(${g.id},false)">❌ ปฏิเสธ</button>
+        </div></td>
+      </tr>`).join("")}</tbody>
+    </table></div>` : "";
+
+  return regSec + `
     <div class="bar">
       <input type="search" placeholder="🔍 ค้นหา รหัส / ชื่อ / แผนก" value="${esc(uq)}" oninput="uq=this.value;render()">
       <button class="btn btn-red" onclick="openEmpModal(null)">➕ เพิ่มพนักงาน</button>
@@ -476,6 +510,9 @@ function kpis(){
   const w = rows.filter(r=>r.status!=="pending" && !r.hr_ack_at).length;
   const t = rows.filter(r=>r.date_from<=today && r.date_to>=today && r.status!=="rejected").length;
   document.getElementById("nPending").textContent = p+w;
+  const nr = document.getElementById("nRegs");
+  nr.textContent = regs.length;
+  nr.classList.toggle("hide", regs.length===0);
   return `<div class="kpis">
     <div class="kpi" style="--c:var(--late)"><div class="lab"><span class="dot"></span>รอหัวหน้าอนุมัติ</div><div class="v">${p}</div></div>
     <div class="kpi" style="--c:var(--vacation)"><div class="lab"><span class="dot"></span>รอ HR รับทราบ</div><div class="v">${w}</div></div>
@@ -544,7 +581,7 @@ function render(){
     const list = applyFilter(rows);
     c.innerHTML = k + filterBar() + `<div class="count">แสดง ${list.length} จาก ${rows.length} รายการ • 🗑 ลบไฟล์แนบ/ลบคำขอได้จากคอลัมน์จัดการ</div>` + table(list,"del");
   } else if(tab==="users"){
-    c.innerHTML = usersView();
+    c.innerHTML = usersView(); // k ถูกคำนวณด้านบนแล้ว (อัปเดต badge)
   } else {
     c.innerHTML = k + summary();
   }
