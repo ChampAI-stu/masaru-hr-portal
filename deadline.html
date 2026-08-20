@@ -270,6 +270,7 @@ body.locked{overflow:hidden}
   .sh-sum>div{display:flex;align-items:center;gap:5px;min-height:21px;flex-wrap:wrap}
   .sh-sum label{display:flex;align-items:center;gap:5px;white-space:nowrap}
   .sh-sum input[type=checkbox]{width:13px;height:13px;accent-color:#000}
+  .sh-sum.sh-sum-join{border-bottom:none}   /* ต่อกับช่องลงชื่อ ไม่ต้องมีเส้นคั่น */
   .sh-sign1{border:1px solid #000;border-top:none;padding:8px 10px 10px}
   .sh-sign1 .pl{margin-left:32px}
   .sh-sign2{margin-top:6px} .sh-sign2 th{background:#f0f0f0;text-align:center;height:20px}
@@ -606,7 +607,7 @@ body.locked{overflow:hidden}
         </div>
 
         <div class="sh-band">ผลการอนุมัติ</div>
-        <div class="sh-sum">
+        <div class="sh-sum sh-sum-join">
           <div><label><input type="checkbox" id="pc_ok"> อนุมัติ</label>
                <span style="margin-left:40px"></span>
                <label><input type="checkbox" id="pc_notok"> ไม่อนุมัติ เนื่องจาก</label>
