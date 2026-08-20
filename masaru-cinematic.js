@@ -108,6 +108,9 @@
     /* ---------- โหมดเงียบ: ไม่ขวางตอนทำงาน ---------- */
     function quiet(ms) {
       mascot.classList.add('is-quiet');
+      // กันกรณี CSS เก่าค้าง cache — บังคับให้ตัวหุ่นชัดเต็มที่เสมอ
+      mascot.style.opacity = '';
+      mascot.style.transform = '';
       mascot.classList.remove('is-explaining');
       window.clearTimeout(quietTimer);
       quietTimer = window.setTimeout(function () {
@@ -124,7 +127,6 @@
     document.addEventListener('focusout', function () {
       window.setTimeout(function () { if (!isTyping()) quiet(200); }, 60);
     }, true);
-    window.addEventListener('scroll', function () { quiet(1200); }, { passive: true });
     document.addEventListener('keydown', function () { if (isTyping()) quiet(60000); }, true);
 
     /* ---------- ตื่น/หลับตามการใช้งาน ---------- */
