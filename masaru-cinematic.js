@@ -22,24 +22,16 @@
   }
 
   function buildMascot() {
+    /* ทำงานเฉพาะหน้าแรก (Hub) เท่านั้น — หน้าอื่นไม่มีผู้ช่วยมารบกวน */
+    if (page !== 'index') return;
+
     /* ---------- ปิดถาวรตามที่ผู้ใช้เลือกไว้ ---------- */
     var OFF_KEY = 'msr_mascot_off';
     function isOff() { try { return localStorage.getItem(OFF_KEY) === '1'; } catch (e) { return false; } }
     if (isOff()) return;
 
     /* ---------- ข้อความประจำแต่ละหน้า ---------- */
-    var PAGE_INFO = {
-      index:       ['ศูนย์รวมระบบ HR', 'ชี้ที่การ์ดระบบ เพื่อดูว่าระบบนั้นใช้ทำอะไร'],
-      dashboard:   ['ผลแบบทดสอบผู้สมัคร', 'ดูผล MBTI และ BOSI พร้อมดาวน์โหลดรายงาน PDF'],
-      recruitment: ['ระบบรับสมัครงาน', 'ติดตามผู้สมัครตั้งแต่รับใบสมัครจนถึงวันเริ่มงาน'],
-      deadline:    ['ทดลองงาน & กำหนดส่ง', 'ดูคนที่ใกล้ครบทดลองงาน และพิมพ์แบบประเมินได้'],
-      exam:        ['แบบทดสอบความรู้', 'สร้างชุดข้อสอบ แล้วแชร์ QR ให้พนักงานทำได้เลย'],
-      training:    ['ระบบอบรม', 'เช็คอินด้วย QR และติดตามผู้เข้าอบรมแบบเรียลไทม์'],
-      hrtime:      ['เวลาทำงาน', 'สรุปการเข้างาน สาย ขาด ลา ของพนักงาน'],
-      leave:       ['ระบบใบลา', 'ตรวจและอนุมัติใบลา พร้อมดูไฟล์แนบ'],
-      chack:       ['งานประจำวัน', 'จัดการงาน HR ประจำวันได้จากหน้านี้']
-    };
-    var info = PAGE_INFO[page] || ['ผู้ช่วย MASARU', 'พร้อมช่วยเหลือคุณอยู่ตรงนี้'];
+    var info = ['ศูนย์รวมระบบ HR', 'ชี้ที่การ์ดระบบ เพื่อดูว่าระบบนั้นใช้ทำอะไร'];
 
     function greeting() {
       var h = new Date().getHours();
@@ -174,7 +166,7 @@
     var greeted = false;
     function syncVisibility() {
       var ok = !loginVisible();
-      if (ok && hub && page === 'index') ok = !hub.classList.contains('hide');
+      if (ok && hub) ok = !hub.classList.contains('hide');
       mascot.classList.toggle('is-visible', ok);
       if (!ok) { mascot.classList.remove('is-explaining'); return; }
       if (overlayOpen()) { quiet(1500); return; }
