@@ -1254,3 +1254,11 @@ body[data-msr-page="index"] .app-tile { position: relative; }
 @media (prefers-reduced-motion: reduce) {
   .msr-mascot.is-party .msr-mascot-body, .msr-confetti i, .msr-tile-badge { animation: none !important; }
 }
+
+/* บังคับ: ตัวหุ่นต้องชัดเต็มที่เสมอ ไม่จางไม่ว่ากรณีใด (เลื่อนจอ/พิมพ์/โหมดเงียบ) */
+.msr-mascot.is-visible,
+.msr-mascot.is-visible.is-quiet {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+.msr-mascot.is-quiet { transform: none !important; }
