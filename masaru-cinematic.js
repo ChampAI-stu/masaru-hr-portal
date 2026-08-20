@@ -22,14 +22,44 @@
   }
 
   function buildMascot() {
-    if (page !== 'index') return;
+    /* ---------- ปิดถาวรตามที่ผู้ใช้เลือกไว้ ---------- */
+    var OFF_KEY = 'msr_mascot_off';
+    function isOff() { try { return localStorage.getItem(OFF_KEY) === '1'; } catch (e) { return false; } }
+    if (isOff()) return;
 
+    /* ---------- ข้อความประจำแต่ละหน้า ---------- */
+    var PAGE_INFO = {
+      index:       ['ศูนย์รวมระบบ HR', 'ชี้ที่การ์ดระบบ เพื่อดูว่าระบบนั้นใช้ทำอะไร'],
+      dashboard:   ['ผลแบบทดสอบผู้สมัคร', 'ดูผล MBTI และ BOSI พร้อมดาวน์โหลดรายงาน PDF'],
+      recruitment: ['ระบบรับสมัครงาน', 'ติดตามผู้สมัครตั้งแต่รับใบสมัครจนถึงวันเริ่มงาน'],
+      deadline:    ['ทดลองงาน & กำหนดส่ง', 'ดูคนที่ใกล้ครบทดลองงาน และพิมพ์แบบประเมินได้'],
+      exam:        ['แบบทดสอบความรู้', 'สร้างชุดข้อสอบ แล้วแชร์ QR ให้พนักงานทำได้เลย'],
+      training:    ['ระบบอบรม', 'เช็คอินด้วย QR และติดตามผู้เข้าอบรมแบบเรียลไทม์'],
+      hrtime:      ['เวลาทำงาน', 'สรุปการเข้างาน สาย ขาด ลา ของพนักงาน'],
+      leave:       ['ระบบใบลา', 'ตรวจและอนุมัติใบลา พร้อมดูไฟล์แนบ'],
+      chack:       ['งานประจำวัน', 'จัดการงาน HR ประจำวันได้จากหน้านี้']
+    };
+    var info = PAGE_INFO[page] || ['ผู้ช่วย MASARU', 'พร้อมช่วยเหลือคุณอยู่ตรงนี้'];
+
+    function greeting() {
+      var h = new Date().getHours();
+      if (h < 12) return 'สวัสดีตอนเช้าครับ';
+      if (h < 17) return 'สวัสดีตอนบ่ายครับ';
+      if (h < 21) return 'สวัสดีตอนเย็นครับ';
+      return 'ดึกแล้วนะครับ';
+    }
+
+    /* ---------- สร้างตัวหุ่น ---------- */
     var mascot = document.createElement('div');
     mascot.className = 'msr-mascot';
     mascot.setAttribute('aria-hidden', 'true');
     mascot.innerHTML = [
-      '<div class="msr-mascot-note"><strong>ผู้ช่วย MASARU</strong><span>ชี้ที่การ์ดระบบ เพื่อดูว่าระบบนั้นใช้ทำอะไร</span></div>',
-      '<div class="msr-mascot-body">',
+      '<div class="msr-mascot-note">',
+        '<button type="button" class="msr-mascot-x" title="ปิดผู้ช่วย">&times;</button>',
+        '<strong></strong><span></span>',
+      '</div>',
+      '<div class="msr-mascot-body" title="คลิกเพื่อดูคำแนะนำ">',
+        '<i class="msr-mascot-antenna"></i>',
         '<div class="msr-mascot-ear left"></div>',
         '<div class="msr-mascot-ear right"></div>',
         '<div class="msr-mascot-head">',
@@ -43,6 +73,9 @@
         '<div class="msr-mascot-arm right"></div>',
         '<div class="msr-mascot-torso"></div>',
         '<div class="msr-mascot-shadow"></div>',
+        '<i class="msr-mascot-spark s1"></i>',
+        '<i class="msr-mascot-spark s2"></i>',
+        '<i class="msr-mascot-spark s3"></i>',
       '</div>'
     ].join('');
     document.body.appendChild(mascot);
@@ -52,50 +85,154 @@
     var noteText = mascot.querySelector('.msr-mascot-note span');
     var hub = document.getElementById('hubScreen');
     var grid = document.getElementById('appGrid');
-    var introTimer = 0;
+    var noteTimer = 0, moodTimer = 0, quietTimer = 0, idleTimer = 0;
 
-    function syncVisibility() {
-      var visible = hub && !hub.classList.contains('hide');
-      mascot.classList.toggle('is-visible', !!visible);
-      if (!visible) {
-        mascot.classList.remove('is-intro', 'is-explaining');
-        return;
-      }
-      mascot.classList.add('is-intro');
-      window.clearTimeout(introTimer);
-      introTimer = window.setTimeout(function () {
-        mascot.classList.remove('is-intro');
-      }, 4200);
-    }
+    resetExplanation();
 
-    function explain(tile) {
-      var title = tile && tile.querySelector('.app-name');
-      var description = tile && tile.querySelector('.app-desc');
-      if (!title || !description) return;
-      noteTitle.textContent = title.textContent.trim();
-      noteText.textContent = description.textContent.trim();
-      mascot.classList.remove('is-intro');
+    /* ---------- พูด (ปิดเองอัตโนมัติ ไม่ค้างบังจอ) ---------- */
+    function say(title, text, ms) {
+      if (mascot.classList.contains('is-quiet')) return;
+      if (title) noteTitle.textContent = title;
+      if (text) noteText.textContent = text;
       mascot.classList.add('is-explaining');
+      window.clearTimeout(noteTimer);
+      noteTimer = window.setTimeout(function () {
+        mascot.classList.remove('is-explaining');
+      }, ms || 6000);
     }
-
+    function mood(name, ms) {
+      mascot.classList.remove('mood-happy', 'mood-alert', 'mood-sleep');
+      if (name) mascot.classList.add('mood-' + name);
+      window.clearTimeout(moodTimer);
+      if (name && ms) moodTimer = window.setTimeout(function () {
+        mascot.classList.remove('mood-' + name);
+      }, ms);
+    }
+    function wave() {
+      mascot.classList.add('is-waving');
+      window.setTimeout(function () { mascot.classList.remove('is-waving'); }, 1800);
+    }
     function resetExplanation() {
-      noteTitle.textContent = 'ผู้ช่วย MASARU';
-      noteText.textContent = 'ชี้ที่การ์ดระบบ เพื่อดูว่าระบบนั้นใช้ทำอะไร';
+      noteTitle.textContent = info[0];
+      noteText.textContent = info[1];
       mascot.classList.remove('is-explaining');
     }
 
-    if (hub) {
-      syncVisibility();
-      new MutationObserver(syncVisibility).observe(hub, {
-        attributes: true,
-        attributeFilter: ['class']
-      });
+    /* ---------- โหมดเงียบ: ไม่ขวางตอนทำงาน ---------- */
+    function quiet(ms) {
+      mascot.classList.add('is-quiet');
+      mascot.classList.remove('is-explaining');
+      window.clearTimeout(quietTimer);
+      quietTimer = window.setTimeout(function () {
+        mascot.classList.remove('is-quiet');
+      }, ms || 1400);
+    }
+    function isTyping() {
+      var el = document.activeElement;
+      if (!el) return false;
+      var t = (el.tagName || '').toLowerCase();
+      return t === 'input' || t === 'textarea' || t === 'select' || el.isContentEditable;
+    }
+    document.addEventListener('focusin', function () { if (isTyping()) quiet(60000); }, true);
+    document.addEventListener('focusout', function () {
+      window.setTimeout(function () { if (!isTyping()) quiet(200); }, 60);
+    }, true);
+    window.addEventListener('scroll', function () { quiet(1200); }, { passive: true });
+    document.addEventListener('keydown', function () { if (isTyping()) quiet(60000); }, true);
+
+    /* ---------- ตื่น/หลับตามการใช้งาน ---------- */
+    function awake() {
+      if (mascot.classList.contains('mood-sleep')) mood(null);
+      window.clearTimeout(idleTimer);
+      idleTimer = window.setTimeout(function () { mood('sleep'); }, 90000);
+    }
+    ['pointermove', 'keydown', 'click'].forEach(function (ev) {
+      window.addEventListener(ev, awake, { passive: true });
+    });
+    awake();
+
+    /* ---------- แสดง/ซ่อน: ซ่อนตอนอยู่หน้า login ---------- */
+    var LOGIN_SEL = '#authScreen, #login, #login-overlay, #authGate';
+    function loginVisible() {
+      var list = document.querySelectorAll(LOGIN_SEL);
+      for (var i = 0; i < list.length; i++) {
+        var el = list[i];
+        if (el.classList.contains('hide')) continue;
+        var st = getComputedStyle(el);
+        if (st.display !== 'none' && st.visibility !== 'hidden') return true;
+      }
+      return false;
+    }
+    function overlayOpen() {
+      // popup/modal เปิดอยู่ → หลบให้
+      var b = document.body;
+      if (b.classList.contains('locked')) return true;
+      try { if (getComputedStyle(b).overflow === 'hidden' && b.scrollHeight > window.innerHeight) return true; } catch (e) {}
+      return false;
     }
 
+    var greeted = false;
+    function syncVisibility() {
+      var ok = !loginVisible();
+      if (ok && hub && page === 'index') ok = !hub.classList.contains('hide');
+      mascot.classList.toggle('is-visible', ok);
+      if (!ok) { mascot.classList.remove('is-explaining'); return; }
+      if (overlayOpen()) { quiet(1500); return; }
+      if (!greeted) {
+        greeted = true;
+        window.setTimeout(function () {
+          wave();
+          say(greeting(), info[1], 6500);
+        }, 900);
+      }
+    }
+
+    var syncFrame = 0;
+    new MutationObserver(function () {
+      cancelAnimationFrame(syncFrame);
+      syncFrame = requestAnimationFrame(syncVisibility);
+    }).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'style'] });
+    syncVisibility();
+
+    /* ---------- คลิกตัวหุ่น = ขอคำแนะนำหน้านี้ ---------- */
+    body.addEventListener('click', function () {
+      mood('happy', 2200);
+      wave();
+      say(info[0], info[1], 6000);
+    });
+
+    /* ---------- ปุ่มปิดถาวร ---------- */
+    mascot.querySelector('.msr-mascot-x').addEventListener('click', function (e) {
+      e.stopPropagation();
+      try { localStorage.setItem(OFF_KEY, '1'); } catch (err) {}
+      mascot.classList.add('is-off');
+    });
+
+    /* ---------- รู้ผลลัพธ์จาก toast ของระบบ (อ่านอย่างเดียว) ---------- */
+    new MutationObserver(function (muts) {
+      for (var i = 0; i < muts.length; i++) {
+        var added = muts[i].addedNodes;
+        for (var j = 0; j < added.length; j++) {
+          var n = added[j];
+          if (!n || n.nodeType !== 1) continue;
+          var cls = (typeof n.className === 'string' ? n.className : '').toLowerCase();
+          if (cls.indexOf('toast') < 0 && (n.id || '').toLowerCase().indexOf('toast') < 0) continue;
+          var txt = (n.textContent || '');
+          if (/ไม่สำเร็จ|ผิดพลาด|error|ล้มเหลว/i.test(txt)) mood('alert', 3000);
+          else mood('happy', 2600);
+        }
+      }
+    }).observe(document.body, { childList: true, subtree: true });
+
+    /* ---------- หน้า Hub: อธิบายการ์ดระบบ (ของเดิม) ---------- */
     if (grid) {
       grid.addEventListener('pointerover', function (event) {
         var tile = event.target.closest('.app-tile');
-        if (tile && grid.contains(tile)) explain(tile);
+        if (!tile || !grid.contains(tile)) return;
+        var title = tile.querySelector('.app-name');
+        var description = tile.querySelector('.app-desc');
+        if (!title || !description) return;
+        say(title.textContent.trim(), description.textContent.trim(), 8000);
       }, { passive: true });
       grid.addEventListener('pointerout', function (event) {
         var tile = event.target.closest('.app-tile');
@@ -105,17 +242,31 @@
       }, { passive: true });
       grid.addEventListener('focusin', function (event) {
         var tile = event.target.closest('.app-tile');
-        if (tile && grid.contains(tile)) explain(tile);
+        if (!tile || !grid.contains(tile)) return;
+        var t = tile.querySelector('.app-name'), d = tile.querySelector('.app-desc');
+        if (t && d) say(t.textContent.trim(), d.textContent.trim(), 8000);
       });
       grid.addEventListener('focusout', resetExplanation);
     }
 
-    window.addEventListener('pointermove', function (event) {
-      var x = ((event.clientX / Math.max(window.innerWidth, 1)) - .5) * 13;
-      var y = ((event.clientY / Math.max(window.innerHeight, 1)) - .5) * -9;
-      body.style.setProperty('--mx', x.toFixed(2) + 'deg');
-      body.style.setProperty('--my', y.toFixed(2) + 'deg');
-    }, { passive: true });
+    /* ---------- เอียงตัว + ตามองตามเมาส์ ---------- */
+    if (matchMedia('(pointer:fine)').matches && !matchMedia('(prefers-reduced-motion:reduce)').matches) {
+      window.addEventListener('pointermove', function (event) {
+        var nx = (event.clientX / Math.max(window.innerWidth, 1)) - .5;
+        var ny = (event.clientY / Math.max(window.innerHeight, 1)) - .5;
+        body.style.setProperty('--mx', (nx * 13).toFixed(2) + 'deg');
+        body.style.setProperty('--my', (ny * -9).toFixed(2) + 'deg');
+        mascot.style.setProperty('--eyeX', (nx * 3.2).toFixed(2) + 'px');
+        mascot.style.setProperty('--eyeY', (ny * 2.4).toFixed(2) + 'px');
+      }, { passive: true });
+    }
+
+    /* ---------- เปิด/ปิดจากคอนโซล ---------- */
+    window.msrMascot = {
+      on: function () { try { localStorage.removeItem(OFF_KEY); } catch (e) {} mascot.classList.remove('is-off'); },
+      off: function () { try { localStorage.setItem(OFF_KEY, '1'); } catch (e) {} mascot.classList.add('is-off'); },
+      say: say
+    };
   }
 
 
