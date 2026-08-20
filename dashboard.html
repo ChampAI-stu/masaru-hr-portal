@@ -97,48 +97,10 @@
     color:var(--green-dark);border-radius:10px;font-family:inherit;font-weight:600;font-size:13px;cursor:pointer;
     display:flex;align-items:center;justify-content:center;gap:6px;transition:.15s}
   .allpdf:hover{background:#cdd6e6}
-  /* ===== รายงาน PDF (A4) ===== */
-  .pdf-page{width:794px;padding:40px 44px;background:#fff;color:#16233f;font-family:'IBM Plex Sans Thai',sans-serif;box-sizing:border-box}
-  .pd-head{display:flex;align-items:center;gap:16px;background:linear-gradient(120deg,#0e1c38,#16294d);border-bottom:4px solid #d62030;border-radius:12px;padding:16px 22px;margin-bottom:22px}
-  .pd-logo{height:30px}
-  .pd-htxt{color:#fff;font-weight:700;font-size:17px;line-height:1.35}
-  .pd-htxt span{font-weight:400;font-size:13px;opacity:.9}
-  .pd-name{display:flex;align-items:center;gap:14px;padding-bottom:16px;border-bottom:1px solid #e2e7ef;margin-bottom:20px}
-  .pd-av{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#0e1c38,#16294d);color:#fff;display:grid;place-items:center;font-size:22px;font-weight:700}
-  .pd-name .nm{font-size:20px;font-weight:700;color:#0e1c38}
-  .pd-name .ps{color:#64708a;font-size:13px}
-  .pd-date{margin-left:auto;color:#64708a;font-size:12px}
-  .pd-sec{margin-bottom:22px}
-  .pd-st{font-weight:700;color:#0e1c38;font-size:16px;display:flex;align-items:center;gap:8px;margin-bottom:2px}
-  .pd-st span{background:#16294d;color:#fff;font-size:14px;padding:2px 12px;border-radius:8px}
-  .pd-arche{color:#64708a;font-size:14px;margin-bottom:14px}
-  .pd-grid{display:grid;grid-template-columns:280px 1fr;gap:20px;align-items:center}
-  .pd-radar{display:flex;justify-content:center}
-  .pd-dim{display:grid;grid-template-columns:20px 1fr 20px 96px;align-items:center;gap:8px;margin-bottom:11px;font-size:13px}
-  .pd-dim b{font-weight:700;text-align:center}
-  .pd-bar{height:9px;background:#cdd6e6;border-radius:99px;overflow:hidden}
-  .pd-bar>i{display:block;height:100%;background:#16294d}
-  .pd-dim span{color:#64708a;font-size:12px;text-align:right}
-  .pd-bosi{display:grid;grid-template-columns:170px 1fr 44px;align-items:center;gap:10px;margin-bottom:12px;font-size:14px}
-  .pd-bosi .lab{font-weight:600}
-  .pd-track{height:12px;background:#e7ecf5;border-radius:99px;overflow:hidden}
-  .pd-track>i{display:block;height:100%;border-radius:99px}
-  .pd-bosi .v{font-weight:700;text-align:right;font-size:13px}
-  .pd-empty{color:#97a1b5;font-size:13px;padding:8px 0}
-  .pd-note{background:#eef1f7;border:1px solid #e2e7ef;border-radius:10px;padding:12px 14px;font-size:12.5px;color:#64708a;margin-top:6px}
-  .pd-foot{text-align:center;color:#97a1b5;font-size:11px;margin-top:20px;padding-top:12px;border-top:1px solid #eef1f7}
-  .pd-siggrid{display:grid;grid-template-columns:320px 1fr;gap:16px;align-items:center}
-  .pd-hex{display:flex;justify-content:center}
-  .pd-trait{display:grid;grid-template-columns:14px 150px 1fr 44px;align-items:center;gap:9px;margin-bottom:12px;font-size:13.5px}
-  .pd-trait .dot{width:11px;height:11px;border-radius:50%}
-  .pd-trait .tl{font-weight:600;color:#16233f}
-  .pd-track2{height:11px;background:#eef1f7;border-radius:99px;overflow:hidden}
-  .pd-track2>i{display:block;height:100%;border-radius:99px}
-  .pd-trait .tv{font-weight:700;text-align:right;font-size:13px;color:#0e1c38}
-  .pd-chips{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px}
-  .pd-chips .chip-lab{font-weight:700;color:#0e1c38;font-size:13px}
-  .pd-chips .chip{background:linear-gradient(135deg,#0e1c38,#16294d);color:#fff;font-size:12.5px;font-weight:600;padding:5px 13px;border-radius:99px;border:1.5px solid #d62030}
 </style>
+<link rel="stylesheet" href="masaru-cinematic.css" media="screen">
+<script src="masaru-cinematic.js" defer></script>
+<style media="print">.msr-atmosphere,.msr-mascot,.msr-login-story{display:none!important}</style>
 <link rel="stylesheet" href="masaru-cinematic.css" media="screen">
 <script src="masaru-cinematic.js" defer></script>
 <style media="print">.msr-atmosphere,.msr-mascot,.msr-login-story{display:none!important}</style>
@@ -268,6 +230,38 @@
   .assessment-missing i{width:43px;height:43px;border-radius:13px;display:grid;place-items:center;background:#fff;border:1px solid #dfe6ef;color:var(--theme);font-size:20px}.assessment-missing b{display:block;font-size:12px;color:#40506a}.assessment-missing span{font-size:9.5px}
   #detail .note{border-radius:13px;background:linear-gradient(135deg,#eef4fd,#f8fbff);border-color:#dbe5f3;display:flex;gap:8px;align-items:flex-start}
   #detail .note::before{content:"\ea75";font-family:"tabler-icons";font-size:17px;color:#2c67ad}
+
+  /* รายงาน PDF - ออกแบบใหม่ทั้งหน้า */
+  .pdf-page{width:794px;height:1123px;padding:0;overflow:hidden;background:#f3f6fb;color:#12213c;font-family:'IBM Plex Sans Thai',Tahoma,sans-serif;box-sizing:border-box}
+  .pr-header{position:relative;height:96px;padding:20px 30px;display:flex;align-items:center;justify-content:space-between;overflow:hidden;background:linear-gradient(125deg,#07142c 0%,#102c59 62%,#214b81 100%);border-bottom:4px solid #d62030}
+  .pr-header::before{content:"";position:absolute;width:210px;height:210px;right:-55px;top:-118px;border:1px solid rgba(255,255,255,.12);border-radius:50%;box-shadow:0 0 0 28px rgba(255,255,255,.035),0 0 0 58px rgba(255,255,255,.02)}
+  .pr-header::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:linear-gradient(90deg,#d62030,#f15c6a 42%,#e1b65f 42%,#e1b65f 58%,#f15c6a 58%,#d62030)}
+  .pr-brand{position:relative;z-index:1;display:flex;align-items:center;gap:15px}.pr-logo{height:27px;max-width:215px;object-fit:contain}.pr-brand-line{height:32px;width:1px;background:rgba(255,255,255,.22)}
+  .pr-title small{display:block;color:#e6bd6b;font-size:8.5px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}.pr-title b{display:block;color:#fff;font-size:18px;margin-top:3px}.pr-title span{display:block;color:#b9c8dd;font-size:9px;margin-top:1px}
+  .pr-docmeta{position:relative;z-index:1;text-align:right;color:#fff}.pr-docmeta b{display:block;font-size:12px}.pr-docmeta span{display:block;color:#aebdd2;font-size:8.5px;margin-top:3px;letter-spacing:.5px}
+  .pr-body{padding:17px 27px 13px}
+  .pr-profile{--tone:#2c67ad;--soft:#eaf3ff;position:relative;display:flex;align-items:center;gap:13px;padding:12px 15px;margin-bottom:11px;border:1px solid #dce5f1;border-radius:15px;background:linear-gradient(125deg,#fff 45%,var(--soft));overflow:hidden}
+  .pr-profile::after{content:"";position:absolute;width:120px;height:120px;border:18px solid rgba(16,41,77,.035);border-radius:50%;right:-52px;top:-60px}
+  .pr-avatar{position:relative;z-index:1;width:49px;height:49px;border-radius:14px;display:grid;place-items:center;color:#fff;font-size:17px;font-weight:800;background:linear-gradient(145deg,var(--tone),#10284f);box-shadow:0 8px 18px rgba(16,41,77,.17)}
+  .pr-person{position:relative;z-index:1;min-width:0}.pr-person .nm{font-size:17px;font-weight:700;color:#0c1931}.pr-person .ps{font-size:10px;color:#697892;margin-top:1px}.pr-person-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}.pr-person-tags span{font-size:7.5px;font-weight:700;color:var(--tone);background:#fff;border:1px solid #dce5ef;border-radius:99px;padding:2px 7px}
+  .pr-profile-date{position:relative;z-index:1;margin-left:auto;text-align:right;color:#7d899c;font-size:8.5px}.pr-profile-date b{display:block;color:#42516a;font-size:9.5px;margin-bottom:2px}
+  .pr-form{--tone:#2c67ad;--soft:#eaf3ff;position:relative;margin-bottom:10px;padding:11px 13px;border:1px solid #dce4ee;border-radius:15px;background:#fff;overflow:hidden}
+  .pr-form::after{content:attr(data-watermark);position:absolute;right:-5px;top:-28px;color:var(--soft);font-size:74px;font-weight:800;letter-spacing:-4px;pointer-events:none}
+  .pr-form-head{position:relative;z-index:1;display:flex;align-items:center;gap:9px;padding-bottom:8px;margin-bottom:9px;border-bottom:1px solid #e9edf3}
+  .pr-form-no{width:29px;height:29px;border-radius:9px;display:grid;place-items:center;color:#fff;background:var(--tone);font-size:8px;font-weight:800;box-shadow:0 6px 14px rgba(16,41,77,.13)}
+  .pr-form-title{flex:1}.pr-form-title b{display:block;font-size:12.5px;color:#15233c}.pr-form-title span{display:block;font-size:8px;color:#8a96a8;margin-top:1px;letter-spacing:.4px}.pr-result-pill{font-size:9px;font-weight:800;color:var(--tone);background:var(--soft);border:1px solid #dfe5ed;border-radius:99px;padding:3px 9px}
+  .pr-mbti-grid{position:relative;z-index:1;display:grid;grid-template-columns:205px 1fr;gap:12px;align-items:center}.pr-radar{height:188px;display:flex;align-items:center;justify-content:center;border-radius:13px;background:radial-gradient(circle at center,var(--soft),#fff 67%);border:1px solid #e2e8f0}.pr-radar svg{width:185px;height:185px}
+  .pr-dims{display:grid;grid-template-columns:1fr 1fr;gap:7px}.pr-dim{padding:8px;border:1px solid #e1e7ef;border-radius:11px;background:linear-gradient(145deg,#fff,#fafcff)}
+  .pr-dim-top{display:flex;align-items:center;justify-content:space-between;gap:5px}.pr-pole{display:flex;align-items:center;gap:4px;min-width:0}.pr-pole.right{flex-direction:row-reverse;text-align:right}.pr-pole-icon{width:20px;height:20px;border-radius:6px;display:grid;place-items:center;background:var(--soft);color:var(--tone);font-size:10px}.pr-pole b{font-size:9.5px;color:#24334c}.pr-pole small{display:block;font-size:6.5px;color:#929cad;white-space:nowrap;max-width:69px;overflow:hidden;text-overflow:ellipsis}
+  .pr-split{display:flex;height:6px;border-radius:99px;overflow:hidden;background:#e8edf4;margin:7px 0 4px}.pr-split .left{background:var(--tone)}.pr-split .right{background:#cbd5e3}.pr-dim-score{display:flex;justify-content:space-between;font-size:7.5px;color:#7b8799}.pr-dim-score strong{color:var(--tone)}
+  .pr-bosi-grid{position:relative;z-index:1;display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.pr-bosi-card{--item:#2c67ad;position:relative;padding:8px;border:1px solid #e0e6ee;border-radius:11px;background:linear-gradient(145deg,#fff,#f9fbfe);overflow:hidden}.pr-bosi-card.dom{border-color:var(--item);box-shadow:0 6px 15px rgba(17,40,78,.08)}
+  .pr-bosi-top{display:flex;align-items:center;gap:6px}.pr-bosi-icon{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;color:#fff;background:var(--item);font-size:13px}.pr-bosi-name{min-width:0}.pr-bosi-name b{display:block;font-size:8.5px;color:#25334b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pr-bosi-name span{display:block;font-size:6.5px;color:#929cad;margin-top:1px}.pr-bosi-pct{margin-left:auto;color:var(--item);font-size:11px;font-weight:800}.pr-bosi-bar{height:6px;margin-top:7px;background:#e7ebf1;border-radius:99px;overflow:hidden}.pr-bosi-bar i{display:block;height:100%;background:var(--item);border-radius:99px}.pr-dom{position:absolute;right:5px;bottom:4px;color:var(--item);font-size:5.8px;font-weight:800;letter-spacing:.5px}
+  .pr-signature-grid{position:relative;z-index:1;display:grid;grid-template-columns:215px 1fr;gap:12px;align-items:center}.pr-hex{height:180px;display:flex;align-items:center;justify-content:center;border-radius:13px;background:radial-gradient(circle at center,#fff7e5,#fff 68%);border:1px solid #efe4ce}.pr-hex svg{width:205px;height:190px}
+  .pr-traits{display:grid;grid-template-columns:1fr 1fr;gap:7px}.pr-trait{--item:#16294d;display:grid;grid-template-columns:25px 1fr 30px;gap:6px;align-items:center;padding:7px;border:1px solid #e8e2d7;border-radius:10px;background:#fffdf9}.pr-trait-icon{width:25px;height:25px;border-radius:8px;display:grid;place-items:center;color:#fff;background:var(--item);font-size:11px}.pr-trait-copy{min-width:0}.pr-trait-copy b{display:block;font-size:8px;color:#4e432e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pr-trait-bar{height:5px;background:#eeeae2;border-radius:99px;overflow:hidden;margin-top:4px}.pr-trait-bar i{display:block;height:100%;background:var(--item);border-radius:99px}.pr-trait-pct{font-size:9px;font-weight:800;color:var(--item);text-align:right}
+  .pr-highlights{position:relative;z-index:1;display:flex;align-items:center;gap:5px;margin-top:8px}.pr-highlights>b{font-size:8px;color:#72551e}.pr-highlights span{font-size:7.5px;font-weight:700;color:#73551c;background:#fff5dd;border:1px solid #ead5a4;border-radius:99px;padding:2px 7px}
+  .pr-empty{position:relative;z-index:1;height:92px;display:flex;align-items:center;justify-content:center;gap:8px;border:1px dashed #cbd5e2;border-radius:11px;background:#f8fafd;color:#7b8798;font-size:10px}.pr-empty i{font-size:22px;color:var(--tone)}
+  .pr-note{display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid #dde6f2;border-radius:10px;background:#f2f6fc;color:#6f7e94;font-size:7.5px;line-height:1.45}.pr-note i{width:23px;height:23px;border-radius:7px;display:grid;place-items:center;flex-shrink:0;color:#2c67ad;background:#e4eefb;font-size:12px}
+  .pr-footer{display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding-top:7px;border-top:1px solid #e5eaf1;color:#9aa4b3;font-size:7px}.pr-footer b{color:#5e6b80;letter-spacing:.5px}.pr-page-no{display:inline-flex;align-items:center;gap:4px}.pr-page-no::before{content:"";width:18px;height:2px;background:#d62030}
 
   @keyframes pgSpin{to{transform:rotate(360deg)}}
   @keyframes pgFloat{50%{transform:translateY(-7px)}}
@@ -673,7 +667,7 @@ async function deleteRespondent(id, name){
 const LOGO = () => { const el = document.querySelector(".hlogo"); return el ? el.src : ""; };
 
 // SVG radar 4 แกน (E/S/T/J) วาดเองจากคะแนน — ใช้ใน PDF ได้ทุกคนโดยไม่ต้องพึ่ง Chart.js
-function svgRadar(sc){
+function svgRadar(sc, tone="#16294d", fill="rgba(22,41,77,.16)"){
   const labs=["E","S","T","J"], vals=[sc.E??0,sc.S??0,sc.T??0,sc.J??0];
   const cx=130,cy=130,R=95, ang=i=>(-90+i*90)*Math.PI/180;
   const pt=(i,r)=>[cx+Math.cos(ang(i))*r, cy+Math.sin(ang(i))*r];
@@ -684,11 +678,11 @@ function svgRadar(sc){
   let axes=""; for(let i=0;i<4;i++){const[x,y]=pt(i,R);axes+=`<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#cdd6e6" stroke-width="1"/>`;}
   const poly=[0,1,2,3].map(i=>pt(i,R*vals[i]/100).map(n=>n.toFixed(1)).join(",")).join(" ");
   let labels=""; const lp=[[cx,cy-R-14],[cx+R+12,cy],[cx,cy+R+20],[cx-R-12,cy]];
-  labs.forEach((l,i)=>{labels+=`<text x="${lp[i][0]}" y="${lp[i][1]}" fill="#0e1c38" font-size="15" font-weight="700" text-anchor="middle">${l}</text>`;});
+  labs.forEach((l,i)=>{labels+=`<text x="${lp[i][0]}" y="${lp[i][1]}" fill="${tone}" font-size="15" font-weight="700" text-anchor="middle">${l}</text>`;});
   return `<svg width="260" height="260" viewBox="0 0 260 260" xmlns="http://www.w3.org/2000/svg">
     ${grid}${axes}
-    <polygon points="${poly}" fill="rgba(22,120,93,.18)" stroke="#16294d" stroke-width="2"/>
-    ${labs.map((l,i)=>{const[x,y]=pt(i,R*vals[i]/100);return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5" fill="#16294d"/>`;}).join("")}
+    <polygon points="${poly}" fill="${fill}" stroke="${tone}" stroke-width="2.4"/>
+    ${labs.map((l,i)=>{const[x,y]=pt(i,R*vals[i]/100);return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.8" fill="${tone}" stroke="#fff" stroke-width="1.5"/>`;}).join("")}
     ${labels}</svg>`;
 }
 
@@ -724,71 +718,93 @@ function svgHex(traits){
     labs+=`<text x="${lx.toFixed(1)}" y="${(ly+4).toFixed(1)}" fill="#0e1c38" font-size="12.5" font-weight="600" text-anchor="${anchor}">${short[i]}</text>`;
   }
   return `<svg width="320" height="300" viewBox="0 0 320 300" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="sigGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#e4b85f" stop-opacity=".42"/><stop offset="100%" stop-color="#d62030" stop-opacity=".16"/></linearGradient></defs>
     ${grid}${axes}
-    <polygon points="${poly}" fill="rgba(201,168,76,.22)" stroke="#d62030" stroke-width="2.5"/>
+    <polygon points="${poly}" fill="url(#sigGrad)" stroke="#a97818" stroke-width="2.5"/>
     ${dots}${labs}</svg>`;
 }
 
 function reportNode(a){
   const m=a.mbti, b=a.bosi, arche=m&&MBTI_TYPES[m.type]?MBTI_TYPES[m.type]:null;
+  const visual=mbtiVisual(m&&m.type), dominant=b&&BOSI[b.type]?BOSI[b.type]:null;
   const dimRows = m ? DIMS.map(([l,r])=>{
     const lv=m.scores[l]??0, rv=m.scores[r]??0;
-    return `<div class="pd-dim"><b>${l}</b><div class="pd-bar"><i style="width:${lv}%"></i></div><b>${r}</b><span>${lv}% / ${rv}%</span></div>`;
-  }).join("") : `<div class="pd-empty">— ยังไม่มีผล MBTI —</div>`;
+    const li=DIM_INFO[l],ri=DIM_INFO[r];
+    return `<div class="pr-dim">
+      <div class="pr-dim-top">
+        <div class="pr-pole"><span class="pr-pole-icon"><i class="ti ${li[1]}"></i></span><div><b>${l}</b><small>${li[0]}</small></div></div>
+        <div class="pr-pole right"><span class="pr-pole-icon"><i class="ti ${ri[1]}"></i></span><div><b>${r}</b><small>${ri[0]}</small></div></div>
+      </div>
+      <div class="pr-split"><i class="left" style="width:${lv}%"></i><i class="right" style="width:${rv}%"></i></div>
+      <div class="pr-dim-score"><span><strong>${lv}%</strong> · ${l}</span><span>${r} · <strong>${rv}%</strong></span></div>
+    </div>`;
+  }).join("") : "";
   const bosiRows = b ? ["B","O","S","I"].map(k=>{
     const v=b.scores[k]??0, meta=BOSI[k];
-    return `<div class="pd-bosi"><span class="lab" style="color:${meta[1]}">${meta[0]}</span><div class="pd-track"><i style="width:${v}%;background:${meta[1]}"></i></div><span class="v">${v}%</span></div>`;
-  }).join("") : `<div class="pd-empty">— ยังไม่มีผล BOSI —</div>`;
+    return `<div class="pr-bosi-card ${k===b.type?"dom":""}" style="--item:${meta[1]}">
+      <div class="pr-bosi-top"><span class="pr-bosi-icon"><i class="ti ${meta[2]}"></i></span><div class="pr-bosi-name"><b>${esc(meta[0])}</b><span>${esc(meta[3])}</span></div><span class="pr-bosi-pct">${v}%</span></div>
+      <div class="pr-bosi-bar"><i style="width:${v}%"></i></div>${k===b.type?'<span class="pr-dom">DOMINANT</span>':""}
+    </div>`;
+  }).join("") : "";
 
   // ลายเซ็นบุคลิก (ต้องมีทั้ง MBTI + BOSI)
-  let sigHTML = "";
+  let sigHTML = `<div class="pr-form" data-watermark="SIGN" style="--tone:#a97818;--soft:#fff5dd">
+    <div class="pr-form-head"><span class="pr-form-no">03</span><div class="pr-form-title"><b>ลายเซ็นบุคลิกการทำงาน</b><span>PERSONALITY SIGNATURE · วิเคราะห์ร่วมจาก MBTI + BOSI</span></div><span class="pr-result-pill">รอผลครบ 2 แบบ</span></div>
+    <div class="pr-empty"><i class="ti ti-fingerprint"></i><span>ต้องมีผล MBTI และ BOSI เพื่อสร้างลายเซ็นบุคลิก</span></div>
+  </div>`;
   if(m && b){
     const tr = derivedTraits(m,b);
-    const meters = tr.map(([lab,v])=>{
+    const traitIcons=["ti-crown","ti-bulb","ti-rosette-discount-check","ti-users-group","ti-wind","ti-calendar-stats"];
+    const meters = tr.map(([lab,v],i)=>{
       const c = traitColor(v);
-      return `<div class="pd-trait"><span class="dot" style="background:${c}"></span>
-        <span class="tl">${lab}</span>
-        <div class="pd-track2"><i style="width:${v}%;background:${c}"></i></div>
-        <span class="tv">${v}%</span></div>`;
+      return `<div class="pr-trait" style="--item:${c}"><span class="pr-trait-icon"><i class="ti ${traitIcons[i]}"></i></span><div class="pr-trait-copy"><b>${esc(lab)}</b><div class="pr-trait-bar"><i style="width:${v}%"></i></div></div><span class="pr-trait-pct">${v}%</span></div>`;
     }).join("");
     const top3 = [...tr].sort((x,y)=>y[1]-x[1]).slice(0,3)
-      .map(t=>`<span class="chip">${t[0]} · ${t[1]}%</span>`).join("");
-    sigHTML = `
-    <div class="pd-sec">
-      <div class="pd-st">ลายเซ็นบุคลิก <span>Personality Signature</span></div>
-      <div class="pd-arche">6 มิติสไตล์การทำงาน วิเคราะห์จาก MBTI + BOSI รวมกัน</div>
-      <div class="pd-siggrid">
-        <div class="pd-hex">${svgHex(tr)}</div>
-        <div>${meters}</div>
-      </div>
-      <div class="pd-chips"><span class="chip-lab">จุดเด่น</span>${top3}</div>
+      .map(t=>`<span>${esc(t[0])} · ${t[1]}%</span>`).join("");
+    sigHTML = `<div class="pr-form" data-watermark="SIGN" style="--tone:#a97818;--soft:#fff5dd">
+      <div class="pr-form-head"><span class="pr-form-no">03</span><div class="pr-form-title"><b>ลายเซ็นบุคลิกการทำงาน</b><span>PERSONALITY SIGNATURE · 6 มิติสไตล์การทำงาน</span></div><span class="pr-result-pill">COMBINED PROFILE</span></div>
+      <div class="pr-signature-grid"><div class="pr-hex">${svgHex(tr)}</div><div class="pr-traits">${meters}</div></div>
+      <div class="pr-highlights"><b>จุดเด่น</b>${top3}</div>
     </div>`;
   }
 
   const n=document.createElement("div");
   n.className="pdf-page";
   n.innerHTML=`
-    <div class="pd-head">
-      <img src="${LOGO()}" class="pd-logo" alt="MASARU">
-      <div class="pd-htxt">รายงานผลแบบประเมินบุคลิกภาพผู้สมัคร<br><span>MBTI &amp; BOSI · MASARU HR</span></div>
+    <div class="pr-header">
+      <div class="pr-brand"><img src="${LOGO()}" class="pr-logo" alt="MASARU"><span class="pr-brand-line"></span><div class="pr-title"><small>Talent Intelligence Report</small><b>รายงานบุคลิกภาพผู้สมัคร</b><span>MBTI · BOSI · Personality Signature</span></div></div>
+      <div class="pr-docmeta"><b>CONFIDENTIAL</b><span>MASARU HR / PEOPLE ANALYTICS</span></div>
     </div>
-    <div class="pd-name"><div class="pd-av">${ini(a.name)}</div>
-      <div><div class="nm">${esc(a.name)}</div><div class="ps">${esc(a.pos||"—")}</div>${a.submittedAt?`<div style="font-size:12px;color:#64748b;margin-top:4px"><i class="ti ti-clock"></i> ส่งเมื่อ ${esc(fmtDateTime(a.submittedAt))}</div>`:""}</div>
-      <div class="pd-date">ออกรายงาน: ${new Date().toLocaleDateString("th-TH",{day:"numeric",month:"long",year:"numeric"})}</div>
-    </div>
-    <div class="pd-sec">
-      <div class="pd-st">MBTI <span>${m?esc(m.type):"—"}</span></div>
-      <div class="pd-arche">${arche?esc(arche[0])+" ("+esc(arche[1])+")":""}</div>
-      <div class="pd-grid"><div class="pd-radar">${m?svgRadar(m.scores):""}</div><div>${dimRows}</div></div>
-    </div>
-    <div class="pd-sec">
-      <div class="pd-st">BOSI DNA <span>${b?esc(b.type)+" — เด่นสุด":"—"}</span></div>
-      ${bosiRows}
-    </div>
-    ${sigHTML}
-    <div class="pd-note">ผลนี้เป็นข้อมูลประกอบเพื่อทำความเข้าใจผู้สมัครก่อนสัมภาษณ์ — ไม่ใช่เกณฑ์ผ่าน/ไม่ผ่าน และไม่ใช่แบบทดสอบทางการที่มีลิขสิทธิ์</div>
-    <div class="pd-foot">เหนือกว่า ทุกวัน — Surpass Every Day · MASARU HR</div>`;
+    <div class="pr-body">
+      <div class="pr-profile" style="--tone:${visual.color};--soft:${visual.soft}"><div class="pr-avatar">${ini(a.name)}</div><div class="pr-person"><div class="nm">${esc(a.name)}</div><div class="ps">${esc(a.pos||"—")}</div><div class="pr-person-tags">${m?`<span>${esc(m.type)} · ${esc(visual.label)}</span>`:""}${b&&dominant?`<span>${esc(dominant[0])}</span>`:""}</div></div><div class="pr-profile-date"><b>วันที่ออกรายงาน</b>${new Date().toLocaleDateString("th-TH",{day:"numeric",month:"long",year:"numeric"})}${a.submittedAt?`<br>ส่งผล ${esc(fmtShort(a.submittedAt))}`:""}</div></div>
+      <div class="pr-form" data-watermark="MBTI" style="--tone:${visual.color};--soft:${visual.soft}">
+        <div class="pr-form-head"><span class="pr-form-no">01</span><div class="pr-form-title"><b>MBTI · รูปแบบบุคลิกภาพ</b><span>ENERGY · INFORMATION · DECISION · LIFESTYLE</span></div><span class="pr-result-pill">${m?esc(m.type)+(arche?" · "+esc(arche[0]):""):"รอผลประเมิน"}</span></div>
+        ${m?`<div class="pr-mbti-grid"><div class="pr-radar">${svgRadar(m.scores,visual.color,visual.fill)}</div><div class="pr-dims">${dimRows}</div></div>`:`<div class="pr-empty"><i class="ti ti-brain"></i><span>ยังไม่มีผล MBTI</span></div>`}
+      </div>
+      <div class="pr-form" data-watermark="BOSI" style="--tone:${dominant?dominant[1]:"#d62030"};--soft:#fff0f2">
+        <div class="pr-form-head"><span class="pr-form-no">02</span><div class="pr-form-title"><b>BOSI · DNA การทำงาน</b><span>BUILDER · OPPORTUNIST · SPECIALIST · INNOVATOR</span></div><span class="pr-result-pill">${b&&dominant?esc(dominant[0])+" · เด่นสุด":"รอผลประเมิน"}</span></div>
+        ${b?`<div class="pr-bosi-grid">${bosiRows}</div>`:`<div class="pr-empty"><i class="ti ti-chart-bar"></i><span>ยังไม่มีผล BOSI</span></div>`}
+      </div>
+      ${sigHTML}
+      <div class="pr-note"><i class="ti ti-info-circle"></i><span>ผลนี้ใช้ประกอบการทำความเข้าใจผู้สมัครก่อนสัมภาษณ์ ไม่ใช่เกณฑ์ผ่านหรือไม่ผ่าน และควรพิจารณาร่วมกับประสบการณ์ ทักษะ และการสัมภาษณ์จริง</span></div>
+      <div class="pr-footer"><b>MASARU HR · SURPASS EVERY DAY</b><span>เอกสารใช้ภายในฝ่ายทรัพยากรบุคคล</span><span class="pr-page-no">PERSONALITY DOSSIER</span></div>
+    </div>`;
   return n;
+}
+
+/* ย่อเนื้อหาอัตโนมัติถ้าล้นกรอบ A4 — กันเนื้อหาถูกตัดหาย (overflow:hidden) */
+function fitReport(node){
+  const head = node.querySelector(".pr-header");
+  const body = node.querySelector(".pr-body");
+  if(!head || !body) return;
+  const avail = node.offsetHeight - head.offsetHeight;
+  const need = body.scrollHeight;
+  if(need > avail && need > 0){
+    const s = Math.max(.72, avail / need);
+    body.style.transformOrigin = "top left";
+    body.style.transform = "scale(" + s.toFixed(4) + ")";
+    body.style.width = (100 / s).toFixed(3) + "%";
+  }
 }
 
 async function exportPdf(list, filename){
@@ -804,14 +820,17 @@ async function exportPdf(list, filename){
     for(let i=0;i<targets.length;i++){
       const node = reportNode(targets[i]);
       stage.innerHTML=""; stage.appendChild(node);
-      await new Promise(r=>setTimeout(r,60)); // ให้ layout/รูปพร้อม
-      const canvas = await html2canvas(node,{scale:2,backgroundColor:"#fff",useCORS:true});
+      if(document.fonts && document.fonts.ready) await document.fonts.ready;
+      await Promise.all([...node.querySelectorAll("img")].map(img=>img.complete?Promise.resolve():new Promise(r=>{img.onload=img.onerror=r;})));
+      await new Promise(r=>setTimeout(r,80)); // ให้ layout/รูปพร้อม
+      fitReport(node);
+      const canvas = await html2canvas(node,{scale:2,backgroundColor:"#f3f6fb",useCORS:true,logging:false});
       const img = canvas.toDataURL("image/jpeg",0.95);
-      const imgH = canvas.height*W/canvas.width;
       if(i>0) pdf.addPage();
-      pdf.addImage(img,"JPEG",0,0,W,Math.min(imgH,H));
+      pdf.addImage(img,"JPEG",0,0,W,H);
     }
-    pdf.save((filename||"ผลแบบทดสอบ")+".pdf");
+    const safe = String(filename||"ผลแบบทดสอบ").replace(/[\\/:*?"<>|]/g,"").trim() || "ผลแบบทดสอบ";
+    pdf.save(safe+".pdf");
   }catch(err){
     alert("สร้าง PDF ไม่สำเร็จ: "+(err.message||err));
   }finally{
