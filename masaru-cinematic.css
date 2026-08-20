@@ -1089,7 +1089,6 @@ body[data-msr-page="deadline"] #formDoc:not(.pdfing) .fi {
   pointer-events: none;
 }
 .msr-mascot.is-quiet .msr-mascot-note { opacity: 0 !important; }
-.msr-mascot.is-off { display: none !important; }
 
 /* เสาอากาศ + ไฟสถานะ */
 .msr-mascot-antenna {
@@ -1154,25 +1153,6 @@ body[data-msr-page="deadline"] #formDoc:not(.pdfing) .fi {
 .msr-mascot.mood-sleep .msr-mascot-antenna { animation-duration: 5s; opacity: .6; }
 .msr-mascot.mood-sleep .msr-mascot-mouth { width: 10px; }
 .msr-mascot.is-waving .msr-mascot-arm.right { animation: msrWave .55s ease-in-out 3; }
-
-/* กล่องข้อความ + ปุ่มปิด */
-.msr-mascot-note { padding-right: 26px; }
-.msr-mascot-x {
-  position: absolute;
-  top: 5px;
-  right: 6px;
-  width: 18px;
-  height: 18px;
-  padding: 0;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: #9fb0c6;
-  font: 700 14px/1 system-ui, sans-serif;
-  cursor: pointer;
-  pointer-events: auto;
-}
-.msr-mascot-x:hover { background: #eef3fa; color: #45566f; }
 
 @keyframes msrAntenna {
   0%, 100% { transform: scale(1); filter: brightness(1); }
