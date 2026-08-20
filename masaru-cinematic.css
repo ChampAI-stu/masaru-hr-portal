@@ -1003,3 +1003,68 @@ body[data-msr-page="deadline"] #formView .btn:focus-visible {
   border-color: rgba(255, 255, 255, .38) !important;
   box-shadow: inset 3px 0 0 var(--msr-gold, #C9A84C);
 }
+
+/* ==========================================================
+   deadline.html — พรีวิว "อิงจาก PDF"
+   คัดลอกกฎ layout ชุดเดียวกับที่ .pdf-stage ใช้ตอนสร้าง PDF
+   มาใส่ให้พรีวิวบนจอ เพื่อให้เห็นหน้าตาเหมือนไฟล์จริงทุกประการ
+
+   ปลอดภัยกับ PDF 100%:
+   - ไฟล์นี้ผูก media="screen" → window.print ไม่โดน
+   - ไฟล์นี้ถูกถอดออกชั่วคราวระหว่าง html2canvas → PDF export ไม่โดน
+   - ไม่แตะ .pdf-stage / #formDoc.pdfing / @media print เลย
+   ========================================================== */
+
+/* กระดาษล็อกความสูง A4 เท่ากับตอนพิมพ์ (เห็นทันทีถ้าเนื้อหาล้น) */
+body[data-msr-page="deadline"] #formDoc:not(.pdfing) .sheet {
+  height: 297mm;
+  min-height: 297mm;
+  max-height: 297mm;
+  overflow: hidden;
+}
+
+/* หน้า 1 — ตารางหัวข้อประเมินยืดเต็มหน้าเหมือน PDF */
+body[data-msr-page="deadline"] #formDoc:not(.pdfing) #formPage1 .sh-score {
+  flex: 1 1 auto;
+  height: auto;
+}
+
+/* หน้า 2 — จัดกึ่งกลางและระยะห่างชุดเดียวกับ PDF */
+body[data-msr-page="deadline"] #formDoc:not(.pdfing) #formPage2 {
+  justify-content: center;
+  position: relative;
+}
+body[data-msr-page="deadline"] #formDoc:not(.pdfing) #formPage2 .sh-band {
+  margin-top: 6mm;
+}
+body[data-msr-page="deadline"] #formDoc:not(.pdfing) #formPage2 .sh-band:first-of-type {
+  margin-top: 0;
+}
+body[data-msr-page="deadline"] #formDoc:not(.pdfing) #formPage2 .sh-sum > div {
+  padding: 5px 0;
+}
+body[data-msr-page="deadline"] #formDoc:not(.pdfing) #formPage2 .sh-sign1 {
+  margin-top: 10mm;
+  margin-bottom: 4mm;
+  border-top: 1px solid #000;
+}
+body[data-msr-page="deadline"] #formDoc:not(.pdfing) #formPage2 .sh-sign2 td {
+  height: 22mm;
+  vertical-align: bottom;
+  padding-bottom: 4mm;
+}
+body[data-msr-page="deadline"] #formDoc:not(.pdfing) #formPage2 .sh-note {
+  margin-top: 0;
+}
+body[data-msr-page="deadline"] #formDoc:not(.pdfing) #formPage2 .pg-no {
+  position: absolute;
+  bottom: 6mm;
+  right: 10mm;
+  margin-top: 0;
+}
+
+/* ช่องกรอกสูงเท่า .fi-flat ที่ใช้ใน PDF (กันบรรทัดเลื่อน 1px ต่อแถว)
+   — ยังพิมพ์ได้ตามปกติ ไม่เปลี่ยนพฤติกรรมฟอร์ม */
+body[data-msr-page="deadline"] #formDoc:not(.pdfing) .fi {
+  min-height: 19px;
+}
