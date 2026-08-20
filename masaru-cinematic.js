@@ -25,10 +25,8 @@
     /* ทำงานเฉพาะหน้าแรก (Hub) เท่านั้น — หน้าอื่นไม่มีผู้ช่วยมารบกวน */
     if (page !== 'index') return;
 
-    /* ---------- ปิดถาวรตามที่ผู้ใช้เลือกไว้ ---------- */
-    var OFF_KEY = 'msr_mascot_off';
-    function isOff() { try { return localStorage.getItem(OFF_KEY) === '1'; } catch (e) { return false; } }
-    if (isOff()) return;
+    /* ล้างค่า "ปิดถาวร" ที่เคยกดไว้ (เลิกใช้ฟีเจอร์นี้แล้ว) */
+    try { localStorage.removeItem('msr_mascot_off'); } catch (e) {}
 
     /* ---------- ข้อความประจำแต่ละหน้า ---------- */
     var info = ['ศูนย์รวมระบบ HR', 'ชี้ที่การ์ดระบบ เพื่อดูว่าระบบนั้นใช้ทำอะไร'];
@@ -46,10 +44,7 @@
     mascot.className = 'msr-mascot';
     mascot.setAttribute('aria-hidden', 'true');
     mascot.innerHTML = [
-      '<div class="msr-mascot-note">',
-        '<button type="button" class="msr-mascot-x" title="ปิดผู้ช่วย">&times;</button>',
-        '<strong></strong><span></span>',
-      '</div>',
+      '<div class="msr-mascot-note"><strong></strong><span></span></div>',
       '<div class="msr-mascot-body" title="คลิกเพื่อดูคำแนะนำ">',
         '<i class="msr-mascot-antenna"></i>',
         '<div class="msr-mascot-ear left"></div>',
@@ -193,13 +188,6 @@
       say(info[0], info[1], 6000);
     });
 
-    /* ---------- ปุ่มปิดถาวร ---------- */
-    mascot.querySelector('.msr-mascot-x').addEventListener('click', function (e) {
-      e.stopPropagation();
-      try { localStorage.setItem(OFF_KEY, '1'); } catch (err) {}
-      mascot.classList.add('is-off');
-    });
-
     /* ---------- รู้ผลลัพธ์จาก toast ของระบบ (อ่านอย่างเดียว) ---------- */
     new MutationObserver(function (muts) {
       for (var i = 0; i < muts.length; i++) {
@@ -253,12 +241,8 @@
       }, { passive: true });
     }
 
-    /* ---------- เปิด/ปิดจากคอนโซล ---------- */
-    window.msrMascot = {
-      on: function () { try { localStorage.removeItem(OFF_KEY); } catch (e) {} mascot.classList.remove('is-off'); },
-      off: function () { try { localStorage.setItem(OFF_KEY, '1'); } catch (e) {} mascot.classList.add('is-off'); },
-      say: say
-    };
+    /* ---------- เรียกใช้จากคอนโซลได้ ---------- */
+    window.msrMascot = { say: say };
   }
 
 
