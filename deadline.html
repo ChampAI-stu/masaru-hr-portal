@@ -277,6 +277,47 @@ body.locked{overflow:hidden}
   #formDoc.no-cover .cover-sheet{display:none!important}   /* เผื่อของเดิม */
   /* ใบปะหน้าใช้เฉพาะหน้าแรก — ซ่อนหน้า 2-3 ไว้ (คงโค้ดเดิมไว้ ไม่ให้สคริปต์พัง) */
   #formPageC2, #formPageC3{display:none!important}
+
+  /* ===== ใบปะหน้า หน้าเดียว — จัดตามต้นฉบับ Word (TH SarabunPSK 16pt) และเต็มหน้า A4 ===== */
+  #formPageC1{padding:12mm 14mm 10mm;font-size:14.5px;line-height:1.55}
+  #formPageC1 .cv1-logo{display:flex;align-items:center;justify-content:center;height:25mm;margin-bottom:2mm}
+  /* .sh-logo เดิมเป็น absolute — ใบปะหน้าต้องอยู่ในสายการไหลปกติ ไม่งั้นหน้าจะไม่เต็ม */
+  #formPageC1 .cv1-logo img{position:static!important;height:auto;width:auto;max-height:26mm;max-width:72mm;
+    object-fit:contain;display:block;top:auto!important;left:auto!important;right:auto!important}
+  #formPageC1 .cv1-title{text-align:center;font-weight:700;font-size:19px;margin-bottom:6mm}
+
+  #formPageC1 .cv1-info .r{display:flex;align-items:flex-end;gap:0;height:11mm}
+  #formPageC1 .cv1-info b{font-weight:700;white-space:nowrap}
+  #formPageC1 .cv1-info .k1{width:34mm}
+  #formPageC1 .cv1-info .k2{width:22mm;text-align:left;padding-left:6mm}
+  #formPageC1 .cv1-info .fi{flex:1 1 auto;min-width:0}
+
+  #formPageC1 .cv1-note{margin-top:5mm}
+  #formPageC1 .cv1-note div{height:8.4mm;display:flex;align-items:center}
+  #formPageC1 .cv1-note b{font-weight:700}
+
+  #formPageC1 .cv1-h{font-weight:700;margin:6mm 0 2.5mm}
+  #formPageC1 .cv1-stat{table-layout:fixed;margin:0}
+  #formPageC1 .cv1-stat th,
+  #formPageC1 .cv1-stat td{border:1px solid #000;padding:1mm 2mm;font-size:14.5px}
+  #formPageC1 .cv1-stat th{background:#f0f0f0;text-align:center;font-weight:700;height:9mm}
+  #formPageC1 .cv1-stat td{height:11mm}
+  #formPageC1 .cv1-stat col.c1{width:34%}
+  #formPageC1 .cv1-stat col.c2{width:30%}
+  #formPageC1 .cv1-stat col.c3{width:36%}
+
+  /* สรุปส่วนที่ 1 — ต้นฉบับไม่มีกรอบ เป็นบรรทัดเปล่า */
+  #formPageC1 .cv1-sum{border:none;padding:0}
+  #formPageC1 .cv1-sum .pf{display:flex;gap:26mm;padding-left:6mm;height:12mm;align-items:center}
+  #formPageC1 .cv1-sum .pf label{display:flex;align-items:center;gap:2mm;white-space:nowrap}
+  #formPageC1 .cv1-sum .pf input[type=checkbox]{width:15px;height:15px;accent-color:#000;margin:0}
+  #formPageC1 .cv1-sum .r{display:flex;align-items:flex-end;gap:2mm;height:12mm;white-space:nowrap}
+  #formPageC1 .cv1-sum .r .fi{flex:0 0 34mm;text-align:center}
+  #formPageC1 .cv1-sum .avg{display:flex;align-items:flex-end;gap:2mm;height:13mm;font-weight:700;margin-top:2mm}
+  #formPageC1 .cv1-sum .avg .fi{flex:0 0 46mm;text-align:center}
+  #formPageC1 .cv1-sum .avg .fi.g{flex:0 0 34mm}
+  #formPageC1 .cv1-fill{flex:1 1 auto;min-height:0}
+  #formPageC1 .pg-no{margin-top:0;text-align:right;font-size:11px;color:#444}
   .cv-info{margin-top:2px;border:none}
   .cv-info td{border:none;padding:3px 0;height:24px;font-size:13px}
   .cv-info .lb{font-weight:600;white-space:nowrap;width:96px}
@@ -572,30 +613,26 @@ body.locked{overflow:hidden}
       <div id="formDoc">
       <!-- ================= ใบปะหน้า หน้า 1/3 ================= -->
       <div class="sheet cover-sheet" id="formPageC1">
-        <div class="sh-head">
-          <img class="sh-logo cvLogoImg" alt="">
-          <div class="sh-title">แบบประเมินผลการทดลองงาน</div>
+        <div class="cv1-logo"><img class="sh-logo cvLogoImg" alt=""></div>
+        <div class="cv1-title">แบบประเมินผลการทดลองงาน</div>
+
+        <div class="cv1-info">
+          <div class="r"><b class="k1">ชื่อพนักงาน</b><input class="fi" id="cv_name"><b class="k2">ชื่อเล่น</b><input class="fi" id="cv_nick" style="flex:0 0 40mm"></div>
+          <div class="r"><b class="k1">รหัสประจำตัว</b><input class="fi" id="cv_code"><b class="k2">ตำแหน่ง</b><input class="fi" id="cv_pos"></div>
+          <div class="r"><b class="k1">เริ่มทดลองงาน</b><input class="fi" id="cv_from"><b class="k2">ถึงวันที่</b><input class="fi" id="cv_to"></div>
         </div>
 
-        <table class="cv-info">
-          <tr><td class="lb">ชื่อพนักงาน</td><td><input class="fi" id="cv_name"></td>
-              <td class="lb" style="width:70px">ชื่อเล่น</td><td style="width:140px"><input class="fi" id="cv_nick"></td></tr>
-          <tr><td class="lb">รหัสประจำตัว</td><td><input class="fi" id="cv_code"></td>
-              <td class="lb">ตำแหน่ง</td><td><input class="fi" id="cv_pos"></td></tr>
-          <tr><td class="lb">เริ่มทดลองงาน</td><td><input class="fi" id="cv_from"></td>
-              <td class="lb">ถึงวันที่</td><td><input class="fi" id="cv_to"></td></tr>
-        </table>
-
-        <div class="cv-note">
-          <b>คำชี้แจง :</b> การประเมินพนักงานจะแบ่งออกเป็น 3 ส่วน (ผ่านที่ 70 คะแนน)<br>
-          ส่วนที่ 1 : การประเมินพฤติกรรมการทำงาน ขาด ลา มาสาย <b>35 คะแนน</b><br>
-          ส่วนที่ 2 : การประเมินประสิทธิภาพการทำงาน <b>35 คะแนน</b><br>
-          ส่วนที่ 3 : การแสดงความคิดเห็น <b>30 คะแนน</b>
+        <div class="cv1-note">
+          <div><b>คำชี้แจง</b>&nbsp;: การประเมินพนักงานจะแบ่งออกเป็น 3 ส่วน (ผ่านที่ 70 คะแนน)</div>
+          <div><b>ส่วนที่ 1</b>&nbsp;: การประเมินพฤติกรรมการทำงาน ขาด ลา มาสาย 35 คะแนน</div>
+          <div><b>ส่วนที่ 2</b>&nbsp;: การประเมินประสิทธิภาพการทำงาน 35 คะแนน</div>
+          <div><b>ส่วนที่ 3</b>&nbsp;: การแสดงความคิดเห็น 30 คะแนน</div>
         </div>
 
-        <div class="cv-sec">การประเมินส่วนที่ 1 : ฝ่ายบุคคล</div>
-        <table class="cv-stat">
-          <tr><th>รายละเอียด</th><th class="c2">จำนวนวัน</th><th class="c3">หมายเหตุ</th></tr>
+        <div class="cv1-h">การประเมินส่วนที่ 1 : ฝ่ายบุคคล</div>
+        <table class="cv1-stat">
+          <colgroup><col class="c1"><col class="c2"><col class="c3"></colgroup>
+          <tr><th>รายละเอียด</th><th>จำนวนวัน</th><th>หมายเหตุ</th></tr>
           <tr><td>ขาดงาน</td><td><input class="fi ctr" id="cv_absent"></td><td><input class="fi" id="cv_absent_n"></td></tr>
           <tr><td>ลากิจ</td><td><input class="fi ctr" id="cv_personal"></td><td><input class="fi" id="cv_personal_n"></td></tr>
           <tr><td>ลาป่วย</td><td><input class="fi ctr" id="cv_sick"></td><td><input class="fi" id="cv_sick_n"></td></tr>
@@ -603,20 +640,20 @@ body.locked{overflow:hidden}
           <tr><td>ลืมสแกนเข้า - ออก</td><td><input class="fi ctr" id="cv_scan"></td><td><input class="fi" id="cv_scan_n"></td></tr>
         </table>
 
-        <div class="cv-sec" style="margin-top:12px">สรุปการประเมินส่วนที่ 1</div>
-        <div class="cv-sum">
-          <div class="row pf">
+        <div class="cv1-h">สรุปการประเมินส่วนที่ 1</div>
+        <div class="cv1-sum">
+          <div class="pf">
             <label><input type="checkbox" id="cvc_s1pass"> ผ่าน</label>
             <label><input type="checkbox" id="cvc_s1fail"> ไม่ผ่าน</label>
           </div>
-          <div class="row">ประเมินครั้งที่ 1 &nbsp; 30 วัน &nbsp; ได้คะแนน <input class="fi ctr" id="cv_r1s"> เกรด <input class="fi ctr" id="cv_r1g"></div>
-          <div class="row">ประเมินครั้งที่ 2 &nbsp; 60 วัน &nbsp; ได้คะแนน <input class="fi ctr" id="cv_r2s"> เกรด <input class="fi ctr" id="cv_r2g"></div>
-          <div class="row">ประเมินครั้งที่ 3 &nbsp; 90 วัน &nbsp; ได้คะแนน <input class="fi ctr" id="cv_r3s"> เกรด <input class="fi ctr" id="cv_r3g"></div>
-          <div class="cv-avg">คะแนนเฉลี่ยรวม <input class="fi ctr wide" id="cv_avgs"> เกรด <input class="fi ctr" id="cv_avgg"></div>
+          <div class="r">ประเมินครั้งที่ 1&nbsp;&nbsp; 30 วัน&nbsp;&nbsp; ได้คะแนน <input class="fi" id="cv_r1s"> เกรด <input class="fi" id="cv_r1g"></div>
+          <div class="r">ประเมินครั้งที่ 2&nbsp;&nbsp; 60 วัน&nbsp;&nbsp; ได้คะแนน <input class="fi" id="cv_r2s"> เกรด <input class="fi" id="cv_r2g"></div>
+          <div class="r">ประเมินครั้งที่ 3&nbsp;&nbsp; 90 วัน&nbsp;&nbsp; ได้คะแนน <input class="fi" id="cv_r3s"> เกรด <input class="fi" id="cv_r3g"></div>
+          <div class="avg">คะแนนเฉลี่ยรวม <input class="fi" id="cv_avgs"> เกรด <input class="fi g" id="cv_avgg"></div>
         </div>
 
-        <div style="flex:1"></div>
-        <div class="pg-no" style="text-align:right;font-size:11px;color:#444">ใบปะหน้าแบบประเมินผลการทดลองงาน</div>
+        <div class="cv1-fill"></div>
+        <div class="pg-no">ใบปะหน้าแบบประเมินผลการทดลองงาน</div>
       </div>
 
       <!-- ================= ใบปะหน้า หน้า 2/3 ================= -->
