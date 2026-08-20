@@ -139,8 +139,9 @@
   .pd-chips .chip-lab{font-weight:700;color:#0e1c38;font-size:13px}
   .pd-chips .chip{background:linear-gradient(135deg,#0e1c38,#16294d);color:#fff;font-size:12.5px;font-weight:600;padding:5px 13px;border-radius:99px;border:1.5px solid #d62030}
 </style>
-<link rel="stylesheet" href="masaru-cinematic.css">
+<link rel="stylesheet" href="masaru-cinematic.css" media="screen">
 <script src="masaru-cinematic.js" defer></script>
+<style media="print">.msr-atmosphere,.msr-mascot,.msr-login-story{display:none!important}</style>
 <style id="personality-graphics">
   :root{
     --pg-purple:#6555c7;--pg-purple-soft:#f0edff;
@@ -381,10 +382,8 @@ const MBTI_TYPES = {
   ESTP:["ผู้ประกอบการ","Entrepreneur"], ESFP:["ผู้สร้างความบันเทิง","Entertainer"],
 };
 const BOSI = {
-  B:["Builder — นักสร้าง","#C00000","ti-building-skyscraper","ลงมือสร้างและขับเคลื่อนงาน"],
-  O:["Opportunist — นักโอกาส","#BA7517","ti-trending-up","มองเห็นโอกาสและปรับตัวเร็ว"],
-  S:["Specialist — ผู้เชี่ยวชาญ","#16294d","ti-focus-2","เชี่ยวชาญ ละเอียด และมั่นคง"],
-  I:["Innovator — นักคิดค้น","#2E75B6","ti-bulb","คิดใหม่ ทดลอง และสร้างทางเลือก"],
+  B:["Builder — นักสร้าง","#C00000"], O:["Opportunist — นักโอกาส","#BA7517"],
+  S:["Specialist — ผู้เชี่ยวชาญ","#16294d"], I:["Innovator — นักคิดค้น","#2E75B6"],
 };
 const DIMS = [["E","I"],["S","N"],["T","F"],["J","P"]];
 const MBTI_GROUPS = {
@@ -663,7 +662,7 @@ async function deleteRespondent(id, name){
     const { error } = await sb.from("quiz_respondents").delete().eq("id", id);
     if(error) throw error;
     delete DATA[id]; selId = null; renderList();
-    $("detail").innerHTML = `<div class="empty detail-empty"><div class="empty-graphic"><i class="ti ti-user-check"></i></div><b>ลบข้อมูลเรียบร้อย</b><span>เลือกผู้ทำแบบทดสอบคนอื่นเพื่อดูผล</span></div>`;
+    $("detail").innerHTML = `<div class="empty">ลบเรียบร้อย — เลือกผู้ทำแบบทดสอบทางซ้ายเพื่อดูผล</div>`;
   }catch(err){
     if(btn){ btn.disabled = false; btn.textContent = "ลบผู้ทำแบบทดสอบ"; }
     alert("ลบไม่สำเร็จ: " + (err.message||err));
