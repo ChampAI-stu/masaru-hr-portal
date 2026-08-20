@@ -270,6 +270,58 @@ body.locked{overflow:hidden}
   .sh-sum>div{display:flex;align-items:center;gap:5px;min-height:21px;flex-wrap:wrap}
   .sh-sum label{display:flex;align-items:center;gap:5px;white-space:nowrap}
   .sh-sum input[type=checkbox]{width:13px;height:13px;accent-color:#000}
+  /* ===== ใบปะหน้า (3 หน้า) — เป็นเอกสารแยกของตัวเอง เลือกจากช่อง "เอกสารที่ต้องการ" ===== */
+  #formDoc.doc-main .cover-sheet{display:none!important}
+  #formDoc.doc-cover #formPage1,
+  #formDoc.doc-cover #formPage2{display:none!important}
+  #formDoc.no-cover .cover-sheet{display:none!important}   /* เผื่อของเดิม */
+  /* ใบปะหน้าใช้เฉพาะหน้าแรก — ซ่อนหน้า 2-3 ไว้ (คงโค้ดเดิมไว้ ไม่ให้สคริปต์พัง) */
+  #formPageC2, #formPageC3{display:none!important}
+  .cv-info{margin-top:2px;border:none}
+  .cv-info td{border:none;padding:3px 0;height:24px;font-size:13px}
+  .cv-info .lb{font-weight:600;white-space:nowrap;width:96px}
+  .cv-note{margin-top:9px;font-size:12.5px;line-height:1.75}
+  .cv-note b{font-weight:700}
+  .cv-sec{margin-top:10px;border:1px solid #000;background:#f0f0f0;font-weight:700;padding:3px 6px;font-size:13px}
+  .cv-stat{margin-top:0;table-layout:fixed}
+  .cv-stat th{background:#f0f0f0;text-align:center;font-weight:700;height:22px;font-size:12.5px}
+  .cv-stat td{height:24px}
+  .cv-stat .c2{width:22%}
+  .cv-stat .c3{width:40%}
+  .cv-sum{border:1px solid #000;border-top:none;padding:8px 10px}
+  .cv-sum .row{display:flex;align-items:center;gap:6px;min-height:24px;flex-wrap:wrap}
+  .cv-sum .row.pf{gap:60px;justify-content:center;margin:4px 0 8px}
+  .cv-sum label{display:flex;align-items:center;gap:6px;white-space:nowrap;font-weight:600}
+  .cv-sum input[type=checkbox]{width:14px;height:14px;accent-color:#000}
+  .cv-sum .fi{width:110px;flex:0 0 110px}
+  .cv-sum .fi.wide{width:150px;flex:0 0 150px}
+  .cv-avg{margin-top:8px;padding-top:7px;border-top:1px solid #000;display:flex;align-items:center;
+    gap:6px;justify-content:center;font-weight:700}
+  /* ตารางประเมิน 27 ข้อ */
+  .cv-eval{margin-top:6px;table-layout:fixed}
+  .cv-eval th{background:#f0f0f0;text-align:center;font-weight:700;font-size:12px;padding:3px}
+  .cv-eval td{height:21px;font-size:11.8px;padding:1px 5px}
+  .cv-eval .sc{width:11%;text-align:center;padding:0}
+  .cv-eval .grp{background:#e8e8e8;font-weight:700;font-size:12px;padding:3px 5px}
+  .cv-eval .tot{background:#f0f0f0;font-weight:700;text-align:right}
+  .cv-eval input[type=checkbox]{width:13px;height:13px;accent-color:#000;margin:0}
+  .cv-eval .totbox{text-align:center;font-weight:700}
+  /* ส่วนความคิดเห็น + ผลสรุป */
+  .cv-cmt{border:1px solid #000;border-top:none;padding:7px 10px}
+  .cv-cmt .who{font-weight:700;margin-bottom:2px;font-size:12.5px}
+  .cv-cmt .ln{display:block;margin-bottom:5px}
+  .cv-res{border:1px solid #000;border-top:none;padding:8px 10px}
+  .cv-res .row{display:flex;align-items:center;gap:6px;min-height:25px;flex-wrap:wrap}
+  .cv-res label{display:flex;align-items:center;gap:6px;white-space:nowrap}
+  .cv-res input[type=checkbox]{width:14px;height:14px;accent-color:#000}
+  .cv-res .fi{width:60px;flex:0 0 60px;text-align:center}
+  .cv-sign{margin-top:14px;display:flex;justify-content:space-between;gap:30px}
+  .cv-sign .col{flex:1;text-align:center;font-size:12.5px}
+  .cv-sign .col .fi{width:200px;display:inline-block}
+  .cv-sign .dt{margin-top:6px;letter-spacing:1px}
+  .cv-sign .dt .fi{width:46px;display:inline-block;text-align:center}
+  .cv-appr{margin-top:26px;text-align:center;font-size:12.5px;line-height:1.9}
+  .cv-appr .fi{width:230px;display:inline-block}
   .sh-sum.sh-sum-join{border-bottom:none}   /* ต่อกับช่องลงชื่อ ไม่ต้องมีเส้นคั่น */
   .sh-sign1{border:1px solid #000;border-top:none;padding:8px 10px 10px}
   .sh-sign1 .pl{margin-left:32px}
@@ -504,6 +556,12 @@ body.locked{overflow:hidden}
         <datalist id="fmEmpList"></datalist></div>
       <button class="btn" id="fmPull">ดึงสถิติขาด-ลา-มาสาย</button>
       <div style="flex:1"></div>
+      <div class="fld" style="min-width:250px"><label>เอกสารที่ต้องการ</label>
+        <select id="fmDoc">
+          <option value="main">📄 แบบประเมินผลการทดลองงาน (2 หน้า)</option>
+          <option value="cover">📑 ใบปะหน้าแบบประเมิน (1 หน้า)</option>
+        </select></div>
+      <button class="btn" id="cvSync" title="ดึงชื่อ/รหัส/ตำแหน่ง/สถิติ จากแบบประเมินมาใส่ใบปะหน้า">↻ เติมข้อมูลใบปะหน้า</button>
       <button class="btn" id="fmNew">ฟอร์มใหม่</button>
       <button class="btn primary" id="fmSave">บันทึกฟอร์ม</button>
       <button class="btn ghost" id="fmPdf" title="สร้าง PDF 2 หน้า (v2)">ส่งออก PDF</button>
@@ -512,6 +570,113 @@ body.locked{overflow:hidden}
 
     <div class="sheet-wrap">
       <div id="formDoc">
+      <!-- ================= ใบปะหน้า หน้า 1/3 ================= -->
+      <div class="sheet cover-sheet" id="formPageC1">
+        <div class="sh-head">
+          <img class="sh-logo cvLogoImg" alt="">
+          <div class="sh-title">แบบประเมินผลการทดลองงาน</div>
+        </div>
+
+        <table class="cv-info">
+          <tr><td class="lb">ชื่อพนักงาน</td><td><input class="fi" id="cv_name"></td>
+              <td class="lb" style="width:70px">ชื่อเล่น</td><td style="width:140px"><input class="fi" id="cv_nick"></td></tr>
+          <tr><td class="lb">รหัสประจำตัว</td><td><input class="fi" id="cv_code"></td>
+              <td class="lb">ตำแหน่ง</td><td><input class="fi" id="cv_pos"></td></tr>
+          <tr><td class="lb">เริ่มทดลองงาน</td><td><input class="fi" id="cv_from"></td>
+              <td class="lb">ถึงวันที่</td><td><input class="fi" id="cv_to"></td></tr>
+        </table>
+
+        <div class="cv-note">
+          <b>คำชี้แจง :</b> การประเมินพนักงานจะแบ่งออกเป็น 3 ส่วน (ผ่านที่ 70 คะแนน)<br>
+          ส่วนที่ 1 : การประเมินพฤติกรรมการทำงาน ขาด ลา มาสาย <b>35 คะแนน</b><br>
+          ส่วนที่ 2 : การประเมินประสิทธิภาพการทำงาน <b>35 คะแนน</b><br>
+          ส่วนที่ 3 : การแสดงความคิดเห็น <b>30 คะแนน</b>
+        </div>
+
+        <div class="cv-sec">การประเมินส่วนที่ 1 : ฝ่ายบุคคล</div>
+        <table class="cv-stat">
+          <tr><th>รายละเอียด</th><th class="c2">จำนวนวัน</th><th class="c3">หมายเหตุ</th></tr>
+          <tr><td>ขาดงาน</td><td><input class="fi ctr" id="cv_absent"></td><td><input class="fi" id="cv_absent_n"></td></tr>
+          <tr><td>ลากิจ</td><td><input class="fi ctr" id="cv_personal"></td><td><input class="fi" id="cv_personal_n"></td></tr>
+          <tr><td>ลาป่วย</td><td><input class="fi ctr" id="cv_sick"></td><td><input class="fi" id="cv_sick_n"></td></tr>
+          <tr><td>เข้างานสาย</td><td><input class="fi ctr" id="cv_late"></td><td><input class="fi" id="cv_late_n"></td></tr>
+          <tr><td>ลืมสแกนเข้า - ออก</td><td><input class="fi ctr" id="cv_scan"></td><td><input class="fi" id="cv_scan_n"></td></tr>
+        </table>
+
+        <div class="cv-sec" style="margin-top:12px">สรุปการประเมินส่วนที่ 1</div>
+        <div class="cv-sum">
+          <div class="row pf">
+            <label><input type="checkbox" id="cvc_s1pass"> ผ่าน</label>
+            <label><input type="checkbox" id="cvc_s1fail"> ไม่ผ่าน</label>
+          </div>
+          <div class="row">ประเมินครั้งที่ 1 &nbsp; 30 วัน &nbsp; ได้คะแนน <input class="fi ctr" id="cv_r1s"> เกรด <input class="fi ctr" id="cv_r1g"></div>
+          <div class="row">ประเมินครั้งที่ 2 &nbsp; 60 วัน &nbsp; ได้คะแนน <input class="fi ctr" id="cv_r2s"> เกรด <input class="fi ctr" id="cv_r2g"></div>
+          <div class="row">ประเมินครั้งที่ 3 &nbsp; 90 วัน &nbsp; ได้คะแนน <input class="fi ctr" id="cv_r3s"> เกรด <input class="fi ctr" id="cv_r3g"></div>
+          <div class="cv-avg">คะแนนเฉลี่ยรวม <input class="fi ctr wide" id="cv_avgs"> เกรด <input class="fi ctr" id="cv_avgg"></div>
+        </div>
+
+        <div style="flex:1"></div>
+        <div class="pg-no" style="text-align:right;font-size:11px;color:#444">ใบปะหน้าแบบประเมินผลการทดลองงาน</div>
+      </div>
+
+      <!-- ================= ใบปะหน้า หน้า 2/3 ================= -->
+      <div class="sheet cover-sheet" id="formPageC2">
+        <div class="cv-sec" style="margin-top:0">การประเมินส่วนที่ 2 : การประเมินประสิทธิภาพการทำงาน</div>
+        <table class="cv-eval">
+          <thead>
+            <tr><th rowspan="2">รายการ</th><th colspan="4">ระดับคะแนน</th></tr>
+            <tr><th class="sc">4</th><th class="sc">3</th><th class="sc">2</th><th class="sc">1</th></tr>
+          </thead>
+          <tbody id="cvEvalBody"></tbody>
+        </table>
+        <div style="flex:1"></div>
+        <div class="pg-no" style="text-align:right;font-size:11px;color:#444">ใบปะหน้า 2 / 3</div>
+      </div>
+
+      <!-- ================= ใบปะหน้า หน้า 3/3 ================= -->
+      <div class="sheet cover-sheet" id="formPageC3">
+        <div class="cv-sec" style="margin-top:0">ส่วนที่ 3 : การแสดงความคิดเห็น</div>
+        <div class="cv-cmt">
+          <div class="who">หัวหน้างาน / ผู้ประเมิน</div>
+          <span class="ln"><input class="fi" id="cv_c_sup1"></span>
+          <span class="ln"><input class="fi" id="cv_c_sup2"></span>
+          <span class="ln"><input class="fi" id="cv_c_sup3"></span>
+          <div class="who" style="margin-top:8px">ฝ่ายทรัพยากรบุคคล</div>
+          <span class="ln"><input class="fi" id="cv_c_hr1"></span>
+          <span class="ln"><input class="fi" id="cv_c_hr2"></span>
+          <span class="ln"><input class="fi" id="cv_c_hr3"></span>
+          <div class="who" style="margin-top:8px">ผู้บริหาร</div>
+          <span class="ln"><input class="fi" id="cv_c_ex1"></span>
+          <span class="ln"><input class="fi" id="cv_c_ex2"></span>
+          <span class="ln"><input class="fi" id="cv_c_ex3"></span>
+        </div>
+
+        <div class="cv-sec" style="margin-top:12px">ผลสรุปการประเมินผลการทำงาน</div>
+        <div class="cv-res">
+          <div class="row"><label><input type="checkbox" id="cvc_pass"> ผ่าน</label></div>
+          <div class="row"><label><input type="checkbox" id="cvc_fail"> ไม่ผ่าน</label></div>
+          <div class="row"><label><input type="checkbox" id="cvc_cont"> ทดลองงานต่อเป็นเวลา</label>
+            <input class="fi" id="cv_contmon"> เดือน</div>
+          <div class="row"><label><input type="checkbox" id="cvc_move"> เสนอเปลี่ยนตำแหน่งงานพร้อมทดลองงานต่อเป็นเวลา</label>
+            <input class="fi" id="cv_movemon"> เดือน</div>
+        </div>
+
+        <div class="cv-sign">
+          <div class="col">ลงชื่อ <input class="fi" id="cv_sg_eval"> ผู้ประเมิน
+            <div class="dt"><input class="fi" id="cv_dt_e1">/<input class="fi" id="cv_dt_e2">/<input class="fi" id="cv_dt_e3"></div></div>
+          <div class="col">ลงชื่อ <input class="fi" id="cv_sg_hr"> ฝ่ายบุคคล
+            <div class="dt"><input class="fi" id="cv_dt_h1">/<input class="fi" id="cv_dt_h2">/<input class="fi" id="cv_dt_h3"></div></div>
+        </div>
+
+        <div class="cv-appr">
+          ลงชื่อ <input class="fi" id="cv_sg_appr"> ผู้อนุมัติ<br>
+          (นายพลวุฒิ บุญวิธวาเจริญ)<br>
+          ประธานบริษัท มาซารุ มาร์เก็ตติ้ง จำกัด
+        </div>
+
+        <div style="flex:1"></div>
+        <div class="pg-no" style="text-align:right;font-size:11px;color:#444">ใบปะหน้า 3 / 3</div>
+      </div>
       <div class="sheet" id="formPage1">
         <div class="sh-head">
           <img id="fmLogoImg" class="sh-logo" alt="">
@@ -2244,6 +2409,150 @@ $F('fmReload').addEventListener('click', async function(){ await loadForms(); to
 
 /* ---------- พิมพ์ / PDF ---------- */
 $F('fmPrint').addEventListener('click', function(){ window.print(); });
+
+/* ============================================================
+   ใบปะหน้า — แบบประเมินผลการทดลองงาน (3 หน้า)
+   เปิด/ปิดได้จากปุ่ม "รวมใบปะหน้า" · รวมอยู่ในทั้งพรีวิว พิมพ์ และ PDF
+   ============================================================ */
+var CV_ITEMS = [
+  ['g', 'หัวหน้างานประเมิน ด้านความสามารถและความรู้ทางวิชาชีพ'],
+  ['i', '1. ความสามารถในการจดจำสิ่งที่หัวหน้างานสอน'],
+  ['i', '2. ทักษะในการใช้คอมพิวเตอร์'],
+  ['i', '3. ลำดับการปฏิบัติ สิ่งที่ต้องทำประจำวัน'],
+  ['i', '4. การใช้โปรแกรมสำเร็จรูปเพื่อพัฒนา'],
+  ['i', '5. ความสามารถในการเรียนรู้สิ่งใหม่ๆ ได้อย่างถูกต้อง และรวดเร็ว'],
+  ['i', '6. การมีไหวพริบปฏิภาณแก้ไขปัญหาเฉพาะหน้า'],
+  ['i', '7. การมีความคิดสร้างสรรค์นำมาปรับปรุงพัฒนางานที่ได้รับมอบหมาย'],
+  ['i', '8. ความสามารถในการควบคุมงานและจัดการระบบงานอย่างถูกต้อง'],
+  ['i', '9. ความสามารถในการหาข้อมูลมาช่วยแก้ปัญหาในการทำงาน'],
+  ['g', 'หัวหน้างานประเมิน ด้านความรับผิดชอบ'],
+  ['i', '1. การปฏิบัติงานที่ได้รับมอบหมายได้ทันเวลา'],
+  ['i', '2. ความขยันอดทนในการทำงาน'],
+  ['i', '3. ความคล่องตัวและความกระตือรือร้นต่องานที่ได้รับมอบหมาย'],
+  ['i', '4. การรู้จักแยกแยะความสำคัญของงาน'],
+  ['i', '5. ความตระหนักและสำนึกในหน้าที่การปฏิบัติงานอยู่เสมอ'],
+  ['i', '6. ความเสียสละต่อหน้าที่การทำงาน'],
+  ['i', '7. การทุ่มเทกำลังความคิดต่อหน้าที่ที่ได้รับมอบหมาย'],
+  ['i', '8. การยอมรับผิดต่องานที่ผิดพลาด'],
+  ['i', '9. การแก้ไขข้อบกพร่องต่องานที่ผิดพลาด'],
+  ['g', 'ส่วนการประเมินของ HR ด้านความมีวินัย'],
+  ['i', '1. ความซื่อสัตย์'],
+  ['i', '2. ความตรงต่อเวลา'],
+  ['i', '3. ความละเอียดรอบคอบ'],
+  ['i', '4. การทำงานตามหน้าที่ของตน'],
+  ['i', '5. มีมนุษยสัมพันธ์ที่ดีกับคนในองค์กร'],
+  ['i', '6. การทำงานไม่ก้าวก่ายหน้าที่ผู้อื่น'],
+  ['i', '7. การปฏิบัติตามกฎระเบียบขององค์กร'],
+  ['i', '8. กริยามารยาทสุภาพ อ่อนน้อมต่อผู้บังคับบัญชาและเพื่อนร่วมงาน'],
+  ['i', '9. ความสามารถในการจูงใจเพื่อนร่วมงาน'],
+];
+var CV_CHK_IDS = [], CV_N = 0;
+
+function cvBuildTable(){
+  var body = $F('cvEvalBody'); if(!body) return;
+  var html = '', n = 0;
+  CV_ITEMS.forEach(function(it){
+    if(it[0] === 'g'){ html += '<tr><td class="grp" colspan="5">' + it[1] + '</td></tr>'; return; }
+    n++;
+    var cells = '';
+    [4,3,2,1].forEach(function(v){
+      var id = 'cvq_' + n + '_' + v;
+      CV_CHK_IDS.push(id);
+      cells += '<td class="sc"><input type="checkbox" id="' + id + '" data-q="' + n + '" data-v="' + v + '"></td>';
+    });
+    html += '<tr><td>' + it[1] + '</td>' + cells + '</tr>';
+  });
+  CV_N = n;
+  html += '<tr><td class="tot">รวมคะแนน</td><td class="tot totbox" colspan="4"><input class="fi ctr" id="cv_p2total" readonly></td></tr>';
+  body.innerHTML = html;
+
+  // ติ๊กได้ข้อละ 1 ช่อง + รวมคะแนนอัตโนมัติ
+  body.addEventListener('change', function(ev){
+    var el = ev.target;
+    if(!el || el.type !== 'checkbox' || !el.dataset.q) return;
+    if(el.checked){
+      [4,3,2,1].forEach(function(v){
+        if(v !== +el.dataset.v){ var o = $F('cvq_' + el.dataset.q + '_' + v); if(o) o.checked = false; }
+      });
+    }
+    cvCalc();
+  });
+}
+
+function cvCalc(){
+  var sum = 0;
+  for(var q = 1; q <= CV_N; q++){
+    for(var v = 4; v >= 1; v--){
+      var o = $F('cvq_' + q + '_' + v);
+      if(o && o.checked){ sum += v; break; }
+    }
+  }
+  var box = $F('cv_p2total');
+  if(box) box.value = sum ? (sum + ' / ' + (CV_N * 4)) : '';
+}
+
+/* เติมข้อมูลจากฟอร์มหลัก (กดปุ่มเดียว ไม่ต้องพิมพ์ซ้ำ) */
+function cvSyncFromMain(){
+  var m = {cv_name:'pf_name', cv_code:'pf_code', cv_pos:'pf_pos',
+           cv_from:'pf_from', cv_to:'pf_to',
+           cv_sick:'pf_sick', cv_personal:'pf_personal', cv_absent:'pf_absent', cv_late:'pf_late'};
+  var n = 0;
+  for(var k in m){
+    var src = $F(m[k]), dst = $F(k);
+    if(src && dst && src.value && !dst.value){ dst.value = src.value; n++; }
+  }
+  var e = (typeof fmCurEmp === 'function') ? fmCurEmp() : null;
+  if(e && $F('cv_nick') && !$F('cv_nick').value) $F('cv_nick').value = e.nickname || e.nick_name || '';
+  cvCalc();
+  return n;
+}
+
+/* สลับเอกสาร: แบบประเมิน (2 หน้า) หรือ ใบปะหน้า (3 หน้า) — คนละใบ ไม่ต่อกัน */
+function currentDoc(){ return ($F('fmDoc') && $F('fmDoc').value) || 'main'; }
+function docApplyMode(){
+  var mode = currentDoc();
+  var doc = $F('formDoc');
+  if(!doc) return;
+  doc.classList.remove('no-cover');
+  doc.classList.toggle('doc-cover', mode === 'cover');
+  doc.classList.toggle('doc-main',  mode !== 'cover');
+  // โลโก้หัวฟอร์มใช้ตัวเดียวกันทั้งสองเอกสาร
+  var img = $F('fmLogoImg');
+  var list = document.querySelectorAll('.cvLogoImg');
+  for(var i=0;i<list.length;i++) list[i].src = img ? img.src : '';
+  if(mode === 'cover') cvSyncFromMain();
+}
+function cvApplyToggle(){ docApplyMode(); }   /* ชื่อเดิม เผื่อโค้ดอื่นเรียก */
+
+/* ให้ระบบบันทึก/โหลดฟอร์มเก็บใบปะหน้าไปด้วย */
+function cvInit(){
+  cvBuildTable();
+  var texts = ['cv_name','cv_nick','cv_code','cv_pos','cv_from','cv_to',
+    'cv_absent','cv_absent_n','cv_personal','cv_personal_n','cv_sick','cv_sick_n',
+    'cv_late','cv_late_n','cv_scan','cv_scan_n',
+    'cv_r1s','cv_r1g','cv_r2s','cv_r2g','cv_r3s','cv_r3g','cv_avgs','cv_avgg','cv_p2total',
+    'cv_c_sup1','cv_c_sup2','cv_c_sup3','cv_c_hr1','cv_c_hr2','cv_c_hr3','cv_c_ex1','cv_c_ex2','cv_c_ex3',
+    'cv_contmon','cv_movemon','cv_sg_eval','cv_sg_hr','cv_sg_appr',
+    'cv_dt_e1','cv_dt_e2','cv_dt_e3','cv_dt_h1','cv_dt_h2','cv_dt_h3'];
+  var chks = ['cvc_s1pass','cvc_s1fail','cvc_pass','cvc_fail','cvc_cont','cvc_move'].concat(CV_CHK_IDS);
+  TEXT_IDS = TEXT_IDS.concat(texts.filter(function(id){ return TEXT_IDS.indexOf(id) < 0; }));
+  CHK_IDS  = CHK_IDS.concat(chks.filter(function(id){ return CHK_IDS.indexOf(id) < 0; }));
+
+  if($F('fmDoc')) $F('fmDoc').addEventListener('change', function(){
+    docApplyMode();
+    toast(currentDoc() === 'cover' ? 'สลับมาที่ใบปะหน้าแล้ว 📑' : 'สลับมาที่แบบประเมินแล้ว 📄');
+    var w = document.querySelector('.sheet-wrap');
+    if(w && w.scrollIntoView) w.scrollIntoView({ behavior:'smooth', block:'start' });
+  });
+  if($F('fmLogo')) $F('fmLogo').addEventListener('change', docApplyMode);
+  if($F('cvSync')) $F('cvSync').addEventListener('click', function(){
+    if($F('fmDoc')) $F('fmDoc').value = 'cover';
+    docApplyMode();
+    toast('ดึงข้อมูลจากแบบประเมินมาใส่ใบปะหน้าแล้ว ✓');
+  });
+  docApplyMode();
+}
+cvInit();
 function loadScript(src){
   return new Promise(function(res, rej){
     var el = document.createElement('script');
@@ -2303,8 +2612,13 @@ $F('fmPdf').addEventListener('click', async function(){
   }
   var jsPDFctor = getJsPDF();
   var name = ($F('pf_name').value||'ฟอร์ม').trim().replace(/[\\/:*?"<>|]/g,'');
-  var file = 'แบบประเมินทดลองงาน_'+name+(($F('pf_round').value)?('_ครั้งที่'+$F('pf_round').value):'')+'.pdf';
-  var pages = [$F('formPage1'), $F('formPage2')].filter(Boolean);
+  var isCover = currentDoc() === 'cover';
+  var cvName = isCover ? (($F('cv_name') && $F('cv_name').value) || name).trim().replace(/[\\/:*?"<>|]/g,'') : name;
+  var file = (isCover ? 'ใบปะหน้าแบบประเมิน_' + (cvName || 'ฟอร์ม')
+                      : 'แบบประเมินทดลองงาน_' + name + (($F('pf_round').value) ? ('_ครั้งที่'+$F('pf_round').value) : ''))
+             + '.pdf';
+  var pages = (isCover ? [$F('formPageC1')]
+                       : [$F('formPage1'), $F('formPage2')]).filter(Boolean);
 
   $F('formDoc').classList.add('pdfing');      // ล็อกขนาดให้พอดี A4 พอดีหน้า
   if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
