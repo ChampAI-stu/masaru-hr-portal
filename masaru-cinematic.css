@@ -1082,13 +1082,11 @@ body[data-msr-page="deadline"] #formDoc:not(.pdfing) .fi {
 }
 .msr-mascot-body { pointer-events: auto; cursor: pointer; }
 
-/* โหมดเงียบ — จางลงเมื่อผู้ใช้กำลังทำงาน */
-.msr-mascot.is-quiet {
-  opacity: .14 !important;
-  transform: scale(.84);
-  pointer-events: none;
+/* โหมดเงียบ — ตัวหุ่นยังชัดเต็มที่ ซ่อนเฉพาะกล่องข้อความไม่ให้บังงาน */
+.msr-mascot.is-quiet .msr-mascot-note {
+  opacity: 0 !important;
+  visibility: hidden !important;
 }
-.msr-mascot.is-quiet .msr-mascot-note { opacity: 0 !important; }
 
 /* เสาอากาศ + ไฟสถานะ */
 .msr-mascot-antenna {
