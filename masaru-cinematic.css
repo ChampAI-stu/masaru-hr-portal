@@ -987,3 +987,19 @@ body[data-msr-page="deadline"] #formView .btn:focus-visible {
   body[data-msr-page="deadline"] .sheet-wrap { padding: 22px 10px 28px; border-radius: 14px; }
   body[data-msr-page="deadline"] .sheet-wrap::after { display: none; }
 }
+
+/* ---------- Fix: ปุ่ม "กลับหน้าหลัก" ใน sidebar ----------
+   ปุ่มมี inline background สีอ่อน แต่ธีมบังคับตัวอักษรขาว → มองไม่เห็น
+   จัดเป็นปุ่มกระจกโทนเข้มให้เข้ากับ sidebar และอ่านชัด */
+#sidebar .nav a[href*="index"] {
+  color: #fff !important;
+  background: rgba(255, 255, 255, .1) !important;
+  border: 1px solid rgba(255, 255, 255, .22) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12);
+}
+#sidebar .nav a[href*="index"]:hover {
+  color: #fff !important;
+  background: rgba(255, 255, 255, .2) !important;
+  border-color: rgba(255, 255, 255, .38) !important;
+  box-shadow: inset 3px 0 0 var(--msr-gold, #C9A84C);
+}
