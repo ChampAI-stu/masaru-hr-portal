@@ -105,6 +105,193 @@
 <link rel="stylesheet" href="masaru-cinematic.css" media="screen">
 <script src="masaru-cinematic.js" defer></script>
 <style media="print">.msr-atmosphere,.msr-mascot,.msr-login-story{display:none!important}</style>
+<style id="masaru-login-premium">
+/* ===========================================================
+   MASARU — Premium Login (LOGIN SCREEN ONLY)
+   ทุก selector ผูกกับ body.msr-auth-on + #authScreen เท่านั้น
+   หน้า Hub / ระบบอื่น ๆ ไม่ถูกแตะแม้แต่นิดเดียว
+   =========================================================== */
+
+/* ---------- เวที ---------- */
+body.msr-auth-on #authScreen.login-wrap{
+  position:relative;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+  gap:clamp(20px,5vw,110px);
+  padding:clamp(20px,4vw,56px);
+  background:
+    radial-gradient(circle at 88% 8%, rgba(70,124,205,.30), transparent 34rem),
+    radial-gradient(circle at 4% 94%, rgba(225,29,63,.16), transparent 28rem),
+    linear-gradient(115deg,#040c1e 0%,#0a1f45 50%,#16386f 100%) !important;
+  background-size:100% 100%,100% 100%,200% 200% !important;
+  animation:mlxDrift 22s ease-in-out infinite alternate;
+}
+@keyframes mlxDrift{from{background-position:0 0,0 0,0% 50%}to{background-position:0 0,0 0,100% 50%}}
+
+/* ---------- ชั้นบรรยากาศ ---------- */
+body.msr-auth-on .mlx-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+body.msr-auth-on .mlx-orb{position:absolute;border-radius:50%;will-change:transform}
+body.msr-auth-on .mlx-orb.a{
+  width:560px;height:560px;right:-250px;top:6vh;
+  background:radial-gradient(circle at 34% 34%,rgba(255,255,255,.10),rgba(38,86,164,.07) 38%,transparent 68%);
+  border:1px solid rgba(120,170,240,.10);animation:mlxFloatA 15s ease-in-out infinite}
+body.msr-auth-on .mlx-orb.b{
+  width:380px;height:380px;left:-170px;bottom:-130px;
+  background:radial-gradient(circle at 66% 30%,rgba(245,55,88,.14),rgba(225,29,63,.04) 46%,transparent 70%);
+  border:1px solid rgba(225,29,63,.12);animation:mlxFloatB 18s ease-in-out infinite}
+@keyframes mlxFloatA{0%,100%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(-26px,26px,0) scale(1.05)}}
+@keyframes mlxFloatB{0%,100%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(22px,-20px,0) scale(1.07)}}
+
+/* วงแหวนกลาง + จุดแดงโคจร */
+body.msr-auth-on .mlx-rings{
+  position:absolute;left:46%;top:50%;width:430px;height:430px;margin:-215px 0 0 -215px;
+  border:1px solid rgba(255,255,255,.075);border-radius:50%;
+  box-shadow:0 0 0 46px rgba(255,255,255,.022),0 0 0 96px rgba(255,255,255,.014),0 0 0 150px rgba(255,255,255,.008);
+  animation:mlxSpin 46s linear infinite}
+body.msr-auth-on .mlx-rings i{
+  position:absolute;left:50%;top:-7px;width:14px;height:14px;margin-left:-7px;border-radius:50%;
+  background:#e11d3f;box-shadow:0 0 22px rgba(225,29,63,.95),0 0 44px rgba(225,29,63,.45)}
+@keyframes mlxSpin{to{transform:rotate(360deg)}}
+
+/* ฝุ่นแสงลอยขึ้น */
+body.msr-auth-on .mlx-dust{position:absolute;bottom:-12px;width:3px;height:3px;border-radius:50%;
+  background:rgba(190,225,255,.75);box-shadow:0 0 9px rgba(150,205,255,.7);
+  animation:mlxRise linear infinite;opacity:0}
+@keyframes mlxRise{
+  0%{opacity:0;transform:translateY(0) scale(.6)}
+  12%{opacity:.9}
+  85%{opacity:.5}
+  100%{opacity:0;transform:translateY(-84vh) scale(1.25)}}
+
+/* ---------- ข้อความฝั่งซ้าย ---------- */
+body.msr-auth-on .mlx-scene{
+  position:relative;z-index:2;width:min(38vw,470px);color:#fff;
+  transform:translate3d(var(--px,0px),var(--py,0px),0);transition:transform .5s cubic-bezier(.22,1,.36,1)}
+body.msr-auth-on .mlx-scene>*{opacity:0;animation:mlxUp .78s cubic-bezier(.22,1,.36,1) forwards}
+body.msr-auth-on .mlx-scene>*:nth-child(1){animation-delay:.10s}
+body.msr-auth-on .mlx-scene>*:nth-child(2){animation-delay:.22s}
+body.msr-auth-on .mlx-scene>*:nth-child(3){animation-delay:.36s}
+body.msr-auth-on .mlx-scene>*:nth-child(4){animation-delay:.50s}
+@keyframes mlxUp{from{opacity:0;transform:translate3d(-26px,16px,0)}to{opacity:1;transform:none}}
+
+body.msr-auth-on .mlx-kicker{
+  display:flex;align-items:center;gap:13px;
+  font-size:10px;font-weight:800;letter-spacing:.28em;color:#eaf3ff;opacity:.9}
+body.msr-auth-on .mlx-kicker::before{
+  content:"";width:38px;height:2px;background:#e11d3f;
+  box-shadow:0 0 18px rgba(255,55,88,.85);animation:mlxPulse 2.6s ease-in-out infinite}
+@keyframes mlxPulse{0%,100%{width:38px;opacity:1}50%{width:56px;opacity:.7}}
+
+body.msr-auth-on .mlx-title{
+  margin:20px 0 16px;font-size:clamp(40px,4.4vw,70px);line-height:.95;
+  letter-spacing:-.055em;font-weight:800;color:#f8fbff;
+  text-shadow:0 16px 50px rgba(0,0,0,.45)}
+body.msr-auth-on .mlx-title span{
+  display:block;color:#ff3154;text-shadow:0 13px 42px rgba(225,29,63,.3);
+  background:linear-gradient(90deg,#ff3154,#ff6b83 55%,#ff3154);
+  background-size:220% 100%;-webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;animation:mlxSheen 6s linear infinite}
+@keyframes mlxSheen{to{background-position:220% 0}}
+
+body.msr-auth-on .mlx-desc{
+  max-width:390px;margin:0;font-size:15px;line-height:1.85;color:#b8c9e4}
+
+body.msr-auth-on .mlx-metrics{display:flex;gap:26px;margin-top:34px;flex-wrap:wrap}
+body.msr-auth-on .mlx-metric{
+  position:relative;padding-left:13px;border-left:2px solid rgba(255,255,255,.16);
+  transition:border-color .3s ease,transform .3s ease}
+body.msr-auth-on .mlx-metric:hover{border-left-color:#e11d3f;transform:translateY(-3px)}
+body.msr-auth-on .mlx-metric b{display:block;font-size:16px;color:#f8fbff}
+body.msr-auth-on .mlx-metric span{display:block;margin-top:3px;font-size:9px;letter-spacing:.15em;color:#8598b7}
+
+/* มุมล่างขวา */
+body.msr-auth-on .mlx-corner{
+  position:absolute;right:26px;bottom:20px;z-index:2;display:flex;align-items:center;gap:9px;
+  color:rgba(255,255,255,.34);font-size:9px;font-weight:800;letter-spacing:.18em;pointer-events:none}
+body.msr-auth-on .mlx-corner::before{content:"";width:30px;height:2px;background:linear-gradient(90deg,#e11d3f,transparent)}
+
+/* ---------- การ์ดล็อกอิน ---------- */
+body.msr-auth-on #authScreen .auth-card{
+  position:relative;z-index:2;overflow:hidden;width:min(92vw,412px);
+  padding:34px 32px 30px;border-radius:26px !important;
+  border:1px solid rgba(255,255,255,.7) !important;
+  background:linear-gradient(155deg,rgba(255,255,255,.985),rgba(241,246,255,.94)) !important;
+  box-shadow:0 36px 100px rgba(0,8,28,.46),inset 0 1px 0 #fff !important;
+  backdrop-filter:blur(24px) saturate(1.12);
+  animation:mlxCardIn .85s cubic-bezier(.22,1,.36,1) both .16s}
+@keyframes mlxCardIn{from{opacity:0;transform:translate3d(46px,18px,0) scale(.96)}to{opacity:1;transform:none}}
+
+/* แถบแดงด้านบน + แสงกวาด */
+body.msr-auth-on #authScreen .auth-card::before{
+  content:"";position:absolute;top:0;left:0;right:0;height:5px;
+  background:linear-gradient(90deg,#9f1239,#e11d3f 38%,#ff6b7f 62%,transparent 94%);
+  background-size:220% 100%;box-shadow:0 2px 16px rgba(225,29,63,.4);
+  animation:mlxBar 5s linear infinite}
+@keyframes mlxBar{to{background-position:220% 0}}
+
+/* โลโก้: แสงกวาดผ่าน */
+body.msr-auth-on #authScreen .logo-plate{
+  position:relative;overflow:hidden;border-radius:17px !important;
+  background:linear-gradient(140deg,#06132a,#18386f) !important;
+  border:1px solid rgba(255,255,255,.10) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.13),0 16px 36px rgba(10,31,66,.22) !important}
+body.msr-auth-on #authScreen .logo-plate::after{
+  content:"";position:absolute;inset:-60% -25%;transform:rotate(22deg);
+  background:linear-gradient(90deg,transparent 34%,rgba(255,255,255,.3),transparent 66%);
+  animation:mlxShine 6.5s ease-in-out infinite;pointer-events:none}
+@keyframes mlxShine{0%,42%{transform:translateX(-80%) rotate(22deg)}72%,100%{transform:translateX(80%) rotate(22deg)}}
+
+body.msr-auth-on #authScreen .sub-brand{color:#0d2147 !important;letter-spacing:.2em !important}
+
+/* ฟอร์ม (หน้าตาเท่านั้น — id/ชื่อ/ลำดับ ไม่เปลี่ยน) */
+body.msr-auth-on #authScreen .fld input,
+body.msr-auth-on #authScreen .fld select{
+  border:1px solid #d6e0ef !important;border-radius:12px !important;
+  background:rgba(248,251,255,.95) !important;color:#15233b !important;
+  padding:12px 14px;box-shadow:inset 0 1px 2px rgba(9,31,67,.04);
+  transition:border-color .2s ease,box-shadow .2s ease,background .2s ease,transform .2s ease}
+body.msr-auth-on #authScreen .fld input:hover,
+body.msr-auth-on #authScreen .fld select:hover{border-color:#b7c8df !important;background:#fff !important}
+body.msr-auth-on #authScreen .fld input:focus,
+body.msr-auth-on #authScreen .fld select:focus{
+  outline:0 !important;border-color:#315f9f !important;background:#fff !important;
+  box-shadow:0 0 0 4px rgba(49,95,159,.13),0 8px 24px rgba(9,31,67,.08) !important;
+  transform:translateY(-1px)}
+
+body.msr-auth-on #authScreen .btn-primary{
+  position:relative;overflow:hidden;border-radius:12px !important;padding:14px !important;
+  background:linear-gradient(135deg,#be123c 0%,#e11d3f 52%,#f43f5e 100%) !important;color:#fff !important;
+  box-shadow:0 12px 28px rgba(190,18,60,.26),inset 0 1px 0 rgba(255,255,255,.24) !important;
+  transition:transform .2s ease,box-shadow .2s ease,filter .2s ease}
+body.msr-auth-on #authScreen .btn-primary::after{
+  content:"";position:absolute;top:0;bottom:0;left:-60%;width:45%;transform:skewX(-22deg);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.42),transparent);transition:left .6s ease}
+body.msr-auth-on #authScreen .btn-primary:hover:not(:disabled){
+  transform:translateY(-2px);filter:saturate(1.08);
+  box-shadow:0 18px 38px rgba(190,18,60,.34),inset 0 1px 0 rgba(255,255,255,.28) !important}
+body.msr-auth-on #authScreen .btn-primary:hover:not(:disabled)::after{left:120%}
+body.msr-auth-on #authScreen .btn-primary:active:not(:disabled){transform:translateY(0) scale(.985)}
+
+body.msr-auth-on #authScreen .link{color:#c9183a !important}
+
+/* ---------- จอเล็ก ---------- */
+@media (max-width:980px){
+  body.msr-auth-on .mlx-scene,
+  body.msr-auth-on .mlx-rings{display:none}
+  body.msr-auth-on #authScreen.login-wrap{gap:0}
+}
+@media (max-width:520px){
+  body.msr-auth-on .mlx-corner{display:none}
+  body.msr-auth-on #authScreen .auth-card{padding:26px 22px 24px}
+}
+
+/* ---------- เคารพ prefers-reduced-motion ---------- */
+@media (prefers-reduced-motion:reduce){
+  body.msr-auth-on #authScreen,
+  body.msr-auth-on #authScreen *{animation:none !important;transition:none !important}
+  body.msr-auth-on .mlx-scene>*{opacity:1}
+  body.msr-auth-on .mlx-dust{display:none}
+}
+</style>
 </head>
 <body>
 
@@ -342,6 +529,85 @@ async function doSignup(){
 }
 
 $('logoutBtn').addEventListener('click', async () => { await sb.auth.signOut(); location.reload(); });
+</script>
+<script id="masaru-login-premium-js">
+(function(){
+  'use strict';
+  /* สร้างเลเยอร์ตกแต่งของ "หน้าล็อกอิน" เท่านั้น — ไม่แตะฟอร์ม/ปุ่ม/สคริปต์เดิม */
+  function build(){
+    var wrap = document.getElementById('authScreen');
+    if (!wrap || wrap.querySelector('.mlx-bg')) return;
+
+    var bg = document.createElement('div');
+    bg.className = 'mlx-bg';
+    bg.setAttribute('aria-hidden','true');
+    bg.innerHTML = '<div class="mlx-orb a"></div><div class="mlx-orb b"></div>'
+                 + '<div class="mlx-rings"><i></i></div>';
+    for (var i=0;i<14;i++){
+      var d = document.createElement('span');
+      d.className = 'mlx-dust';
+      d.style.left = (Math.random()*100).toFixed(1) + '%';
+      d.style.animationDuration = (12 + Math.random()*14).toFixed(1) + 's';
+      d.style.animationDelay = (Math.random()*16).toFixed(1) + 's';
+      bg.appendChild(d);
+    }
+    wrap.insertBefore(bg, wrap.firstChild);
+
+    var scene = document.createElement('section');
+    scene.className = 'mlx-scene';
+    scene.setAttribute('aria-hidden','true');
+    scene.innerHTML =
+      '<div class="mlx-kicker">MASARU PEOPLE OPERATIONS</div>' +
+      '<h1 class="mlx-title">People.<span>Elevated.</span></h1>' +
+      '<p class="mlx-desc">ระบบบริหารบุคลากรที่เชื่อมทุกช่วงเวลาสำคัญ ตั้งแต่วันแรกของการสมัคร จนถึงการเติบโตของทุกคนในองค์กร</p>' +
+      '<div class="mlx-metrics">' +
+        '<div class="mlx-metric"><b>ONE</b><span>UNIFIED PORTAL</span></div>' +
+        '<div class="mlx-metric"><b>LIVE</b><span>CONNECTED DATA</span></div>' +
+        '<div class="mlx-metric"><b>360°</b><span>PEOPLE VIEW</span></div>' +
+      '</div>';
+    var card = wrap.querySelector('.auth-card');
+    if (card) wrap.insertBefore(scene, card); else wrap.appendChild(scene);
+
+    var mark = document.createElement('div');
+    mark.className = 'mlx-corner';
+    mark.setAttribute('aria-hidden','true');
+    mark.textContent = 'MASARU / PEOPLE OS';
+    wrap.appendChild(mark);
+
+    /* parallax เบา ๆ ตามเมาส์ */
+    if (matchMedia('(pointer:fine)').matches && !matchMedia('(prefers-reduced-motion:reduce)').matches){
+      window.addEventListener('pointermove', function(e){
+        if (!document.body.classList.contains('msr-auth-on')) return;
+        var x = (e.clientX/Math.max(innerWidth,1) - .5) * 16;
+        var y = (e.clientY/Math.max(innerHeight,1) - .5) * 12;
+        scene.style.setProperty('--px', (-x).toFixed(1)+'px');
+        scene.style.setProperty('--py', (-y).toFixed(1)+'px');
+      }, {passive:true});
+    }
+  }
+
+  /* เปิด/ปิดธีมตามการมองเห็นของหน้าล็อกอิน */
+  function sync(){
+    var wrap = document.getElementById('authScreen');
+    var on = !!wrap && !wrap.classList.contains('hide')
+             && getComputedStyle(wrap).display !== 'none';
+    document.body.classList.toggle('msr-auth-on', on);
+    if (on) build();
+  }
+
+  function boot(){
+    sync();
+    var t = 0;
+    new MutationObserver(function(){
+      cancelAnimationFrame(t);
+      t = requestAnimationFrame(sync);
+    }).observe(document.body, {subtree:true, childList:true, attributes:true, attributeFilter:['class','style']});
+    window.addEventListener('pageshow', sync);
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, {once:true});
+  else boot();
+})();
 </script>
 </body>
 </html>
