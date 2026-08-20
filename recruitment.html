@@ -323,6 +323,19 @@
     .int-sec-title { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; margin: 22px 0 12px; }
     .int-sec-title:first-child { margin-top: 0; }
     .int-sec-title i { font-size: 17px; }
+    /* ปุ่มนำออกจากแท็บวันเริ่มงาน (ซ่อนเฉพาะแท็บนี้ — ข้อมูลยังอยู่ครบ) */
+    .start-x { flex-shrink:0; width:30px; height:30px; margin-left:6px; display:grid; place-items:center;
+      border:1px solid var(--line); background:#fff; border-radius:9px; color:#94a3b8; cursor:pointer;
+      font-size:15px; transition:all .15s; }
+    .start-x:hover { border-color:#1f6f9c; color:#1f6f9c; background:#eff6ff; }
+    .start-restore { display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin-bottom:14px;
+      padding:9px 13px; border:1px dashed #cbd5e2; border-radius:11px; background:#f8fafc;
+      color:var(--muted); font-size:12.5px; }
+    .start-restore b { color:var(--ink); font-weight:700; }
+    .start-restore button { margin-left:auto; padding:5px 12px; border:1px solid #cbd5e2; background:#fff;
+      border-radius:8px; color:#1f6f9c; font-family:inherit; font-size:12px; font-weight:600; cursor:pointer;
+      display:inline-flex; align-items:center; gap:5px; }
+    .start-restore button:hover { background:#eff6ff; border-color:#1f6f9c; }
     .int-sec-n { font-size: 11px; font-weight: 600; background: var(--bg); color: var(--muted); padding: 1px 9px; border-radius: 20px; }
     .int-card { display: flex; align-items: center; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 13px 16px; margin-bottom: 9px; cursor: pointer; transition: all .12s; box-shadow: var(--shadow); }
     .int-card:hover { border-color: var(--green-line); transform: translateX(2px); }
@@ -1367,7 +1380,10 @@
       const ci = DATA.findIndex(x => x.id === a.id); const c = col(ci < 0 ? 0 : ci);
       const F = (l, v) => v ? `<div class="f"><div class="fl">${l}</div><div class="fv">${v}</div></div>` : '';
       const FULL = (l, v) => v ? `<div class="f full"><div class="fl">${l}</div><div class="fv">${v}</div></div>` : '';
-      const SEC = (title, inner, ac) => inner.trim() ? `<section class="sec"><div class="sec-h" style="--ac:${ac}">${title}</div><div class="grid">${inner}</div></section>` : '';
+      const SEC = (no, title, inner, ac, sub) => inner.trim() ? `<section class="sec" style="--ac:${ac}">
+        <div class="sec-head"><div class="sec-no">${no}</div><div><div class="sec-h">${title}</div>${sub ? `<div class="sec-sub">${sub}</div>` : ''}</div></div>
+        <div class="grid">${inner}</div>
+      </section>` : '';
 
       const screening = F('ผู้ตรวจ', esc(a.hrBy)) + FULL('ความเห็นคัดกรอง', esc(a.hrNote));
       const resTag = a.result === 'pass' ? '<span class="tag ok">ผ่าน</span>' : a.result === 'fail' ? '<span class="tag no">ไม่ผ่าน</span>' : '';
@@ -1384,6 +1400,12 @@
         F('ผลตอบรับ', respTag);
 
       const S = statusOf(a);
+      const progressStatus = (S === 'rejected' || S === 'cancelled') ? (a.prevStatus || inferPrev(a)) : S;
+      const progressIndex = Math.max(0, FLOW.indexOf(progressStatus));
+      const progressLabels = { new: 'รับใบสมัคร', screening: 'คัดกรอง', interview: 'สัมภาษณ์', offer: 'เสนอการจ้าง', hired: 'เริ่มงาน' };
+      const progress = FLOW.map((key, i) => `<div class="step ${i < progressIndex ? 'done' : ''} ${i === progressIndex ? 'current' : ''}">
+        <div class="step-dot">${i < progressIndex ? '✓' : (i + 1)}</div><div class="step-label">${progressLabels[key]}</div>
+      </div>`).join('');
       const outcome = S === 'hired'
         ? `<div class="outcome oc-ok"><div class="oc-ic">✓</div><div><div class="oc-t">รับเข้าทำงาน</div><div class="oc-s">ผู้สมัครตอบรับ Offer${a.respondedAt ? ' · ' + esc(a.respondedAt) : ''}</div></div></div>`
         : S === 'rejected'
@@ -1398,6 +1420,10 @@
       const resumeNote = resumeLink
         ? `<div class="rnote">📎 แนบไฟล์เรซูเม่: <a href="${resumeLink}">เปิด / ดาวน์โหลด</a></div>`
         : (!a.resumePath ? `<div class="rnote">— ไม่มีไฟล์เรซูเม่แนบ —</div>` : '');
+      const screeningSec = SEC('HR', 'ผลคัดกรอง', screening, '#a97818', 'Screening review');
+      const offerSec = SEC('OF', 'ข้อเสนอการจ้าง', offer, '#a97818', 'Employment offer');
+      const summaryClass = screeningSec && offerSec ? 'summary-grid' : 'summary-grid single';
+      const generatedAt = new Date().toLocaleString('th-TH');
       const fname = ('สรุป_' + a.name).replace(/[\\/:*?"<>|]/g, '') + '.pdf';
 
       const html = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">
@@ -1405,68 +1431,81 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'IBM Plex Sans Thai',sans-serif;color:#17241f;background:#eef1ee;padding:28px 20px}
-  .sheet{background:#fff;border-radius:14px;overflow:hidden;border:1px solid #e6e9e4}
-  .brandbar{background:linear-gradient(135deg,#0e1c38,#16294d);padding:17px 30px;display:flex;align-items:center;justify-content:space-between}
-  .brandbar img{height:23px}
-  .brandbar .doc{color:#c9cdc9;font-size:12px;font-weight:500;letter-spacing:.3px}
-  .accent{height:3px;background:linear-gradient(90deg,#7a1e28,#b0273a 60%,#7a1e28)}
-  .body{padding:24px 26px 8px}
-  .hero{display:flex;align-items:center;gap:16px;padding:20px 22px;background:linear-gradient(120deg,#edf6f1,#f6f9f7);border:1px solid #e0efe7;border-radius:14px;margin-bottom:16px}
-  .av{width:56px;height:56px;border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;flex-shrink:0}
-  .cand-name{font-size:21px;font-weight:700;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.cand-pos{font-size:18px;font-weight:700;color:#16294d;margin-top:6px;letter-spacing:.2px}
-  .badge{font-size:11.5px;font-weight:600;padding:3px 11px;border-radius:20px;background:${st.bg};color:${st.color}}
-  .cand-meta{color:#6c7671;font-size:12.5px;margin-top:5px}
-  .outcome{display:flex;align-items:center;gap:14px;padding:14px 18px;border-radius:12px;margin-bottom:16px}
-  .oc-ic{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:#fff;flex-shrink:0}
-  .oc-t{font-size:15px;font-weight:700}.oc-s{font-size:12.5px;opacity:.85;margin-top:1px}
-  .oc-ok{background:#e7ecf5;color:#0e1c38}.oc-ok .oc-ic{background:#16294d}
-  .oc-no{background:#fbe9ee;color:#8a2540}.oc-no .oc-ic{background:#b0273a}
-  .oc-cancel{background:#eceef0;color:#47535a}.oc-cancel .oc-ic{background:#6c7671}
-  .sec{background:#f7f9f7;border:1px solid #ebefeb;border-radius:13px;padding:15px 18px;margin-bottom:14px}
-  .sec-h{font-size:11.5px;font-weight:700;color:#4a5450;text-transform:uppercase;letter-spacing:.6px;margin:0 0 13px;display:flex;align-items:center;gap:8px}
-  .sec-h::before{content:'';width:9px;height:9px;border-radius:3px;background:var(--ac,#16294d)}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 24px}
-  .f.full{grid-column:1/-1}
-  .fl{font-size:11px;color:#8a938e;margin-bottom:3px}
-  .fv{font-size:14px;font-weight:600;line-height:1.5}
-  .tag{display:inline-block;font-size:12px;font-weight:700;padding:2px 10px;border-radius:6px}
-  .tag.ok{background:#e7ecf5;color:#0e1c38}.tag.no{background:#fbe9ee;color:#8a2540}
-  .exec-sec{page-break-inside:avoid}
-  .exec-lines{display:flex;flex-direction:column;gap:30px;padding:14px 2px 2px}
-  .exec-lines i{display:block;border-bottom:1.2px dotted #aab3ad;height:0}
-  .exec-sign{display:flex;justify-content:flex-end;margin-top:30px;padding-right:6px}
-  .exec-sign .sig{text-align:center;font-size:13px;color:#17241f}
-  .exec-sign .sigline{display:block;width:220px;border-bottom:1.2px dotted #aab3ad;height:26px;margin:0 auto 8px}
-  .exec-sign .signame{font-weight:600}
-  .exec-sign .sigrole{font-size:11.5px;color:#6c7671;margin-top:2px}
-  .rnote{font-size:12.5px;color:#6c7671;padding:2px 2px 6px}.rnote a{color:#16294d;font-weight:600}
-  .foot{padding:14px 2px 4px;color:#97a1b5;font-size:10.5px;text-align:center;border-top:1px solid #f0f1ee;margin-top:8px}
-  .printbtn{position:fixed;top:18px;right:18px;background:#16294d;color:#fff;border:none;font-family:inherit;font-size:14px;font-weight:600;padding:12px 20px;border-radius:11px;cursor:pointer;box-shadow:0 8px 22px rgba(22,120,93,.4)}
-  .resume-page{background:#fff;border:1px solid #e6e9e4;border-radius:14px;padding:24px 30px;text-align:center;margin-top:16px;page-break-before:always}
-  .rp-title{font-size:11.5px;font-weight:700;color:#4a5450;text-transform:uppercase;letter-spacing:.6px;margin-bottom:16px;display:flex;align-items:center;gap:8px;text-align:left}
-  .rp-title::before{content:'';width:9px;height:9px;border-radius:3px;background:#556066}
-  .rp-img{max-width:100%;border:1px solid #e6e9e4;border-radius:10px}
-  .sec,.outcome,.hero{page-break-inside:avoid}
+  body{font-family:'IBM Plex Sans Thai',Tahoma,sans-serif;color:#17233b;background:#e9edf3;padding:28px 20px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   #doc{width:760px;margin:0 auto}
-
-    .info-f.edit{background:#fffdf5;border-color:#f0e2c8}
-    .info-f .k-edit{margin-left:8px;font-size:.72rem;font-weight:600;color:#8a5a12;
-      display:inline-flex;align-items:center;gap:3px}
-    .inp-date{padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-family:inherit;
-      font-size:.9rem;background:#fff;width:100%;max-width:190px;color:var(--ink)}
-    .inp-date:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px rgba(22,41,77,.08)}
-
-    .icon-btn.bk { color:#8a5a12; border-color:#f0d9b5; background:#fff8ec; }
-    .icon-btn.bk:hover { background:#ffefd6; }
-    .icon-btn.bk.on { background:#8a5a12; border-color:#8a5a12; color:#fff; }
-    .stag.tag-bk { background:#fff2dc; color:#8a5a12; }
-    .fchip.fchip-bk.on { background:#8a5a12; border-color:#8a5a12; color:#fff; }
-    .fchip.fchip-bk { color:#8a5a12; }
-
-    .btn.btn-back { background:#fff; border:1px solid var(--line); color:var(--muted); }
-    .btn.btn-back:hover { background:var(--bg); color:var(--ink); border-color:var(--green-line); }
+  .sheet{position:relative;background:#fff;border-radius:20px;overflow:hidden;border:1px solid #dce2ea;box-shadow:0 18px 55px rgba(14,28,56,.12)}
+  .brandbar{position:relative;min-height:102px;padding:24px 30px;background:linear-gradient(125deg,#09152d 0%,#12264a 72%,#1d3865 100%);display:flex;align-items:center;justify-content:space-between;overflow:hidden}
+  .brandbar::before{content:'';position:absolute;width:230px;height:230px;border:1px solid rgba(255,255,255,.08);border-radius:50%;right:-80px;top:-120px}
+  .brandbar::after{content:'';position:absolute;width:145px;height:145px;border:28px solid rgba(177,39,58,.16);border-radius:50%;right:88px;bottom:-118px}
+  .brandbar img{position:relative;z-index:1;height:27px;max-width:230px;object-fit:contain}
+  .brand-doc{position:relative;z-index:1;text-align:right;color:#fff}
+  .brand-eyebrow{font-size:9px;font-weight:600;letter-spacing:1.8px;color:#cfac66;text-transform:uppercase}
+  .brand-title{font-size:17px;font-weight:700;margin-top:3px}
+  .brand-code{font-size:9.5px;color:#aab7ca;margin-top:3px;letter-spacing:.4px}
+  .accent{height:4px;background:linear-gradient(90deg,#8d1f30 0%,#c0394f 40%,#d4aa54 40%,#d4aa54 58%,#c0394f 58%,#8d1f30 100%)}
+  .body{padding:22px 26px 15px}
+  .hero{position:relative;display:flex;align-items:center;gap:17px;padding:18px 20px;background:linear-gradient(125deg,#f4f7fb 0%,#fff 70%);border:1px solid #dfe6ef;border-radius:16px;margin-bottom:13px;overflow:hidden}
+  .hero::after{content:'';position:absolute;right:-42px;top:-62px;width:150px;height:150px;border:22px solid rgba(18,38,74,.035);border-radius:50%}
+  .av{position:relative;z-index:1;width:61px;height:61px;border-radius:17px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;flex-shrink:0;box-shadow:inset 0 0 0 1px rgba(14,28,56,.08)}
+  .candidate{position:relative;z-index:1;flex:1;min-width:0}
+  .cand-top{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .cand-name{font-size:21px;font-weight:700;line-height:1.25;color:#111b30}
+  .badge{font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:20px;background:${st.bg};color:${st.color};border:1px solid ${st.color}22}
+  .cand-pos{font-size:14px;font-weight:600;color:#223c66;margin-top:5px}
+  .cand-meta{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
+  .meta-pill{font-size:10.5px;color:#5d6b7d;background:#fff;border:1px solid #e0e6ee;border-radius:20px;padding:3px 9px}
+  .progress{display:flex;align-items:flex-start;padding:13px 17px 11px;background:#0e1c38;border-radius:14px;margin-bottom:13px}
+  .step{position:relative;flex:1;text-align:center;color:#77859a}
+  .step:not(:last-child)::after{content:'';position:absolute;left:calc(50% + 13px);right:calc(-50% + 13px);top:11px;height:2px;background:#30405b}
+  .step.done:not(:last-child)::after{background:#b28a3d}
+  .step-dot{position:relative;z-index:1;width:23px;height:23px;margin:0 auto 5px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#273751;border:1px solid #40506a;color:#99a7ba;font-size:9.5px;font-weight:700}
+  .step.done .step-dot{background:#b28a3d;border-color:#d1aa5a;color:#fff}
+  .step.current .step-dot{background:#fff;border:4px solid #c13a4f;color:#0e1c38;box-shadow:0 0 0 3px rgba(193,58,79,.22)}
+  .step-label{font-size:9px;font-weight:600;white-space:nowrap}
+  .step.done .step-label,.step.current .step-label{color:#f4f6f9}
+  .outcome{display:flex;align-items:center;gap:12px;padding:11px 15px;border-radius:12px;margin-bottom:13px;border:1px solid transparent}
+  .oc-ic{width:31px;height:31px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;flex-shrink:0}
+  .oc-t{font-size:14px;font-weight:700}.oc-s{font-size:11px;opacity:.82;margin-top:1px}
+  .oc-ok{background:#edf2fa;color:#0e1c38;border-color:#d9e2f1}.oc-ok .oc-ic{background:#16294d}
+  .oc-no{background:#fff1f4;color:#8a2540;border-color:#f5d8df}.oc-no .oc-ic{background:#b0273a}
+  .oc-cancel{background:#f2f4f6;color:#47535a;border-color:#e2e6e9}.oc-cancel .oc-ic{background:#6c7671}
+  .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+  .summary-grid.single{grid-template-columns:1fr}
+  .sec{background:#fff;border:1px solid #dfe5ec;border-radius:14px;padding:14px 16px;page-break-inside:avoid}
+  .sec-head{display:flex;align-items:center;gap:9px;padding-bottom:10px;margin-bottom:11px;border-bottom:1px solid #edf0f4}
+  .sec-no{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:var(--ac);color:#fff;font-size:9.5px;font-weight:700;letter-spacing:.3px}
+  .sec-h{font-size:12.5px;font-weight:700;color:#17233b}
+  .sec-sub{font-size:8.5px;color:#9aa4b2;letter-spacing:.6px;text-transform:uppercase;margin-top:1px}
+  .interview-sec{margin-bottom:12px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 20px}
+  .f.full{grid-column:1/-1}
+  .fl{font-size:9.5px;color:#8b96a5;margin-bottom:2px}
+  .fv{font-size:12.5px;font-weight:600;color:#19243a;line-height:1.45;overflow-wrap:anywhere}
+  .tag,.mbadge{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:20px}
+  .tag.ok{background:#e8eef8;color:#0e1c38}.tag.no{background:#fbe9ee;color:#8a2540}
+  .mbadge.online{background:#e4f1fb;color:#1f6f9c}.mbadge.onsite{background:#eef0f4;color:#394a62}
+  .mlink{color:#1f5f8c;text-decoration:none}
+  .approval{position:relative;background:linear-gradient(135deg,#fcfaf5,#fff);border:1px solid #eadfca;border-radius:14px;padding:14px 16px 13px;margin-bottom:11px;page-break-inside:avoid;overflow:hidden}
+  .approval::after{content:'APPROVAL';position:absolute;right:-4px;top:4px;color:rgba(169,120,24,.055);font-size:44px;font-weight:700;letter-spacing:2px}
+  .approval-head{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .approval-title{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:#4f3d16}
+  .approval-mark{width:9px;height:9px;background:#c59b45;border-radius:3px;transform:rotate(45deg)}
+  .approval-note{font-size:8.5px;color:#aa9c7e;letter-spacing:.4px}
+  .write-line{height:23px;border-bottom:1px dotted #cfc5b2}
+  .signature{width:235px;margin:12px 0 0 auto;text-align:center;color:#685b42}
+  .sig-line{border-bottom:1px dotted #9f927c;height:18px}
+  .sig-label{font-size:9px;margin-top:4px;color:#9b8f79}
+  .rnote{font-size:10.5px;color:#7b8592;padding:2px 2px 7px}.rnote a{color:#16294d;font-weight:600}
+  .foot{display:flex;align-items:center;justify-content:space-between;padding:10px 2px 0;color:#9aa4b2;font-size:8.8px;border-top:1px solid #edf0f4;margin-top:2px}
+  .foot-brand{font-weight:700;color:#647087;letter-spacing:.5px}
+  .printbtn{position:fixed;top:18px;right:18px;background:linear-gradient(135deg,#0e1c38,#213e70);color:#fff;border:none;font-family:inherit;font-size:13px;font-weight:600;padding:11px 18px;border-radius:11px;cursor:pointer;box-shadow:0 10px 24px rgba(14,28,56,.28)}
+  .printbtn:disabled{opacity:.65;cursor:wait}
+  .resume-page{background:#fff;border:1px solid #dce2ea;border-radius:18px;padding:24px 30px;text-align:center;margin-top:16px;page-break-before:always}
+  .rp-title{font-size:11px;font-weight:700;color:#17233b;text-transform:uppercase;letter-spacing:.6px;margin-bottom:16px;display:flex;align-items:center;gap:8px;text-align:left}
+  .rp-title::before{content:'';width:9px;height:9px;border-radius:3px;background:#a97818}
+  .rp-img{max-width:100%;border:1px solid #dfe5ec;border-radius:10px}
+  .sec,.outcome,.hero,.progress,.approval{page-break-inside:avoid}
+  @media print{body{background:#fff;padding:0}.printbtn{display:none}.sheet{box-shadow:none;border-radius:0}}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"><\/script>
@@ -1474,32 +1513,35 @@
   <button id="savebtn" class="printbtn" onclick="dl()">💾 บันทึกเป็น PDF</button>
   <div id="doc">
   <div class="sheet">
-    <div class="brandbar">${logoSrc ? `<img src="${logoSrc}">` : '<b style="color:#fff;font-style:italic">MASARU</b>'}<span class="doc">สรุปข้อมูลผู้สมัคร</span></div>
+    <div class="brandbar">
+      ${logoSrc ? `<img src="${logoSrc}">` : '<b style="position:relative;z-index:1;color:#fff;font-size:23px;font-style:italic">MASARU</b>'}
+      <div class="brand-doc"><div class="brand-eyebrow">Recruitment dossier</div><div class="brand-title">สรุปข้อมูลผู้สมัคร</div><div class="brand-code">MASARU HR · CONFIDENTIAL</div></div>
+    </div>
     <div class="accent"></div>
     <div class="body">
       <div class="hero">
-        <div style="flex:1;min-width:0">
-          <div class="cand-name">${esc(a.name)}<span class="badge">${st.label}</span></div>
-          <div class="cand-pos"><span style="color:#6c7671;font-weight:600">ตำแหน่ง:</span> ${esc(a.pos || '—')}</div>
-          <div class="cand-meta">${esc(a.src || '—')}${a.phone ? ' · ' + esc(a.phone) : ''} · รับสมัคร ${esc(a.date)}</div>
-        </div>
-      </div>
-      ${outcome}
-      ${SEC('ผลคัดกรอง', screening, '#8a5a12')}
-      ${SEC('การสัมภาษณ์', interview, '#1f6f9c')}
-      <section class="sec exec-sec">
-        <div class="sec-h" style="--ac:#C9A84C">ความเห็นของผู้บริหาร</div>
-        <div class="exec-lines"><i></i><i></i><i></i><i></i></div>
-        <div class="exec-sign">
-          <div class="sig">
-            <span class="sigline"></span>
-            <div class="signame">( คุณพลวุฒิ บุญวิธวาเจริญ )</div>
-            <div class="sigrole">ประธานบริหาร · วันที่ ................................</div>
+        <div class="av" style="background:${c.bg};color:${c.fg}">${esc(ini(a.name))}</div>
+        <div class="candidate">
+          <div class="cand-top"><div class="cand-name">${esc(a.name)}</div><span class="badge">${st.label}</span></div>
+          <div class="cand-pos">ตำแหน่ง · ${esc(a.pos || '—')}</div>
+          <div class="cand-meta">
+            <span class="meta-pill">ช่องทาง ${esc(a.src || '—')}</span>
+            ${a.phone ? `<span class="meta-pill">โทร ${esc(a.phone)}</span>` : ''}
+            <span class="meta-pill">วันที่สมัคร ${esc(thDate(a.date) || a.date || '—')}</span>
           </div>
         </div>
+      </div>
+      <div class="progress">${progress}</div>
+      ${outcome}
+      ${(screeningSec || offerSec) ? `<div class="${summaryClass}">${screeningSec}${offerSec}</div>` : ''}
+      <div class="interview-sec">${SEC('IN', 'การสัมภาษณ์', interview, '#1f6f9c', 'Interview summary')}</div>
+      <section class="approval">
+        <div class="approval-head"><div class="approval-title"><span class="approval-mark"></span>ความเห็นและการอนุมัติของผู้บริหาร</div><div class="approval-note">EXECUTIVE REVIEW</div></div>
+        <div class="write-line"></div><div class="write-line"></div><div class="write-line"></div>
+        <div class="signature"><div class="sig-line"></div><div class="sig-label">ผู้อนุมัติ / วันที่</div></div>
       </section>
       ${resumeNote}
-      <div class="foot">พิมพ์เมื่อ ${new Date().toLocaleString('th-TH')} · MASARU HR — ระบบรับสมัครงาน</div>
+      <div class="foot"><span class="foot-brand">MASARU HR · RECRUITMENT</span><span>จัดทำเมื่อ ${generatedAt}</span><span>เอกสารภายใน</span></div>
     </div>
   </div>
   ${resumePage}
@@ -1682,9 +1724,42 @@
     }
     function gotoCand(id) { navTo('list'); selId = id; editInt = null; renderList(); const a = getA(id); if (a) renderDetail(a); }
 
+    /* ── ซ่อนคนที่เริ่มงานแล้วออกจากแท็บ "วันเริ่มงาน" ─────────────────
+       เก็บในเครื่องผู้ใช้เท่านั้น (localStorage) — ไม่แตะฐานข้อมูล
+       ข้อมูลผู้สมัครยังอยู่ครบทั้งแท็บผู้สมัคร ใบสรุป และรายงาน        */
+    const START_HIDE_KEY = 'msr_start_hidden';
+    function startHidden() {
+      try { const v = JSON.parse(localStorage.getItem(START_HIDE_KEY) || '[]'); return Array.isArray(v) ? v : []; }
+      catch (e) { return []; }
+    }
+    function saveStartHidden(arr) {
+      try { localStorage.setItem(START_HIDE_KEY, JSON.stringify(arr)); } catch (e) {}
+    }
+    function hideFromStart(id, ev) {
+      if (ev) { ev.stopPropagation(); ev.preventDefault(); }
+      const h = startHidden();
+      if (h.indexOf(id) < 0) h.push(id);
+      saveStartHidden(h);
+      renderStartDates();
+      showToast('นำออกจากแท็บวันเริ่มงานแล้ว — ข้อมูลยังอยู่ครบในแท็บผู้สมัคร');
+    }
+    function restoreStartHidden() {
+      saveStartHidden([]);
+      renderStartDates();
+      showToast('คืนรายการที่ซ่อนไว้ทั้งหมดแล้ว ✓');
+    }
+
     function renderStartDates() {
-      const list = DATA.filter(a => ['offer', 'hired'].includes(statusOf(a)) && a.offerStart);
+      const hidden = startHidden();
+      const all = DATA.filter(a => ['offer', 'hired'].includes(statusOf(a)) && a.offerStart);
+      const list = all.filter(a => hidden.indexOf(a.id) < 0);
+      const hiddenCount = all.length - list.length;
       const nc = document.getElementById('nc-start'); if (nc) nc.textContent = list.length;
+
+      const restoreBar = hiddenCount
+        ? `<div class="start-restore"><i class="ti ti-eye-off"></i>ซ่อนไว้ <b>${hiddenCount}</b> รายการ (ข้อมูลยังอยู่ครบในแท็บผู้สมัคร)<button type="button" onclick="restoreStartHidden()"><i class="ti ti-arrow-back-up"></i>แสดงทั้งหมด</button></div>`
+        : '';
+
       const groups = { overdue: [], today: [], week: [], later: [] };
       list.forEach(a => {
         const diff = dayDiff(a.offerStart);
@@ -1698,9 +1773,12 @@
       Object.values(groups).forEach(g => g.sort(byDate));
 
       const el = document.getElementById('start-body');
-      if (!list.length) { el.innerHTML = '<div class="empty"><i class="ti ti-calendar-off"></i>ยังไม่มีผู้สมัครที่ระบุวันเริ่มงาน</div>'; return; }
+      if (!list.length) {
+        el.innerHTML = restoreBar + '<div class="empty"><i class="ti ti-calendar-off"></i>ยังไม่มีผู้สมัครที่ระบุวันเริ่มงาน</div>';
+        return;
+      }
 
-      const sec = (title, arr, color, icon) => arr.length ? `
+      const sec = (title, arr, color, icon, removable) => arr.length ? `
         <div class="int-sec-title" style="color:${color}"><i class="ti ${icon}"></i>${title}<span class="int-sec-n">${arr.length}</span></div>
         ${arr.map(a => {
           const av = avStyle(a), stm = stMeta(statusOf(a));
@@ -1714,14 +1792,15 @@
               <div class="int-pos">${esc(a.pos)} · <span style="color:${stm.color}">${stm.label}</span></div>
             </div>
             ${rel ? `<span class="int-rel" style="color:${color}">${rel}</span>` : ''}
+            ${removable ? `<button class="start-x" type="button" title="นำออกจากแท็บนี้ (ข้อมูลยังอยู่ครบ)" onclick="hideFromStart('${a.id}',event)"><i class="ti ti-eye-off"></i></button>` : ''}
           </div>`;
         }).join('')}` : '';
 
-      el.innerHTML =
-        sec('เริ่มงานแล้ว', groups.overdue, '#556066', 'ti-check') +
-        sec('เริ่มวันนี้', groups.today, '#16294d', 'ti-star') +
-        sec('ภายใน 7 วัน', groups.week, '#8a5a12', 'ti-calendar-week') +
-        sec('ถัดไป', groups.later, '#1f6f9c', 'ti-calendar');
+      el.innerHTML = restoreBar +
+        sec('เริ่มงานแล้ว', groups.overdue, '#556066', 'ti-check', true) +
+        sec('เริ่มวันนี้', groups.today, '#16294d', 'ti-star', false) +
+        sec('ภายใน 7 วัน', groups.week, '#8a5a12', 'ti-calendar-week', false) +
+        sec('ถัดไป', groups.later, '#1f6f9c', 'ti-calendar', false);
     }
 
     // ═══════════════════ REPORTS ═══════════════════
