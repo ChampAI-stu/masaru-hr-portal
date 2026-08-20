@@ -195,3 +195,102 @@
     enhance();
   }
 })();
+
+/* ============================================================
+   MASARU — Logout Redirect
+   ออกจากระบบจากหน้าไหนก็ตาม → เด้งกลับหน้า Login ของพอร์ทัล
+   ทำงานโดยเฝ้าดู session key ของ Supabase ใน localStorage
+   จึงไม่ต้องแก้โค้ด logout เดิมของแต่ละระบบเลย
+   ============================================================ */
+(function () {
+  'use strict';
+
+  var TARGET = 'index.html';
+  var FLAG = 'msr_logout_pending';
+  var RE = /^sb-.+-auth-token$/;
+
+  var file = (location.pathname.split('/').pop() || 'index.html').toLowerCase();
+  var here = file.replace(/\.html?$/, '') || 'index';
+  if (here === 'index') return;                 // หน้าพอร์ทัลจัดการเองอยู่แล้ว
+
+  function sessionKeys() {
+    var out = [];
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && RE.test(k) && localStorage.getItem(k)) out.push(k);
+      }
+    } catch (e) { return null; }               // localStorage ถูกบล็อก → ไม่ทำอะไร
+    return out.sort();
+  }
+
+  function lostAny(before, now) {
+    if (!before || !now) return false;
+    for (var i = 0; i < before.length; i++) {
+      if (now.indexOf(before[i]) < 0) return true;
+    }
+    return false;
+  }
+
+  function leave() {
+    try { sessionStorage.removeItem(FLAG); } catch (e) {}
+    location.replace(TARGET);
+  }
+
+  /* 1) กรณีระบบเดิมสั่ง location.reload() หลัง signOut
+        → อ่านธงที่ตั้งไว้ตอนกดปุ่ม แล้วเทียบว่า session หายจริงไหม */
+  try {
+    var raw = sessionStorage.getItem(FLAG);
+    if (raw) {
+      sessionStorage.removeItem(FLAG);
+      var snapshot = JSON.parse(raw);
+      if (lostAny(snapshot, sessionKeys())) { leave(); return; }
+    }
+  } catch (e) {}
+
+  /* 2) ตั้งธงตอนผู้ใช้กดปุ่ม "ออกจากระบบ" (รองรับทุกรูปแบบปุ่มในพอร์ทัล) */
+  document.addEventListener('click', function (ev) {
+    var el = ev.target;
+    for (var hop = 0; el && hop < 6; hop++, el = el.parentElement) {
+      var id = (el.id || '').toLowerCase();
+      var cls = '';
+      try { cls = (typeof el.className === 'string' ? el.className : '').toLowerCase(); } catch (e) {}
+      var oc = '';
+      var title = '';
+      try {
+        oc = (el.getAttribute && el.getAttribute('onclick') || '').toLowerCase();
+        title = (el.getAttribute && el.getAttribute('title') || '');
+      } catch (e) {}
+      var txt = (el.textContent || '').trim();
+
+      var isLogout =
+        /logout|signout/.test(id) ||
+        /logout|signout/.test(cls) ||
+        /logout|signout/.test(oc) ||
+        title.indexOf('ออกจากระบบ') > -1 ||
+        (txt.length < 40 && txt.indexOf('ออกจากระบบ') > -1);
+
+      if (isLogout) {
+        try { sessionStorage.setItem(FLAG, JSON.stringify(sessionKeys() || [])); } catch (e) {}
+        return;
+      }
+    }
+  }, true);
+
+  /* 3) เฝ้าดู session แบบต่อเนื่อง — ครอบคลุมกรณีที่ระบบไม่ reload
+        และกรณี session หมดอายุเอง (ต้องหาย 2 รอบติดกันจึงเด้ง กัน false positive
+        ตอน Supabase ต่ออายุ token) */
+  var prev = sessionKeys();
+  if (!prev || !prev.length) return;            // ยังไม่เคยล็อกอินในหน้านี้ → ไม่ต้องเฝ้า
+  var miss = 0;
+  setInterval(function () {
+    var now = sessionKeys();
+    if (!now) return;
+    if (lostAny(prev, now)) {
+      if (++miss >= 2) leave();
+    } else {
+      miss = 0;
+      prev = now;
+    }
+  }, 350);
+})();
