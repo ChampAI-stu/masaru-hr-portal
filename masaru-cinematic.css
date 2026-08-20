@@ -1068,3 +1068,129 @@ body[data-msr-page="deadline"] #formDoc:not(.pdfing) #formPage2 .pg-no {
 body[data-msr-page="deadline"] #formDoc:not(.pdfing) .fi {
   min-height: 19px;
 }
+
+/* ==========================================================
+   ผู้ช่วย MASARU — อัปเกรด (สวยขึ้น + รู้บริบท)
+   หลักการ: "ไม่รบกวนการทำงาน"
+   - ตัวการ์ตูนไม่รับคลิก ยกเว้นตัวหุ่นเองกับปุ่มปิด
+   - จางลงอัตโนมัติเมื่อผู้ใช้พิมพ์ / เลื่อนจอ / เปิด popup
+   - ปิดถาวรได้ และจำค่าไว้
+   ========================================================== */
+
+.msr-mascot {
+  transition: opacity .24s ease, visibility .24s ease, transform .28s ease;
+}
+.msr-mascot-body { pointer-events: auto; cursor: pointer; }
+
+/* โหมดเงียบ — จางลงเมื่อผู้ใช้กำลังทำงาน */
+.msr-mascot.is-quiet {
+  opacity: .14 !important;
+  transform: scale(.84);
+  pointer-events: none;
+}
+.msr-mascot.is-quiet .msr-mascot-note { opacity: 0 !important; }
+.msr-mascot.is-off { display: none !important; }
+
+/* เสาอากาศ + ไฟสถานะ */
+.msr-mascot-antenna {
+  position: absolute;
+  left: 50%;
+  top: -19px;
+  width: 9px;
+  height: 9px;
+  margin-left: -4.5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, #fff, #ff5470 58%, #b8112f);
+  box-shadow: 0 0 10px rgba(255, 84, 112, .85);
+  animation: msrAntenna 2.6s ease-in-out infinite;
+}
+.msr-mascot-antenna::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  width: 2px;
+  height: 13px;
+  margin-left: -1px;
+  border-radius: 2px;
+  background: linear-gradient(#d7e9ff, #82b2e6);
+}
+
+/* ตา — มองตามเมาส์ + กะพริบ */
+.msr-mascot-eye {
+  transform: translate(var(--eyeX, 0px), var(--eyeY, 0px));
+  transition: transform .18s ease-out;
+  animation: msrBlink2 5.2s infinite;
+}
+@keyframes msrBlink2 {
+  0%, 45%, 51%, 100% { height: 14px; opacity: 1; }
+  48% { height: 2px; opacity: .9; }
+}
+
+/* ตรา M เต้นเป็นจังหวะหัวใจ */
+.msr-mascot-torso::before { animation: msrBadge 3.2s ease-in-out infinite; }
+
+/* ประกายรอบตัว */
+.msr-mascot-spark {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(150, 215, 255, .9);
+  box-shadow: 0 0 8px rgba(130, 205, 255, .9);
+  opacity: 0;
+  animation: msrSparkle 4.4s ease-in-out infinite;
+}
+.msr-mascot-spark.s1 { left: 6px;  top: 44px; animation-delay: 0s }
+.msr-mascot-spark.s2 { right: 4px; top: 66px; animation-delay: 1.5s }
+.msr-mascot-spark.s3 { left: 22px; top: 12px; animation-delay: 2.9s }
+
+/* อารมณ์ */
+.msr-mascot.mood-happy .msr-mascot-mouth { height: 12px; border-bottom-width: 4px; border-color: #35cf9a; }
+.msr-mascot.mood-happy .msr-mascot-antenna { background: radial-gradient(circle at 34% 30%, #fff, #4be0a6 58%, #128f63); box-shadow: 0 0 12px rgba(75,224,166,.9); }
+.msr-mascot.mood-alert .msr-mascot-eye { background: #ffd36e; box-shadow: 0 0 9px #ffc63f, 0 0 18px rgba(255,198,63,.7); }
+.msr-mascot.mood-alert .msr-mascot-mouth { height: 4px; border-radius: 4px; border-bottom-color: #ffa64d; }
+.msr-mascot.mood-sleep .msr-mascot-eye { height: 2px !important; animation: none; opacity: .75; }
+.msr-mascot.mood-sleep .msr-mascot-antenna { animation-duration: 5s; opacity: .6; }
+.msr-mascot.mood-sleep .msr-mascot-mouth { width: 10px; }
+.msr-mascot.is-waving .msr-mascot-arm.right { animation: msrWave .55s ease-in-out 3; }
+
+/* กล่องข้อความ + ปุ่มปิด */
+.msr-mascot-note { padding-right: 26px; }
+.msr-mascot-x {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #9fb0c6;
+  font: 700 14px/1 system-ui, sans-serif;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.msr-mascot-x:hover { background: #eef3fa; color: #45566f; }
+
+@keyframes msrAntenna {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.18); filter: brightness(1.25); }
+}
+@keyframes msrBadge {
+  0%, 72%, 100% { transform: translateX(-50%) scale(1); }
+  80% { transform: translateX(-50%) scale(1.11); }
+  88% { transform: translateX(-50%) scale(1.03); }
+}
+@keyframes msrSparkle {
+  0%, 100% { opacity: 0; transform: translateY(0) scale(.6); }
+  40% { opacity: .95; transform: translateY(-10px) scale(1.15); }
+  70% { opacity: 0; transform: translateY(-18px) scale(.7); }
+}
+
+/* จอเล็กมาก / โหมดลดการเคลื่อนไหว */
+@media (max-width: 620px) { .msr-mascot { display: none !important; } }
+@media (prefers-reduced-motion: reduce) {
+  .msr-mascot-antenna, .msr-mascot-spark, .msr-mascot-torso::before { animation: none !important; }
+}
