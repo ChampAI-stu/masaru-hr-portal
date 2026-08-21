@@ -121,6 +121,16 @@ body.locked{overflow:hidden}
 .back-home:hover{background:rgba(255,255,255,.2)}
 /* ===== Modal ===== */
 /* ===== คลังความรู้ AI ===== */
+.stag{display:inline-block;font-size:12px;font-weight:700;padding:4px 11px;border-radius:99px;white-space:nowrap}
+.stag.c-wait{background:#FEF3C7;color:#92400E}
+.stag.c-ok{background:#DCFCE7;color:#166534}
+.stag.c-rej{background:#FEE2E2;color:#991B1B}
+.stag.c-cancel{background:#F1F1EE;color:#6B7280}
+.dt2{line-height:1.5}
+.dt2 .d1{font-weight:600;color:var(--ink)}
+.dt2 .d2{font-size:11.5px;color:#8A94A6;margin-top:2px}
+.hd-ok{font-size:11px;color:#166534;font-weight:600}
+.hd-no{font-size:11px;color:#B45309;font-weight:600}
 .kb-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:18px 0 10px}
 .kb-head h3{font-size:16px;color:var(--ink);margin:0}
 .kb-head .sp{margin-left:auto}
@@ -328,7 +338,14 @@ function setTab(t){
   render();
 }
 
-/* ---------- สถานะ pipeline ---------- */
+/* ---------- แท็กสถานะสั้น ๆ ---------- */
+function statusTag(r){
+  if(r.status==="cancelled") return `<span class="stag c-cancel">🚫 ยกเลิก</span>`;
+  if(r.status==="rejected")  return `<span class="stag c-rej">❌ ไม่อนุมัติ</span>`;
+  if(r.status==="pending")   return `<span class="stag c-wait">⏳ รอ HR</span>`;
+  return `<span class="stag c-ok">✅ อนุมัติ</span>`;
+}
+/* ---------- สถานะ pipeline (เก็บไว้เผื่อใช้) ---------- */
 function pipeline(r){
   if(r.status==="cancelled")
     return `<div class="pipe"><span class="st deny"><span class="dot"></span>ยกเลิกโดยพนักงาน</span></div>`;
@@ -749,6 +766,19 @@ function usersView(){
 /* ---------- Render ---------- */
 function tagOf(t){ return `<span class="tag ${TAGC[t]||'t-etc'}">${esc(t)}</span>`; }
 
+function reqAt(r){
+  const iso = r.created_at || "";
+  if(!iso) return "-";
+  const d = new Date(iso);
+  if(isNaN(d)) return "-";
+  const dd = String(d.getDate()).padStart(2,"0");
+  const mm = String(d.getMonth()+1).padStart(2,"0");
+  const yy = String((d.getFullYear()+543)%100).padStart(2,"0");
+  const hh = String(d.getHours()).padStart(2,"0");
+  const mi = String(d.getMinutes()).padStart(2,"0");
+  return `${dd}/${mm}/${yy} ${hh}:${mi} น.`;
+}
+
 function rowHtml(r, mode){
   const withAct = !!mode;
   let actions = "";
@@ -757,7 +787,7 @@ function rowHtml(r, mode){
       actions = `<button class="btn mini m-ok" onclick="act(${r.id},'approve')">✅ อนุมัติ</button>
                  <button class="btn mini m-bad" onclick="act(${r.id},'reject')">❌ ไม่อนุมัติ</button>`;
     else if(!r.hr_ack_at)
-      actions = `<button class="btn mini m-ack" onclick="act(${r.id},'ack')">👁 รับทราบ</button>`;
+      actions = `<button class="btn mini m-ack" onclick="act(${r.id},'ack')">👁 ปิดงาน</button>`;
   } else if(mode==="del"){
     const nDocs = (r.attachments||[]).length;
     actions = `${nDocs?`<button class="btn mini m-deldoc" onclick="delDocs(${r.id})" title="ลบเฉพาะไฟล์แนบ คำขอยังอยู่">🗑 ไฟล์ (${nDocs})</button>`:""}
@@ -767,9 +797,10 @@ function rowHtml(r, mode){
     <td class="mut">#${r.id}</td>
     <td class="emp"><b>${esc(r.emp_name)}</b><div class="mut">${esc(r.emp_code)} • ${esc(r.department||"-")}</div></td>
     <td>${tagOf(r.leave_type)}</td>
-    <td>${range(r)}</td>
+    <td><div class="dt2"><div class="d1">${range(r)}</div><div class="d2">🕐 ขอเมื่อ ${reqAt(r)}</div>
+      <div class="${r.head_confirmed?"hd-ok":"hd-no"}">${r.head_confirmed?"✅ หัวหน้าอนุมัติแล้ว":"⚠️ ยังไม่ยืนยันหัวหน้า"}</div></div></td>
     <td>${esc(r.reason||"-")}${(r.attachments&&r.attachments.length)?` <button class="btn mini m-doc" onclick="viewDocs(${r.id})" title="ดูหลักฐาน">📎 ${r.attachments.length}</button>`:(r.has_document?' <span class="doc" title="แจ้งว่ามีเอกสาร แต่ยังไม่ส่งไฟล์">📎รอไฟล์</span>':'')}</td>
-    <td>${pipeline(r)}</td>
+    <td>${statusTag(r)}</td>
     <td class="mut">${esc(r.approved_by||"-")}</td>
     ${withAct?`<td><div class="act">${actions}</div></td>`:""}
   </tr>`;
@@ -778,7 +809,7 @@ function rowHtml(r, mode){
 function table(list, mode){
   if(list.length===0) return `<div class="card"><div class="empty"><div class="big">🎉</div>ไม่มีรายการ</div></div>`;
   return `<div class="card"><table>
-    <thead><tr><th>#</th><th>พนักงาน</th><th>ประเภท</th><th>วันที่</th><th>เหตุผล</th><th>สถานะ</th><th>ผู้อนุมัติ</th>${mode?"<th>จัดการ</th>":""}</tr></thead>
+    <thead><tr><th>#</th><th>พนักงาน</th><th>ประเภท</th><th>วันที่ลา / ขอเมื่อ</th><th>เหตุผล</th><th>สถานะ</th><th>ผู้อนุมัติ</th>${mode?"<th>จัดการ</th>":""}</tr></thead>
     <tbody>${list.map(r=>rowHtml(r,mode)).join("")}</tbody>
   </table></div>`;
 }
@@ -793,8 +824,8 @@ function kpis(){
   nr.textContent = regs.length;
   nr.classList.toggle("hide", regs.length===0);
   return `<div class="kpis">
-    <div class="kpi" style="--c:var(--late)"><div class="lab"><span class="dot"></span>รอหัวหน้าอนุมัติ</div><div class="v">${p}</div></div>
-    <div class="kpi" style="--c:var(--vacation)"><div class="lab"><span class="dot"></span>รอ HR รับทราบ</div><div class="v">${w}</div></div>
+    <div class="kpi" style="--c:var(--late)"><div class="lab"><span class="dot"></span>รอ HR พิจารณา</div><div class="v">${p}</div></div>
+    <div class="kpi" style="--c:var(--vacation)"><div class="lab"><span class="dot"></span>รอปิดงาน</div><div class="v">${w}</div></div>
     <div class="kpi" style="--c:var(--present)"><div class="lab"><span class="dot"></span>ลา/สาย มีผลวันนี้</div><div class="v">${t}</div></div>
     <div class="kpi" style="--c:var(--navy)"><div class="lab"><span class="dot"></span>คำขอทั้งหมด</div><div class="v">${rows.length}</div></div>
   </div>`;
