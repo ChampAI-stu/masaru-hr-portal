@@ -369,48 +369,41 @@ function stage(r){
 
 /* ---------- Actions ---------- */
 async function act(id, what){
-  const label = {approve:"อนุมัติ", reject:"ไม่อนุมัติ", ack:"รับทราบ"}[what];
+  const label = {approve:"อนุมัติ", reject:"ไม่อนุมัติ", ack:"ปิดงาน"}[what];
 
-  /* ---- ปิดงานอย่างเดียว (คำขอที่ตัดสินไปแล้ว) ---- */
+  /* ปิดงาน */
   if(what === "ack"){
-    if(!confirm(`ยืนยัน "รับทราบ" คำขอ #${id}?`)) return;
+    if(!confirm(`ยืนยัน "ปิดงาน" คำขอ #${id}?`)) return;
     const {error} = await db.from("leave_requests")
       .update({ hr_ack_by: hrName(), hr_ack_at: new Date().toISOString() }).eq("id", id);
     if(error){ toast("อัปเดตไม่สำเร็จ: "+error.message); return; }
-    toast(`รับทราบคำขอ #${id} เรียบร้อย ✅`);
+    toast(`ปิดงานคำขอ #${id} เรียบร้อย ✅`);
     await loadAll();
     return;
   }
 
-  /* ---- HR อนุมัติ / ไม่อนุมัติ (ส่งผ่านบอทเพื่อแจ้ง LINE พนักงานด้วย) ---- */
+  /* HR อนุมัติ / ไม่อนุมัติ  (ยังไม่ส่งแจ้งเตือน LINE — แจ้งพนักงานเองไปก่อน) */
   let note = "";
   if(what === "reject"){
-    note = prompt(`ไม่อนุมัติคำขอ #${id}\n\nเหตุผล (พนักงานจะเห็นข้อความนี้ใน LINE):`, "") ;
-    if(note === null) return;                    // กดยกเลิก
+    note = prompt(`ไม่อนุมัติคำขอ #${id}\n\nเหตุผล (บันทึกไว้ในระบบ):`, "");
+    if(note === null) return;
     note = String(note).trim();
     if(!note){ toast("กรุณาระบุเหตุผล"); return; }
   }else{
-    if(!confirm(`ยืนยัน "อนุมัติ" คำขอ #${id}?\n\nระบบจะแจ้งผลให้พนักงานทาง LINE ทันที`)) return;
+    if(!confirm(`ยืนยัน "อนุมัติ" คำขอ #${id}?\n\n(ระบบยังไม่ส่งแจ้งเตือน LINE — รบกวนแจ้งพนักงานเอง)`)) return;
   }
 
-  if(!adminCode){ toast("ยังไม่ได้ตั้งโค้ดลับผู้ดูแล — ตั้งได้ที่แท็บผู้ใช้ระบบ"); return; }
+  const now = new Date().toISOString();
+  const patch = {
+    status: what==="approve" ? "approved" : "rejected",
+    approved_by: hrName(), approved_at: now,
+    hr_ack_by: hrName(), hr_ack_at: now
+  };
+  if(note) patch.review_note = note;
 
-  try{
-    const res = await fetch(BOT_URL + "?action=decide", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code: adminCode, id, act: what, by: hrName(), note })
-    });
-    const out = await res.json().catch(()=>({}));
-    if(!res.ok || !out.ok){
-      toast("ไม่สำเร็จ: " + (out.error || res.status));
-      return;
-    }
-    toast(`${label}คำขอ #${id} เรียบร้อย ✅` + (out.notified ? " (แจ้ง LINE แล้ว)" : " (แต่แจ้ง LINE ไม่สำเร็จ)"));
-  }catch(e){
-    toast("เชื่อมต่อบอทไม่ได้: " + (e.message||e));
-    return;
-  }
+  const {error} = await db.from("leave_requests").update(patch).eq("id", id).eq("status","pending");
+  if(error){ toast("อัปเดตไม่สำเร็จ: "+error.message); return; }
+  toast(`${label}คำขอ #${id} เรียบร้อย ✅`);
   await loadAll();
 }
 function hrName(){ return (window.__userEmail || "HR (เว็บ)"); }
@@ -887,7 +880,7 @@ function render(){
   const k = kpis();
   if(tab==="pending"){
     const list = rows.filter(r=>r.status!=="cancelled" && (r.status==="pending" || !r.hr_ack_at));
-    c.innerHTML = k + `<div class="count">🖥️ <b>HR อนุมัติที่หน้านี้</b> — กดอนุมัติ/ไม่อนุมัติในตาราง ระบบจะแจ้งผลให้พนักงานทาง LINE ทันที</div>` + table(list,"act");
+    c.innerHTML = k + `<div class="count">🖥️ <b>HR อนุมัติที่หน้านี้</b> — กดอนุมัติ/ไม่อนุมัติในตาราง (ยังไม่ส่งแจ้งเตือน LINE อัตโนมัติ)</div>` + table(list,"act");
   } else if(tab==="all"){
     const list = applyFilter(rows);
     c.innerHTML = k + filterBar() + `<div class="count">แสดง ${list.length} จาก ${rows.length} รายการ • 🗑 ลบไฟล์แนบ/ลบคำขอได้จากคอลัมน์จัดการ</div>` + table(list,"del");
