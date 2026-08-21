@@ -203,7 +203,7 @@ body.locked{overflow:hidden}
     <button id="tb-all" class="tab" onclick="setTab('all')">ทั้งหมด</button>
     <button id="tb-sum" class="tab" onclick="setTab('sum')">สรุปเดือนนี้</button>
     <button id="tb-users" class="tab" onclick="setTab('users')">ผู้ใช้ระบบ<span class="n hide" id="nRegs">0</span></button>
-    <button id="tb-kb" class="tab" onclick="setTab('kb')">คลังความรู้ AI<span class="n hide" id="nHrq">0</span></button>
+    <button id="tb-kb" class="tab" onclick="setTab('kb')">คลังความรู้ & วันหยุด<span class="n hide" id="nHrq">0</span></button>
   </div>
 </div></div>
 
@@ -273,6 +273,7 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 let db = null, rows = [], tab = "pending";
 let kbs = [], hrqs = [], kbq = "", kbEditId = null;   // คลังความรู้ AI
+let hols = [], offDays = "0";                        // วันหยุดบริษัท
 const F = { status:"", type:"", dept:"", q:"", from:"", to:"" };
 
 const TAGC = {"ลาป่วย":"t-sick","ลากิจ":"t-biz","ลาพักร้อน":"t-vac","มาสาย":"t-late","ขาดงาน":"t-abs"};
@@ -297,7 +298,7 @@ async function pageAll(table, orderCol){
 let emps=[], links=[], apprs=[], regs=[], uq="", adminCode="", showCode=false, lineQuota=null, regCmd="ลงทะเบียน", botName="น้องพลอย";
 const BOT_URL = "https://iyycyvnvfmerxkcfalea.supabase.co/functions/v1/dynamic-processor";
 async function loadAll(){
-  const [a,b,c,d,e,f,g,bn,kbr,hqr] = await Promise.all([
+  const [a,b,c,d,e,f,g,bn,kbr,hqr,hlr,odr] = await Promise.all([
     pageAll("leave_requests","created_at"),
     db.from("employees").select("*").order("emp_code"),
     db.from("line_users").select("*").order("registered_at",{ascending:false}),
@@ -308,9 +309,12 @@ async function loadAll(){
     db.from("system_kv").select("v").eq("k","bot_name").maybeSingle(),
     db.from("hr_knowledge").select("*").order("is_active",{ascending:false}).order("id"),
     db.from("hr_questions").select("*").order("created_at",{ascending:false}).limit(100),
+    db.from("company_holidays").select("*").order("hdate"),
+    db.from("system_kv").select("v").eq("k","weekly_offdays").maybeSingle(),
   ]);
   rows = a; emps = b.data||[]; links = c.data||[]; apprs = d.data||[]; regs = e.data||[]; adminCode = (f.data&&f.data.v)||""; regCmd = (g.data&&g.data.v)||"ลงทะเบียน"; botName = (bn.data&&bn.data.v)||"น้องพลอย";
   kbs = (kbr && kbr.data) || []; hrqs = (hqr && hqr.data) || [];
+  hols = (hlr && hlr.data) || []; offDays = (odr && odr.data && odr.data.v) || "0";
   const openQ = hrqs.filter(q => !q.answered_at).length;
   const bq = document.getElementById("nHrq");
   if (bq) { bq.textContent = openQ; bq.classList.toggle("hide", openQ === 0); }
@@ -948,12 +952,68 @@ function kbView(){
     </div>
     <div class="kb-grid">${cards}</div>
 
+    ${holView()}
+
     ${done.length ? `<div class="kb-head"><h3 style="font-size:14px;color:#7A879C">🗂 คำถามที่ตอบแล้วล่าสุด</h3></div>
       ${done.map(x=>`<div class="hrq" style="border-left-color:#9AA7BC">
         <div class="q" style="font-weight:600;color:#4A586F">${esc(x.question)}</div>
         <div class="who">ตอบโดย ${esc(x.answered_by||"-")} · ${String(x.answered_at||"").slice(0,16).replace("T"," ")}${x.answer?`<br>💬 ${esc(x.answer)}`:""}</div>
       </div>`).join("")}` : ""}
   `;
+}
+
+/* ---- วันหยุดบริษัท (ใช้คำนวณ "หยุดติดกัน") ---- */
+const DOW_TH = ["อาทิตย์","จันทร์","อังคาร","พุธ","พฤหัสบดี","ศุกร์","เสาร์"];
+function holView(){
+  const y = new Date().getFullYear();
+  const list = hols.filter(h => String(h.hdate).slice(0,4) >= String(y));
+  const offSet = String(offDays).split(",").map(x=>Number(x.trim())).filter(n=>n>=0&&n<=6);
+  const chips = DOW_TH.map((d,i)=>`<label style="display:inline-flex;align-items:center;gap:5px;margin-right:12px;font-size:13px">
+      <input type="checkbox" ${offSet.includes(i)?"checked":""} onchange="offToggle(${i},this.checked)" style="width:15px;height:15px;accent-color:#1B2D51">${d}</label>`).join("");
+  const rows = list.length ? list.map(h=>{
+    const dw = DOW_TH[new Date(String(h.hdate)+"T00:00:00Z").getUTCDay()];
+    return `<tr><td style="white-space:nowrap"><b>${esc(String(h.hdate))}</b> <span class="mut">(${dw})</span></td>
+      <td>${esc(h.hname)}</td>
+      <td style="text-align:right"><button class="btn btn-line" style="padding:5px 10px;font-size:12px" onclick="holDel('${esc(String(h.hdate))}')">🗑 ลบ</button></td></tr>`;
+  }).join("") : `<tr><td colspan="3" class="kb-empty">ยังไม่มีวันหยุดบริษัทในปีนี้</td></tr>`;
+
+  return `
+    <div class="kb-head"><h3>🗓 วันหยุดบริษัท & วันหยุดประจำสัปดาห์</h3></div>
+    <div class="kb-hint">
+      ใช้คำนวณกฎ <b>"ห้ามหยุดติดต่อกัน"</b> — เช่น ลาวันจันทร์–อังคาร แต่วันอาทิตย์เป็นวันหยุด ระบบจะนับเป็นหยุดติดกัน 3 วันทันที<br>
+      <b>วันหยุดประจำสัปดาห์:</b><br>${chips}
+    </div>
+    <div class="card" style="margin-bottom:8px"><table style="min-width:auto">
+      <thead><tr><th style="width:210px">วันที่</th><th>ชื่อวันหยุด</th><th style="width:90px"></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+    <div class="bar" style="margin-bottom:18px">
+      <input type="date" id="holDate">
+      <input id="holName" placeholder="ชื่อวันหยุด เช่น วันสงกรานต์" style="min-width:230px">
+      <button class="btn btn-red" onclick="holAdd()">➕ เพิ่มวันหยุด</button>
+    </div>`;
+}
+async function offToggle(i, on){
+  let set = String(offDays).split(",").map(x=>Number(x.trim())).filter(n=>n>=0&&n<=6);
+  set = on ? [...new Set([...set, i])] : set.filter(x=>x!==i);
+  const v = set.sort().join(",") || "";
+  const { error } = await db.from("system_kv").upsert({ k:"weekly_offdays", v });
+  if(error){ alert("บันทึกไม่สำเร็จ: " + error.message); return; }
+  await loadAll();
+}
+async function holAdd(){
+  const d = document.getElementById("holDate").value;
+  const n = document.getElementById("holName").value.trim();
+  if(!d || !n){ alert("กรุณาเลือกวันที่และกรอกชื่อวันหยุด"); return; }
+  const { error } = await db.from("company_holidays").upsert({ hdate:d, hname:n });
+  if(error){ alert("บันทึกไม่สำเร็จ: " + error.message); return; }
+  await loadAll();
+}
+async function holDel(d){
+  if(!confirm(`ลบวันหยุด ${d}?`)) return;
+  const { error } = await db.from("company_holidays").delete().eq("hdate", d);
+  if(error){ alert("ลบไม่สำเร็จ: " + error.message); return; }
+  await loadAll();
 }
 
 function kbNew(){
