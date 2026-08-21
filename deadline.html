@@ -2714,27 +2714,59 @@ function setTab(v){
   var k=_q('fmBack'); if(k) k.onclick=function(){ setTab('alert'); };
 })();
 
+/* ---------- จับคู่พนักงานจากชื่อในรายการเตือน ----------
+   รายการเตือนเก็บชื่อรูปแบบ "ชื่อเล่น (ชื่อ-นามสกุล)" จึงต้องแยกก่อนค้นหา
+   ไม่งั้นจะหาไม่เจอ แล้วไปเติม "แผนก" ลงช่องตำแหน่งแทน                */
+function fmNorm(x){ return String(x==null?'':x).replace(/\s+/g,'').toLowerCase(); }
+function fmParseName(raw){
+  var s = String(raw==null?'':raw).trim();
+  var nick = '', full = s;
+  var m = s.match(/^(.+?)\s*[\(（]\s*(.+?)\s*[\)）]\s*$/);
+  if(m){ nick = m[1].trim(); full = m[2].trim(); }
+  return { nick: nick, full: full, raw: s };
+}
+function fmMatchEmp(raw){
+  var p = fmParseName(raw);
+  var list = EMP || [];
+  var nf = fmNorm(p.full), nn = fmNorm(p.nick), ns = fmNorm(p.raw);
+  var hit = null;
+  if(nf) hit = list.filter(function(e){ return fmNorm(e.full_name) === nf; })[0];
+  if(!hit) hit = list.filter(function(e){ return fmNorm(fmEmpLabel(e)) === ns; })[0];
+  if(!hit && nf) hit = list.filter(function(e){ return fmNorm(e.full_name).indexOf(nf) >= 0; })[0];
+  if(!hit && nn){
+    var byNick = list.filter(function(e){ return fmNorm(e.nickname) === nn; });
+    if(byNick.length === 1) hit = byNick[0];     // ชื่อเล่นซ้ำกันหลายคน = ไม่เดา
+  }
+  p.emp = hit || null;
+  return p;
+}
+
 /* ---------- เปิดฟอร์มจากปุ่มในการ์ด (เติมข้อมูลให้อัตโนมัติ) ---------- */
 window.openProbationForm = function(rid, n){
   setTab('form');
   var rec = (state.records||[]).find(function(x){ return String(x.id)===String(rid); });
-  var name = rec ? rec.name : '';
+  var rawName = rec ? rec.name : '';
   clearForm();
+
+  var p = fmMatchEmp(rawName);
+  var e = p.emp;
+  var name = e ? (e.full_name || p.full) : p.full;   // ใส่ชื่อ-นามสกุลจริง ไม่ใช่ "ชื่อเล่น (ชื่อ)"
   $F('pf_name').value = name || '';
-  var e = EMP.filter(function(x){ return (x.full_name||'')===name; })[0];
   if(e){
     fmEmpId = e.id;
     $F('fmEmp').value   = fmEmpLabel(e);
     $F('pf_pos').value  = e.position || e.group_name || '';
     $F('pf_code').value = e.emp_code || '';
-  }else if(rec && rec.dept){
-    $F('pf_pos').value = rec.dept;
+    if($F('cv_nick')) $F('cv_nick').value = e.nickname || p.nick || '';
+  }else{
+    if(p.nick && $F('cv_nick')) $F('cv_nick').value = p.nick;
+    if(rec && rec.dept) $F('pf_pos').value = rec.dept;   // ไม่เจอในทะเบียน -> ใช้แผนกเป็นตัวช่วย
   }
   var round = ({30:1,60:2,90:3})[+n] || 4;   /* >90 วัน = งวดต่ออายุ */
   $F('fmType').value = ({1:'p30',2:'p60',3:'p90',4:'pext'})[round];
   $F('pf_round').value = round;
   $F('pf_days').value  = n;
-  var ref = rec && rec.ref ? rec.ref : (e ? e.start_date : '');
+  var ref = (rec && rec.ref) ? rec.ref : (e ? e.start_date : '');
   if(ref){
     var off = 0;          // เริ่มจากวันเริ่มงานเสมอ
     var len = +n;         // สะสมถึงวันครบ 30/60/90/ต่ออายุ
