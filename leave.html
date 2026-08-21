@@ -120,6 +120,37 @@ body.locked{overflow:hidden}
 .back-home{background:rgba(255,255,255,.12);border:none;color:#fff;border-radius:9px;padding:8px 13px;cursor:pointer;font-family:inherit;font-size:13.5px;text-decoration:none;font-weight:600}
 .back-home:hover{background:rgba(255,255,255,.2)}
 /* ===== Modal ===== */
+/* ===== คลังความรู้ AI ===== */
+.kb-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:18px 0 10px}
+.kb-head h3{font-size:16px;color:var(--ink);margin:0}
+.kb-head .sp{margin-left:auto}
+.kb-hint{background:#EEF3FB;border:1px solid #D6E2F3;border-left:4px solid var(--navy);border-radius:12px;
+  padding:12px 15px;font-size:13px;color:#3C4B66;line-height:1.75;margin-bottom:14px}
+.kb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.kb-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 15px;box-shadow:var(--shadow);position:relative}
+.kb-card.off{opacity:.62;background:#FAFAF8}
+.kb-card .t{font-weight:700;font-size:14.5px;color:var(--ink);padding-right:74px}
+.kb-card .kw{font-size:11.5px;color:#7A879C;margin:4px 0 8px;word-break:break-word}
+.kb-card .ct{font-size:13px;line-height:1.7;color:#33415C;white-space:pre-wrap}
+.kb-card .ops{position:absolute;top:12px;right:12px;display:flex;gap:6px}
+.kb-card .ops button{border:1px solid var(--line);background:#fff;border-radius:8px;width:28px;height:28px;
+  cursor:pointer;font-size:14px;line-height:1;color:#5B6980}
+.kb-card .ops button:hover{border-color:var(--navy);color:var(--navy)}
+.kb-card .ops button.del:hover{border-color:#DC2626;color:#DC2626}
+.kb-badge{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:99px;margin-left:6px}
+.kb-badge.on{background:#DCFCE7;color:#166534}
+.kb-badge.off{background:#F1F1EE;color:#77808F}
+.hrq{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--orange);
+  border-radius:14px;padding:13px 15px;box-shadow:var(--shadow);margin-bottom:10px}
+.hrq .q{font-size:14px;color:var(--ink);font-weight:600;line-height:1.6}
+.hrq .who{font-size:12px;color:#7A879C;margin-top:4px}
+.hrq .ops{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+.hrq textarea{width:100%;margin-top:8px;font-family:inherit;font-size:13.5px;padding:9px 11px;
+  border:1px solid var(--line);border-radius:10px;resize:vertical;min-height:66px;outline:none}
+.kb-empty{text-align:center;color:#8A94A6;padding:26px;font-size:13.5px}
+.modal.wide{width:600px}
+.modal-b textarea{width:100%;font-family:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--line);
+  border-radius:10px;resize:vertical;outline:none}
 .modal-bg{position:fixed;inset:0;background:rgba(16,31,54,.55);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px}
 .modal{background:#fff;border-radius:16px;width:410px;max-width:100%;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.35)}
 .modal-h{background:var(--navy);color:#fff;font-family:'Anuphan';font-weight:700;font-size:16px;padding:13px 16px;border-bottom:3px solid var(--orange)}
@@ -172,6 +203,7 @@ body.locked{overflow:hidden}
     <button id="tb-all" class="tab" onclick="setTab('all')">ทั้งหมด</button>
     <button id="tb-sum" class="tab" onclick="setTab('sum')">สรุปเดือนนี้</button>
     <button id="tb-users" class="tab" onclick="setTab('users')">ผู้ใช้ระบบ<span class="n hide" id="nRegs">0</span></button>
+    <button id="tb-kb" class="tab" onclick="setTab('kb')">คลังความรู้ AI<span class="n hide" id="nHrq">0</span></button>
   </div>
 </div></div>
 
@@ -201,6 +233,28 @@ body.locked{overflow:hidden}
   </div>
 </div>
 
+<div class="modal-bg hide" id="kbBg" onclick="if(event.target===this)kbClose()">
+  <div class="modal wide">
+    <div class="modal-h" id="kbTitle">เพิ่มหัวข้อความรู้</div>
+    <div class="modal-b">
+      <label>หัวข้อ <span style="color:#8A94A6;font-weight:400">(ชื่อเรื่องสั้น ๆ)</span></label>
+      <input id="kbTopic" placeholder="เช่น เงินเดือนและวันจ่าย">
+      <label>คำค้น <span style="color:#8A94A6;font-weight:400">(คั่นด้วยจุลภาค — บอทใช้จับคู่กับคำถามพนักงาน)</span></label>
+      <input id="kbKw" placeholder="เงินเดือน,วันจ่าย,สลิป,โอนเงิน">
+      <label>คำตอบที่ให้บอทใช้ <span style="color:#8A94A6;font-weight:400">(เขียนเป็นภาษาคนอ่านง่าย)</span></label>
+      <textarea id="kbContent" rows="6" placeholder="เงินเดือนออกทุกวันที่ 28 ของเดือน ถ้าตรงวันหยุดจะเลื่อนเป็นวันทำการก่อนหน้า สลิปดูได้ที่..."></textarea>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:12px">
+        <input type="checkbox" id="kbActive" checked style="width:16px;height:16px;accent-color:#1B2D51">
+        เปิดใช้งาน (ถ้าปิด บอทจะไม่นำหัวข้อนี้ไปตอบ)
+      </label>
+    </div>
+    <div class="modal-f">
+      <button class="btn btn-line" onclick="kbClose()">ยกเลิก</button>
+      <button class="btn btn-red" onclick="kbSave()">บันทึก</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-bg hide" id="chatBg" onclick="if(event.target===this)closeChat()">
   <div class="chat-modal">
     <div class="modal-h" id="chatTitle">💬 ประวัติแชท</div>
@@ -218,6 +272,7 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 /* ======================================================== */
 
 let db = null, rows = [], tab = "pending";
+let kbs = [], hrqs = [], kbq = "", kbEditId = null;   // คลังความรู้ AI
 const F = { status:"", type:"", dept:"", q:"", from:"", to:"" };
 
 const TAGC = {"ลาป่วย":"t-sick","ลากิจ":"t-biz","ลาพักร้อน":"t-vac","มาสาย":"t-late","ขาดงาน":"t-abs"};
@@ -242,7 +297,7 @@ async function pageAll(table, orderCol){
 let emps=[], links=[], apprs=[], regs=[], uq="", adminCode="", showCode=false, lineQuota=null, regCmd="ลงทะเบียน", botName="น้องพลอย";
 const BOT_URL = "https://iyycyvnvfmerxkcfalea.supabase.co/functions/v1/dynamic-processor";
 async function loadAll(){
-  const [a,b,c,d,e,f,g,bn] = await Promise.all([
+  const [a,b,c,d,e,f,g,bn,kbr,hqr] = await Promise.all([
     pageAll("leave_requests","created_at"),
     db.from("employees").select("*").order("emp_code"),
     db.from("line_users").select("*").order("registered_at",{ascending:false}),
@@ -251,15 +306,21 @@ async function loadAll(){
     db.from("system_kv").select("v").eq("k","admin_code").maybeSingle(),
     db.from("system_kv").select("v").eq("k","reg_command").maybeSingle(),
     db.from("system_kv").select("v").eq("k","bot_name").maybeSingle(),
+    db.from("hr_knowledge").select("*").order("is_active",{ascending:false}).order("id"),
+    db.from("hr_questions").select("*").order("created_at",{ascending:false}).limit(100),
   ]);
   rows = a; emps = b.data||[]; links = c.data||[]; apprs = d.data||[]; regs = e.data||[]; adminCode = (f.data&&f.data.v)||""; regCmd = (g.data&&g.data.v)||"ลงทะเบียน"; botName = (bn.data&&bn.data.v)||"น้องพลอย";
+  kbs = (kbr && kbr.data) || []; hrqs = (hqr && hqr.data) || [];
+  const openQ = hrqs.filter(q => !q.answered_at).length;
+  const bq = document.getElementById("nHrq");
+  if (bq) { bq.textContent = openQ; bq.classList.toggle("hide", openQ === 0); }
   fetchLineQuota();
   render();
 }
 
 function setTab(t){
   tab = t;
-  ["pending","all","sum","users"].forEach(x=>document.getElementById("tb-"+x).classList.toggle("on",x===t));
+  ["pending","all","sum","users","kb"].forEach(x=>{const el=document.getElementById("tb-"+x); if(el) el.classList.toggle("on",x===t);});
   render();
 }
 
@@ -760,6 +821,8 @@ function render(){
   } else if(tab==="all"){
     const list = applyFilter(rows);
     c.innerHTML = k + filterBar() + `<div class="count">แสดง ${list.length} จาก ${rows.length} รายการ • 🗑 ลบไฟล์แนบ/ลบคำขอได้จากคอลัมน์จัดการ</div>` + table(list,"del");
+  } else if(tab==="kb"){
+    c.innerHTML = kbView();
   } else if(tab==="users"){
     c.innerHTML = usersView(); // k ถูกคำนวณด้านบนแล้ว (อัปเดต badge)
   } else {
@@ -784,6 +847,7 @@ function exportExcel(){
 
 /* ---------- Auth (login ร่วมกับ Portal) ---------- */
 db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  db.auth.getUser().then(r => { window.__userEmail = (r?.data?.user?.email || "").split("@")[0] || "HR (เว็บ)"; }).catch(()=>{});
 const $g = id => document.getElementById(id);
 
 let liveStarted = false, liveTimer = null;
@@ -830,6 +894,142 @@ async function doLogin(){
 $g("authLoginBtn").onclick = doLogin;
 $g("authPass").addEventListener("keydown", e => { if(e.key==="Enter") doLogin(); });
 $g("mSave").onclick = saveEmp;
+
+
+/* ================= คลังความรู้ AI (แก้ได้จากหน้านี้เลย) ================= */
+function kbView(){
+  const q = kbq.trim().toLowerCase();
+  const list = kbs.filter(k => !q || `${k.topic} ${k.keywords} ${k.content}`.toLowerCase().includes(q));
+  const open = hrqs.filter(x => !x.answered_at);
+  const done = hrqs.filter(x => x.answered_at).slice(0, 10);
+
+  const qCards = open.length ? open.map(x => `
+    <div class="hrq">
+      <div class="q">❓ ${esc(x.question)}</div>
+      <div class="who">👤 ${esc(x.emp_name||"-")} (${esc(x.emp_code||"-")}) · ${esc(x.department||"-")} · ${String(x.created_at||"").slice(0,16).replace("T"," ")}</div>
+      <textarea id="ans-${x.id}" placeholder="พิมพ์คำตอบที่ตอบพนักงานไป (บันทึกไว้เป็นประวัติ และกดเพิ่มเข้าคลังเพื่อให้บอทตอบเองครั้งหน้า)"></textarea>
+      <div class="ops">
+        <button class="btn btn-line" onclick="hrqDone(${x.id})">✔ บันทึกว่าตอบแล้ว</button>
+        <button class="btn btn-red" onclick="hrqToKb(${x.id})">➕ เพิ่มเข้าคลังความรู้</button>
+      </div>
+    </div>`).join("")
+    : `<div class="kb-empty">ไม่มีคำถามค้าง — บอทตอบได้เองหมดเลย 🎉</div>`;
+
+  const cards = list.length ? list.map(k => `
+    <div class="kb-card ${k.is_active ? "" : "off"}">
+      <div class="ops">
+        <button onclick="kbToggle(${k.id})" title="${k.is_active ? "ปิดใช้งาน" : "เปิดใช้งาน"}">${k.is_active ? "👁" : "🚫"}</button>
+        <button onclick="kbEdit(${k.id})" title="แก้ไข">✏️</button>
+        <button class="del" onclick="kbDel(${k.id})" title="ลบ">🗑</button>
+      </div>
+      <div class="t">${esc(k.topic)}<span class="kb-badge ${k.is_active ? "on" : "off"}">${k.is_active ? "ใช้งาน" : "ปิดอยู่"}</span></div>
+      <div class="kw">🔎 ${esc(k.keywords)}</div>
+      <div class="ct">${esc(k.content)}</div>
+    </div>`).join("")
+    : `<div class="kb-empty">ยังไม่มีหัวข้อความรู้ — กด "เพิ่มหัวข้อ" เพื่อเริ่มได้เลย</div>`;
+
+  return `
+    <div class="kb-hint">
+      🤖 <b>บอทจะตอบคำถามพนักงานจากคลังนี้เท่านั้น</b> — หัวข้อไหนยังไม่มีข้อมูล บอทจะไม่เดา แต่จะส่งคำถามต่อให้ HR ทาง LINE<br>
+      💡 <b>คำค้น</b> คือคำที่พนักงานน่าจะพิมพ์ ใส่ให้ครบหลายแบบ คั่นด้วยจุลภาค เช่น <code>เงินเดือน,วันจ่าย,สลิป,เงินออก</code><br>
+      ✅ แก้แล้วบอทใช้ทันที ไม่ต้อง deploy ใหม่
+    </div>
+
+    <div class="kb-head">
+      <h3>❓ คำถามที่รอ HR ตอบ <span class="kb-badge ${open.length ? "on" : "off"}">${open.length} ข้อ</span></h3>
+    </div>
+    ${qCards}
+
+    <div class="kb-head">
+      <h3>📚 คลังความรู้ (${kbs.filter(k=>k.is_active).length} หัวข้อที่ใช้งาน / ${kbs.length} ทั้งหมด)</h3>
+      <input class="sp" style="font-family:inherit;font-size:13.5px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;outline:none;min-width:220px"
+             placeholder="ค้นหาหัวข้อ / คำค้น" value="${esc(kbq)}" oninput="kbq=this.value;clearTimeout(window.__kbT);window.__kbT=setTimeout(render,250)">
+      <button class="btn btn-red" onclick="kbNew()">➕ เพิ่มหัวข้อ</button>
+    </div>
+    <div class="kb-grid">${cards}</div>
+
+    ${done.length ? `<div class="kb-head"><h3 style="font-size:14px;color:#7A879C">🗂 คำถามที่ตอบแล้วล่าสุด</h3></div>
+      ${done.map(x=>`<div class="hrq" style="border-left-color:#9AA7BC">
+        <div class="q" style="font-weight:600;color:#4A586F">${esc(x.question)}</div>
+        <div class="who">ตอบโดย ${esc(x.answered_by||"-")} · ${String(x.answered_at||"").slice(0,16).replace("T"," ")}${x.answer?`<br>💬 ${esc(x.answer)}`:""}</div>
+      </div>`).join("")}` : ""}
+  `;
+}
+
+function kbNew(){
+  kbEditId = null;
+  document.getElementById("kbTitle").textContent = "เพิ่มหัวข้อความรู้";
+  document.getElementById("kbTopic").value = "";
+  document.getElementById("kbKw").value = "";
+  document.getElementById("kbContent").value = "";
+  document.getElementById("kbActive").checked = true;
+  document.getElementById("kbBg").classList.remove("hide");
+  setTimeout(()=>document.getElementById("kbTopic").focus(), 60);
+}
+function kbEdit(id){
+  const k = kbs.find(x => x.id === id); if(!k) return;
+  kbEditId = id;
+  document.getElementById("kbTitle").textContent = "แก้ไขหัวข้อความรู้";
+  document.getElementById("kbTopic").value = k.topic || "";
+  document.getElementById("kbKw").value = k.keywords || "";
+  document.getElementById("kbContent").value = k.content || "";
+  document.getElementById("kbActive").checked = !!k.is_active;
+  document.getElementById("kbBg").classList.remove("hide");
+}
+function kbClose(){ document.getElementById("kbBg").classList.add("hide"); }
+
+async function kbSave(){
+  const topic = document.getElementById("kbTopic").value.trim();
+  const keywords = document.getElementById("kbKw").value.trim();
+  const content = document.getElementById("kbContent").value.trim();
+  const is_active = document.getElementById("kbActive").checked;
+  if(!topic){ alert("กรุณากรอกหัวข้อ"); return; }
+  if(!keywords){ alert("กรุณากรอกคำค้น อย่างน้อย 1 คำ (บอทใช้จับคู่กับคำถาม)"); return; }
+  if(content.length < 5){ alert("กรุณากรอกคำตอบให้ชัดเจน"); return; }
+  const payload = { topic, keywords, content, is_active, updated_at: new Date().toISOString() };
+  const { error } = kbEditId
+    ? await db.from("hr_knowledge").update(payload).eq("id", kbEditId)
+    : await db.from("hr_knowledge").insert(payload);
+  if(error){ alert("บันทึกไม่สำเร็จ: " + error.message); return; }
+  kbClose(); await loadAll();
+}
+async function kbToggle(id){
+  const k = kbs.find(x => x.id === id); if(!k) return;
+  const { error } = await db.from("hr_knowledge")
+    .update({ is_active: !k.is_active, updated_at: new Date().toISOString() }).eq("id", id);
+  if(error){ alert("อัปเดตไม่สำเร็จ: " + error.message); return; }
+  await loadAll();
+}
+async function kbDel(id){
+  const k = kbs.find(x => x.id === id); if(!k) return;
+  if(!confirm(`ลบหัวข้อ "${k.topic}" ออกจากคลังความรู้?\n\nบอทจะไม่ใช้หัวข้อนี้ตอบอีก (ถ้าแค่อยากพักไว้ ให้กดปิดใช้งานแทน)`)) return;
+  const { error } = await db.from("hr_knowledge").delete().eq("id", id);
+  if(error){ alert("ลบไม่สำเร็จ: " + error.message); return; }
+  await loadAll();
+}
+
+/* ---- คำถามที่ส่งต่อมาให้ HR ---- */
+async function hrqDone(id){
+  const ta = document.getElementById("ans-" + id);
+  const answer = ta ? ta.value.trim() : "";
+  const who = (window.__userEmail || "HR (เว็บ)");
+  const { error } = await db.from("hr_questions")
+    .update({ answer: answer || null, answered_by: who, answered_at: new Date().toISOString() }).eq("id", id);
+  if(error){ alert("บันทึกไม่สำเร็จ: " + error.message); return; }
+  await loadAll();
+}
+function hrqToKb(id){
+  const x = hrqs.find(v => v.id === id); if(!x) return;
+  const ta = document.getElementById("ans-" + id);
+  const answer = ta ? ta.value.trim() : "";
+  if(!answer){ alert("พิมพ์คำตอบก่อน แล้วค่อยกดเพิ่มเข้าคลังความรู้นะครับ"); return; }
+  kbNew();
+  document.getElementById("kbTitle").textContent = "เพิ่มเข้าคลังความรู้ (จากคำถามพนักงาน)";
+  document.getElementById("kbTopic").value = x.question.slice(0, 40);
+  document.getElementById("kbKw").value = x.question.replace(/[?？]/g, "").split(/\s+/).filter(w => w.length > 1).slice(0, 6).join(",");
+  document.getElementById("kbContent").value = answer;
+  window.__kbFromQ = id;
+}
 
 (async function bootAuth(){
   try{
