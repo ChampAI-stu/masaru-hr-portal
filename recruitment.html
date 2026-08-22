@@ -336,6 +336,13 @@
     .dash-chips span { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600;
       padding: 6px 12px; border-radius: 99px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.17); }
 
+    .dash-chips .live { font-weight: 700; }
+    .dash-chips .live.on { background: rgba(52,211,153,.16); border-color: rgba(52,211,153,.45); color: #a7f3d0; }
+    .dash-chips .live.on i { animation: dashPulse 1.9s ease-in-out infinite; }
+    .dash-chips .live.off { background: rgba(251,191,36,.14); border-color: rgba(251,191,36,.4); color: #fde68a; }
+    @keyframes dashPulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+    @media (prefers-reduced-motion: reduce) { .dash-chips .live.on i { animation: none } }
+
     /* ---- KPI ---- */
     .kpi-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
     .kpi { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: 16px;
@@ -2134,8 +2141,10 @@
         <div class="dash-hero">
           <div class="dash-eyebrow">Recruitment Pipeline Dashboard</div>
           <h2>ภาพรวมการสรรหาพนักงาน</h2>
-          <p>ติดตามทุกขั้นตอนการจ้างงานแบบเรียลไทม์ · ข้อมูล ณ ${esc(new Date().toLocaleString('th-TH', { dateStyle: 'long', timeStyle: 'short' }))}</p>
-          <div class="dash-chips"><span><i class="ti ti-circle-check"></i>รับคนได้เร็วขึ้น</span>
+          <p>ติดตามทุกขั้นตอนการจ้างงานแบบเรียลไทม์ · อัปเดตล่าสุด <span id="dashTime">${esc(new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }))} น.</span></p>
+          <div class="dash-chips">
+            <span class="live" id="dashLive"><i class="ti ti-circle-dot"></i>กำลังเชื่อมต่อ...</span>
+            <span><i class="ti ti-circle-check"></i>รับคนได้เร็วขึ้น</span>
             <span><i class="ti ti-circle-check"></i>คัดคนได้แม่นยำ</span>
             <span><i class="ti ti-circle-check"></i>ตัดสินใจด้วยข้อมูล</span></div>
         </div>
@@ -2207,6 +2216,18 @@
           </div>
           <div class="dsrc-note">💡 นับจาก “ร่องรอยที่เกิดขึ้นจริง” ไม่ใช่สถานะปัจจุบัน — คนที่เคยสัมภาษณ์แล้วไม่ผ่าน จะยังถูกนับในขั้นสัมภาษณ์ ทำให้อัตราการผ่านแต่ละด่านตรงความจริง</div>
         </div>`;
+      updateLiveBadge();
+    }
+
+    // ป้ายสถานะการเชื่อมต่อสด (เขียว = สด / เหลือง = ใช้การรีเฟรชสำรอง)
+    let rtOk = false;
+    function updateLiveBadge() {
+      const el = document.getElementById('dashLive');
+      if (!el) return;
+      el.className = 'live ' + (rtOk ? 'on' : 'off');
+      el.innerHTML = rtOk
+        ? '<i class="ti ti-circle-dot"></i>อัปเดตสดอัตโนมัติ'
+        : '<i class="ti ti-refresh"></i>รีเฟรชอัตโนมัติทุก 45 วิ';
     }
 
     // ═══════════════════ AUTO-SAVE ═══════════════════
@@ -2245,12 +2266,34 @@
       rtChannel = _sb.channel('applicants-rt')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'applicants' }, () => rtRefresh())
         .subscribe((status) => {
+          rtOk = (status === 'SUBSCRIBED');
+          updateLiveBadge();
           if (['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED'].includes(status)) {
             clearTimeout(rtTimer);
             setTimeout(() => { if (currentUser) setupRealtime(); }, 3000);  // ต่อใหม่อัตโนมัติ
           }
         });
     }
+
+    /* ── ตาข่ายกันพลาดสำหรับแดชบอร์ด ──
+       ถ้า Realtime ของตาราง applicants ไม่ได้เปิดไว้ หรือหลุดชั่วคราว
+       หน้ารายงานจะรีเฟรชเองทุก 45 วิ (เฉพาะตอนเปิดแท็บรายงานอยู่และหน้าจอ active) */
+    function repIsOpen() {
+      const pg = document.getElementById('pg-rep');
+      return !!pg && pg.classList.contains('on');
+    }
+    setInterval(() => {
+      if (!currentUser || document.visibilityState !== 'visible') return;
+      if (!repIsOpen()) return;
+      dbLoad().then(() => { renderRep(); }).catch(() => {});
+    }, 45000);
+
+    // กลับมาที่แท็บเบราว์เซอร์ -> ดึงข้อมูลใหม่ทันที
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible' || !currentUser) return;
+      if (!repIsOpen()) return;
+      dbLoad().then(() => { renderRep(); }).catch(() => {});
+    });
     function rtRefresh() {
       clearTimeout(rtTimer);
       rtTimer = setTimeout(async () => {
