@@ -1996,7 +1996,7 @@
     const repAppDate = a => a.date || a.createdAt || '';
     const inRange = (d, f, t) => !!d && d >= f && d <= t;
 
-    // ═══════════════════ รายงานสรุปตามช่วงเวลา (PDF) ═══════════════════
+    // ═══════════════════ รายงานสรุปตามช่วงเวลา (แบ่งหน้า A4 อัตโนมัติ) ═══════════════════
     function openPeriodReport() {
       repEnsureRange();
       const f = repFrom, t = repTo;
@@ -2017,7 +2017,6 @@
       const thD = d => thDate(d) || '-';
       const dayCount = Math.round((Date.parse(t) - Date.parse(f)) / 86400000) + 1;
 
-      // ---- KPI ----
       const kpis = [
         { l: 'ผู้สมัครใหม่', v: newOnes.length, c: '#2c67ad' },
         { l: 'นัดสัมภาษณ์', v: intInP.length, c: '#c9992a' },
@@ -2026,61 +2025,36 @@
         { l: 'ไม่ผ่าน / ยกเลิก', v: closedInP.length, c: '#9a2b48' },
       ];
 
-      // ---- สรุปตามตำแหน่ง ----
+      const key = a => (a.pos || '').trim() || 'ไม่ระบุ';
       const gp = {};
-      newOnes.forEach(a => { const k = (a.pos || '').trim() || 'ไม่ระบุ'; gp[k] = (gp[k] || 0) + 1; });
-      hiredInP.forEach(a => { const k = (a.pos || '').trim() || 'ไม่ระบุ'; gp[k] = gp[k] || 0; });
-      const posRows = Object.keys(gp).sort((x, y) => gp[y] - gp[x]).map(k => {
-        const nw = newOnes.filter(a => ((a.pos || '').trim() || 'ไม่ระบุ') === k).length;
-        const iv = intInP.filter(a => ((a.pos || '').trim() || 'ไม่ระบุ') === k).length;
-        const hr = hiredInP.filter(a => ((a.pos || '').trim() || 'ไม่ระบุ') === k).length;
-        return `<tr><td>${esc(k)}</td><td class="c">${nw}</td><td class="c">${iv}</td><td class="c b">${hr}</td></tr>`;
-      }).join('') || `<tr><td colspan="4" class="none">ไม่มีข้อมูลในช่วงนี้</td></tr>`;
+      newOnes.forEach(a => { gp[key(a)] = (gp[key(a)] || 0) + 1; });
+      hiredInP.forEach(a => { gp[key(a)] = gp[key(a)] || 0; });
+      const posRows = Object.keys(gp).sort((x, y) => gp[y] - gp[x]).map(k =>
+        `<tr><td>${esc(k)}</td><td class="c">${newOnes.filter(a => key(a) === k).length}</td>
+         <td class="c">${intInP.filter(a => key(a) === k).length}</td>
+         <td class="c b">${hiredInP.filter(a => key(a) === k).length}</td></tr>`
+      ).join('') || `<tr><td colspan="4" class="none">ไม่มีข้อมูลในช่วงนี้</td></tr>`;
 
-      // ---- สรุปตามช่องทาง ----
+      const skey = a => (a.src || '').trim() || 'ไม่ระบุ';
       const gs = {};
-      newOnes.forEach(a => { const k = (a.src || '').trim() || 'ไม่ระบุ'; gs[k] = (gs[k] || 0) + 1; });
-      const srcRows = Object.keys(gs).sort((x, y) => gs[y] - gs[x]).map(k => {
-        const hr = hiredInP.filter(a => ((a.src || '').trim() || 'ไม่ระบุ') === k).length;
-        const pct = newOnes.length ? Math.round(gs[k] / newOnes.length * 100) : 0;
-        return `<tr><td>${esc(k)}</td><td class="c">${gs[k]}</td><td class="c">${pct}%</td><td class="c b">${hr}</td></tr>`;
-      }).join('') || `<tr><td colspan="4" class="none">ไม่มีข้อมูลในช่วงนี้</td></tr>`;
+      newOnes.forEach(a => { gs[skey(a)] = (gs[skey(a)] || 0) + 1; });
+      const srcRows = Object.keys(gs).sort((x, y) => gs[y] - gs[x]).map(k =>
+        `<tr><td>${esc(k)}</td><td class="c">${gs[k]}</td>
+         <td class="c">${newOnes.length ? Math.round(gs[k] / newOnes.length * 100) : 0}%</td>
+         <td class="c b">${hiredInP.filter(a => skey(a) === k).length}</td></tr>`
+      ).join('') || `<tr><td colspan="4" class="none">ไม่มีข้อมูลในช่วงนี้</td></tr>`;
 
-      // ---- ตารางรายชื่อ ----
       const badge = a => { const m = stMeta(statusOf(a));
         return `<span class="bg" style="color:${m.color};background:${m.bg}">${m.label}</span>`; };
-      const listRows = (arr, cols) => arr.length
-        ? arr.map((a, i) => `<tr>
-            <td class="c">${i + 1}</td>
-            <td>${esc(a.name)}</td>
-            <td>${esc(a.pos || '-')}</td>
-            ${cols.map(fn => `<td>${fn(a)}</td>`).join('')}
-          </tr>`).join('')
+      const rows = (arr, cols) => arr.length
+        ? arr.map((a, i) => `<tr><td class="c">${i + 1}</td><td>${esc(a.name)}</td><td>${esc(a.pos || '-')}</td>${cols.map(fn => `<td>${fn(a)}</td>`).join('')}</tr>`).join('')
         : `<tr><td colspan="${3 + cols.length}" class="none">ไม่มีข้อมูลในช่วงนี้</td></tr>`;
+      const byD = k => (x, y) => String(x[k] || '').localeCompare(String(y[k] || ''));
 
-      const sortByDate = (k) => (x, y) => String(x[k] || '').localeCompare(String(y[k] || ''));
-
-      const tblNew = listRows([...newOnes].sort(sortByDate('date')), [
-        a => thD(repAppDate(a)), a => esc(a.src || '-'), a => esc(a.phone || '-'), a => badge(a),
-      ]);
-      const tblInt = listRows([...intInP].sort(sortByDate('intDate')), [
-        a => `${thD(a.intDate)}${a.intTime ? ' ' + esc(a.intTime.slice(0, 5)) + ' น.' : ''}`,
-        a => esc(a.intBy || '-'),
-        a => a.intMode === 'online' ? 'ออนไลน์' : 'ออนไซต์',
-        a => esc(a.result || '-'),
-      ]);
-      const tblHired = listRows([...hiredInP].sort(sortByDate('offerStart')), [
-        a => thD(a.offerStart), a => esc(a.offerSalary ? a.offerSalary + ' บาท' : '-'),
-        a => esc(a.offerType || '-'), a => thD(a.respondedAt),
-      ]);
-      const tblClosed = listRows([...closedInP].sort(sortByDate('closedAt')), [
-        a => thD(a.closedAt || repAppDate(a)), a => badge(a),
-        a => esc(a.closeReason || a.resultNote || '-'),
-      ]);
-
+      const TB = (head, body) => `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
       const SEC = (no, title, sub, inner) => `
-        <section class="sec">
-          <div class="sh"><span class="no">${no}</span><div><b>${title}</b>${sub ? `<small>${sub}</small>` : ''}</div></div>
+        <section class="sec" data-title="${esc(title)}">
+          <div class="sh"><span class="no">${no}</span><div><b>${esc(title)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</div></div>
           ${inner}
         </section>`;
 
@@ -2094,16 +2068,24 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"><\/script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#e9edf3;font-family:'IBM Plex Sans Thai',sans-serif;color:#16233f;padding:22px 12px 60px}
+body{background:#e9edf3;font-family:'IBM Plex Sans Thai',sans-serif;color:#16233f;padding:70px 12px 60px}
 .bar{position:fixed;top:0;left:0;right:0;background:#0e1c38;color:#fff;padding:11px 18px;display:flex;
  align-items:center;gap:12px;z-index:9;box-shadow:0 3px 14px rgba(0,0,0,.2)}
 .bar b{font-size:14px}.bar .sp{margin-left:auto;display:flex;gap:8px}
 .bar button{border:0;border-radius:9px;padding:9px 16px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer}
 #savebtn{background:#d42027;color:#fff}#prbtn{background:rgba(255,255,255,.16);color:#fff}
 .bar button:disabled{opacity:.6;cursor:wait}
-.sheet{width:794px;margin:56px auto 0;background:#fff;padding:0 0 26px;box-shadow:0 10px 34px rgba(16,35,63,.14)}
+
+/* ---- หน้า A4 ---- */
+.page{width:794px;height:1123px;background:#fff;margin:0 auto 20px;overflow:hidden;position:relative;
+ box-shadow:0 10px 34px rgba(16,35,63,.14);display:flex;flex-direction:column}
+.parea{flex:1;padding:16px 30px 0;overflow:hidden}
+.pft{flex-shrink:0;padding:8px 30px 12px;border-top:1px solid #eef1f6;display:flex;justify-content:space-between;
+ font-size:9px;color:#9aa4b5}
+.pft .pno{font-weight:700;color:#5e6b80}
+
 .hd{position:relative;overflow:hidden;padding:22px 30px;background:linear-gradient(125deg,#07142c,#12305e 62%,#1f4b80);
- color:#fff;border-bottom:4px solid #d42027}
+ color:#fff;border-bottom:4px solid #d42027;flex-shrink:0}
 .hd::after{content:"";position:absolute;width:190px;height:190px;right:-56px;top:-96px;border:1px solid rgba(255,255,255,.13);border-radius:50%}
 .hd img{height:26px;display:block;margin-bottom:11px}
 .hd small{display:block;font-size:9px;letter-spacing:1.7px;color:#e6bd6b;font-weight:700}
@@ -2111,12 +2093,15 @@ body{background:#e9edf3;font-family:'IBM Plex Sans Thai',sans-serif;color:#16233
 .hd .pr{margin-top:7px;font-size:12px;color:#c3d1e4}
 .hd .meta{position:absolute;right:30px;top:24px;text-align:right;font-size:9.5px;color:#aebdd2;z-index:1}
 .hd .meta b{display:block;color:#fff;font-size:11px}
-.body{padding:20px 30px 0}
-.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin-bottom:20px}
+.mini{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:11px 30px;
+ background:#0e1c38;color:#fff;border-bottom:3px solid #d42027;font-size:11px}
+.mini b{font-size:12.5px}.mini span{color:#aebdd2;font-size:10px}
+
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin-bottom:18px}
 .kpi{border:1px solid #e2e7ef;border-left:4px solid var(--c);border-radius:11px;padding:11px 12px;background:#fbfcfe}
 .kpi .l{font-size:10px;color:#7a8398}
 .kpi .v{font-size:22px;font-weight:700;color:#0e1c38;line-height:1.2;margin-top:3px}
-.sec{margin-bottom:19px;page-break-inside:avoid}
+.sec{margin-bottom:17px}
 .sh{display:flex;align-items:center;gap:10px;margin-bottom:9px;padding-bottom:7px;border-bottom:1.5px solid #16294d}
 .sh .no{width:23px;height:23px;border-radius:7px;background:#16294d;color:#fff;font-size:11px;font-weight:700;
  display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -2130,81 +2115,138 @@ td.c{text-align:center}td.b{font-weight:700;color:#16294d}
 td.none{text-align:center;color:#9aa4b5;padding:14px;font-style:italic}
 .bg{display:inline-block;font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.sign{display:grid;grid-template-columns:1fr 1fr;gap:34px;margin-top:26px;padding-top:8px}
+.sign{display:grid;grid-template-columns:1fr 1fr;gap:34px;margin-top:22px}
 .sign div{text-align:center;font-size:11px;color:#43526b}
 .sign .ln{border-bottom:1px dotted #8a94a6;height:34px;margin-bottom:6px}
-.ft{margin-top:20px;padding:9px 30px 0;border-top:1px solid #eef1f6;display:flex;justify-content:space-between;
- font-size:9px;color:#9aa4b5}
-@media print{body{background:#fff;padding:0}.bar{display:none}.sheet{margin:0;box-shadow:none;width:auto}}
+#flow{position:absolute;left:-99999px;top:0;width:734px}
+@media print{
+  @page{size:A4;margin:0}
+  body{background:#fff;padding:0}.bar{display:none}
+  .page{margin:0;box-shadow:none;page-break-after:always}
+  .page:last-child{page-break-after:auto}
+}
 </style></head><body>
 <div class="bar"><b>📄 รายงานสรุปการสรรหา</b>
-  <span style="font-size:12px;color:#b9c8dd">${thD(f)} - ${thD(t)} (${dayCount} วัน)</span>
+  <span style="font-size:12px;color:#b9c8dd">${thD(f)} - ${thD(t)} (${dayCount} วัน) · <span id="pgcount">กำลังจัดหน้า...</span></span>
   <span class="sp"><button id="prbtn" onclick="window.print()">🖨️ พิมพ์</button>
   <button id="savebtn" onclick="dl()">💾 บันทึกเป็น PDF</button></span></div>
 
-<div class="sheet">
-  <div class="hd">
-    ${logoSrc ? `<img src="${logoSrc}" alt="">` : ''}
-    <small>RECRUITMENT PERIOD REPORT</small>
-    <h1>รายงานสรุปการสรรหาพนักงาน</h1>
-    <div class="pr">ช่วงวันที่ ${thD(f)} ถึง ${thD(t)} · รวม ${dayCount} วัน</div>
-    <div class="meta"><b>MASARU HR</b>ออกรายงาน ${esc(now)}<br>เอกสารภายใน (ความลับ)</div>
+<div id="pages"></div>
+
+<div id="flow">
+  <div class="kpis">${kpis.map(k => `<div class="kpi" style="--c:${k.c}"><div class="l">${k.l}</div><div class="v">${k.v}</div></div>`).join('')}</div>
+  <div class="two">
+    ${SEC(1, 'สรุปตามตำแหน่ง', 'จำนวนในช่วงเวลาที่เลือก', TB('<th>ตำแหน่ง</th><th style="text-align:center">สมัครใหม่</th><th style="text-align:center">สัมภาษณ์</th><th style="text-align:center">รับเข้า</th>', posRows))}
+    ${SEC(2, 'สรุปตามช่องทาง', 'ที่มาของผู้สมัคร', TB('<th>ช่องทาง</th><th style="text-align:center">จำนวน</th><th style="text-align:center">สัดส่วน</th><th style="text-align:center">รับเข้า</th>', srcRows))}
   </div>
-  <div class="body">
-    <div class="kpis">${kpis.map(k => `<div class="kpi" style="--c:${k.c}"><div class="l">${k.l}</div><div class="v">${k.v}</div></div>`).join('')}</div>
-
-    <div class="two">
-      ${SEC(1, 'สรุปตามตำแหน่ง', 'จำนวนในช่วงเวลาที่เลือก',
-        `<table><thead><tr><th>ตำแหน่ง</th><th style="text-align:center">สมัครใหม่</th><th style="text-align:center">สัมภาษณ์</th><th style="text-align:center">รับเข้า</th></tr></thead><tbody>${posRows}</tbody></table>`)}
-      ${SEC(2, 'สรุปตามช่องทาง', 'ที่มาของผู้สมัคร',
-        `<table><thead><tr><th>ช่องทาง</th><th style="text-align:center">จำนวน</th><th style="text-align:center">สัดส่วน</th><th style="text-align:center">รับเข้า</th></tr></thead><tbody>${srcRows}</tbody></table>`)}
-    </div>
-
-    ${SEC(3, `ผู้สมัครใหม่ในช่วงนี้ (${newOnes.length} คน)`, 'เรียงตามวันที่สมัคร',
-      `<table><thead><tr><th style="width:26px;text-align:center">#</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th style="width:74px">วันที่สมัคร</th><th style="width:88px">ช่องทาง</th><th style="width:84px">เบอร์โทร</th><th style="width:80px">สถานะปัจจุบัน</th></tr></thead><tbody>${tblNew}</tbody></table>`)}
-
-    ${SEC(4, `นัดสัมภาษณ์ในช่วงนี้ (${intInP.length} คน)`, 'เรียงตามวันสัมภาษณ์',
-      `<table><thead><tr><th style="width:26px;text-align:center">#</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th style="width:104px">วัน/เวลา</th><th style="width:80px">ผู้สัมภาษณ์</th><th style="width:62px">รูปแบบ</th><th style="width:78px">ผล</th></tr></thead><tbody>${tblInt}</tbody></table>`)}
-
-    ${SEC(5, `รับเข้าทำงานในช่วงนี้ (${hiredInP.length} คน)`, 'ผู้ที่ตอบรับข้อเสนอแล้ว',
-      `<table><thead><tr><th style="width:26px;text-align:center">#</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th style="width:78px">วันเริ่มงาน</th><th style="width:86px">เงินเดือน</th><th style="width:86px">ประเภทจ้าง</th><th style="width:78px">วันตอบรับ</th></tr></thead><tbody>${tblHired}</tbody></table>`)}
-
-    ${SEC(6, `ไม่ผ่าน / ยกเลิก ในช่วงนี้ (${closedInP.length} คน)`, 'พร้อมเหตุผล',
-      `<table><thead><tr><th style="width:26px;text-align:center">#</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th style="width:78px">วันที่ปิดเคส</th><th style="width:82px">สถานะ</th><th>เหตุผล</th></tr></thead><tbody>${tblClosed}</tbody></table>`)}
-
-    <div class="sign">
-      <div><div class="ln"></div>ผู้จัดทำ (ฝ่ายบุคคล)</div>
-      <div><div class="ln"></div>ผู้รับทราบ (ผู้บริหาร)</div>
-    </div>
+  ${SEC(3, `ผู้สมัครใหม่ในช่วงนี้ (${newOnes.length} คน)`, 'เรียงตามวันที่สมัคร',
+    TB('<th style="width:26px;text-align:center">#</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th style="width:74px">วันที่สมัคร</th><th style="width:88px">ช่องทาง</th><th style="width:84px">เบอร์โทร</th><th style="width:80px">สถานะปัจจุบัน</th>',
+      rows([...newOnes].sort(byD('date')), [a => thD(repAppDate(a)), a => esc(a.src || '-'), a => esc(a.phone || '-'), a => badge(a)])))}
+  ${SEC(4, `นัดสัมภาษณ์ในช่วงนี้ (${intInP.length} คน)`, 'เรียงตามวันสัมภาษณ์',
+    TB('<th style="width:26px;text-align:center">#</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th style="width:104px">วัน/เวลา</th><th style="width:80px">ผู้สัมภาษณ์</th><th style="width:62px">รูปแบบ</th><th style="width:78px">ผล</th>',
+      rows([...intInP].sort(byD('intDate')), [a => `${thD(a.intDate)}${a.intTime ? ' ' + esc(a.intTime.slice(0, 5)) + ' น.' : ''}`, a => esc(a.intBy || '-'), a => a.intMode === 'online' ? 'ออนไลน์' : 'ออนไซต์', a => esc(a.result || '-')])))}
+  ${SEC(5, `รับเข้าทำงานในช่วงนี้ (${hiredInP.length} คน)`, 'ผู้ที่ตอบรับข้อเสนอแล้ว',
+    TB('<th style="width:26px;text-align:center">#</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th style="width:78px">วันเริ่มงาน</th><th style="width:86px">เงินเดือน</th><th style="width:86px">ประเภทจ้าง</th><th style="width:78px">วันตอบรับ</th>',
+      rows([...hiredInP].sort(byD('offerStart')), [a => thD(a.offerStart), a => esc(a.offerSalary ? a.offerSalary + ' บาท' : '-'), a => esc(a.offerType || '-'), a => thD(a.respondedAt)])))}
+  ${SEC(6, `ไม่ผ่าน / ยกเลิก ในช่วงนี้ (${closedInP.length} คน)`, 'พร้อมเหตุผล',
+    TB('<th style="width:26px;text-align:center">#</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th style="width:78px">วันที่ปิดเคส</th><th style="width:82px">สถานะ</th><th>เหตุผล</th>',
+      rows([...closedInP].sort(byD('closedAt')), [a => thD(a.closedAt || repAppDate(a)), a => badge(a), a => esc(a.closeReason || a.resultNote || '-')])))}
+  <div class="sign">
+    <div><div class="ln"></div>ผู้จัดทำ (ฝ่ายบุคคล)</div>
+    <div><div class="ln"></div>ผู้รับทราบ (ผู้บริหาร)</div>
   </div>
-  <div class="ft"><span>MASARU HR — เหนือกว่า ทุกวัน</span><span>เอกสารใช้ภายในองค์กร</span></div>
 </div>
 
 <script>
+var HEAD_HTML = ${JSON.stringify(`<div class="hd">${logoSrc ? `<img src="${logoSrc}" alt="">` : ''}<small>RECRUITMENT PERIOD REPORT</small><h1>รายงานสรุปการสรรหาพนักงาน</h1><div class="pr">ช่วงวันที่ ${thD(f)} ถึง ${thD(t)} · รวม ${dayCount} วัน</div><div class="meta"><b>MASARU HR</b>ออกรายงาน ${now}<br>เอกสารภายใน (ความลับ)</div></div>`)};
+var MINI_HTML = ${JSON.stringify(`<div class="mini"><b>รายงานสรุปการสรรหาพนักงาน</b><span>${thD(f)} - ${thD(t)} · MASARU HR</span></div>`)};
+
+/* ───── จัดหน้า A4 อัตโนมัติ: ไม่ตัดกลางแถวตาราง ───── */
+function newPage(withBigHead){
+  var pg = document.createElement('div'); pg.className = 'page';
+  pg.innerHTML = (withBigHead ? HEAD_HTML : MINI_HTML) +
+    '<div class="parea"></div><div class="pft"><span>MASARU HR — เหนือกว่า ทุกวัน</span><span class="pno"></span></div>';
+  document.getElementById('pages').appendChild(pg);
+  return pg;
+}
+function overflow(pg){ var a = pg.querySelector('.parea'); return a.scrollHeight > a.clientHeight; }
+
+function paginate(){
+  var flow = document.getElementById('flow');
+  var pages = document.getElementById('pages');
+  pages.innerHTML = '';
+  var pg = newPage(true), area = pg.querySelector('.parea');
+
+  function pushBlock(node){
+    area.appendChild(node);
+    if (overflow(pg)) { area.removeChild(node); pg = newPage(false); area = pg.querySelector('.parea'); area.appendChild(node); }
+  }
+
+  var blocks = [].slice.call(flow.children);
+  blocks.forEach(function(blk){
+    var tbl = blk.tagName === 'SECTION' ? blk.querySelector('table') : null;
+    var bodyRows = tbl ? [].slice.call(tbl.querySelectorAll('tbody > tr')) : [];
+
+    // บล็อกธรรมดา หรือ ตารางสั้น -> ยัดทั้งก้อน
+    if (!tbl || bodyRows.length <= 2) { pushBlock(blk.cloneNode(true)); return; }
+
+    // ตารางยาว -> ใส่ทีละแถว ขึ้นหน้าใหม่พร้อมหัวตารางเดิม
+    var shell = blk.cloneNode(true);
+    var shellTbl = shell.querySelector('table');
+    var tb = shellTbl.querySelector('tbody');
+    tb.innerHTML = '';
+    var titleEl = shell.querySelector('.sh b');
+    var baseTitle = titleEl ? titleEl.textContent : '';
+    area.appendChild(shell);
+    if (overflow(pg)) { area.removeChild(shell); pg = newPage(false); area = pg.querySelector('.parea'); area.appendChild(shell); }
+
+    var cur = shell, curBody = tb, part = 1;
+    bodyRows.forEach(function(tr){
+      var c = tr.cloneNode(true);
+      curBody.appendChild(c);
+      if (overflow(pg)) {
+        curBody.removeChild(c);
+        part++;
+        pg = newPage(false); area = pg.querySelector('.parea');
+        cur = blk.cloneNode(true);
+        var t2 = cur.querySelector('table'); curBody = t2.querySelector('tbody'); curBody.innerHTML = '';
+        var b2 = cur.querySelector('.sh b'); if (b2) b2.textContent = baseTitle + ' (ต่อ ' + part + ')';
+        area.appendChild(cur);
+        curBody.appendChild(c);
+      }
+    });
+  });
+
+  // เลขหน้า
+  var all = [].slice.call(document.querySelectorAll('.page'));
+  all.forEach(function(p, i){ p.querySelector('.pno').textContent = 'หน้า ' + (i + 1) + ' / ' + all.length; });
+  var pc = document.getElementById('pgcount');
+  if (pc) pc.textContent = 'รวม ' + all.length + ' หน้า';
+  return all.length;
+}
+
 async function dl(){
-  var b=document.getElementById('savebtn'); b.disabled=true; b.textContent='กำลังสร้าง PDF...';
+  var b = document.getElementById('savebtn'); b.disabled = true; b.textContent = 'กำลังสร้าง PDF...';
   try{
-    if(typeof html2canvas==='undefined'||!window.jspdf) throw new Error('lib');
-    var jsPDF=window.jspdf.jsPDF;
-    var pdf=new jsPDF({unit:'pt',format:'a4',orientation:'portrait'});
-    var pw=pdf.internal.pageSize.getWidth(), ph=pdf.internal.pageSize.getHeight();
-    var m=22, availW=pw-m*2, availH=ph-m*2;
-    var sheet=document.querySelector('.sheet');
-    var cv=await html2canvas(sheet,{scale:2,backgroundColor:'#ffffff',useCORS:true});
-    var ratio=availW/cv.width, pageHpx=Math.floor(availH/ratio);
-    var y=0, first=true;
-    while(y<cv.height){
-      var hpx=Math.min(pageHpx, cv.height-y);
-      var c=document.createElement('canvas'); c.width=cv.width; c.height=hpx;
-      c.getContext('2d').drawImage(cv,0,y,cv.width,hpx,0,0,cv.width,hpx);
-      if(!first) pdf.addPage();
-      pdf.addImage(c.toDataURL('image/jpeg',0.95),'JPEG',m,m,availW,hpx*ratio);
-      first=false; y+=hpx;
+    if (typeof html2canvas === 'undefined' || !window.jspdf) throw new Error('lib');
+    var jsPDF = window.jspdf.jsPDF;
+    var pdf = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'portrait' });
+    var pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
+    var pages = [].slice.call(document.querySelectorAll('.page'));
+    for (var i = 0; i < pages.length; i++){
+      b.textContent = 'กำลังสร้าง PDF... ' + (i + 1) + '/' + pages.length;
+      var cv = await html2canvas(pages[i], { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+      if (i > 0) pdf.addPage();
+      pdf.addImage(cv.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pw, ph);
     }
     pdf.save(${JSON.stringify(fname)});
-    b.disabled=false; b.textContent='💾 บันทึกเป็น PDF';
-  }catch(e){ window.print(); b.disabled=false; b.textContent='💾 บันทึกเป็น PDF'; }
+    b.disabled = false; b.textContent = '💾 บันทึกเป็น PDF';
+  }catch(e){ window.print(); b.disabled = false; b.textContent = '💾 บันทึกเป็น PDF'; }
 }
+
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ setTimeout(paginate, 80); });
+else window.addEventListener('load', function(){ setTimeout(paginate, 200); });
+setTimeout(function(){ if (!document.querySelector('.page')) paginate(); }, 2500);
 <\/script>
 </body></html>`;
 
