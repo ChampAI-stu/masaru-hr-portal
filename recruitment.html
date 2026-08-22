@@ -314,6 +314,90 @@
     #pg-rep, #pg-int { flex-direction: column; overflow-y: auto; }
     .rep-wrap { max-width: 860px; margin: 0 auto; padding: 30px 32px; width: 100%; }
     .rep-title { font-size: 20px; font-weight: 700; margin-bottom: 22px; }
+    /* ═══════════════ DASHBOARD (แท็บรายงาน) ═══════════════ */
+    #pg-rep .rep-wrap { max-width: 1280px; padding: 24px 22px 60px; }
+    .dash { display: block; }
+    .dash > * + * { margin-top: 16px; }
+    .dash-hero { position: relative; overflow: hidden; border-radius: 20px; padding: 22px 26px; color: #fff;
+      background: radial-gradient(circle at 88% 12%, rgba(90,180,255,.25), transparent 40%),
+                  radial-gradient(circle at 6% 110%, rgba(225,41,61,.28), transparent 42%),
+                  linear-gradient(135deg, #07162f 0%, #14356a 58%, #21538c 100%); }
+    .dash-hero::after { content: ""; position: absolute; width: 200px; height: 200px; right: -60px; top: -90px;
+      border: 1px solid rgba(255,255,255,.12); border-radius: 50%; box-shadow: 0 0 0 26px rgba(255,255,255,.03); }
+    .dash-eyebrow { display: inline-flex; align-items: center; gap: 7px; font-size: 10px; font-weight: 800;
+      letter-spacing: 1.6px; color: #ffd58a; text-transform: uppercase; }
+    .dash-eyebrow::before { content: ""; width: 18px; height: 2px; background: #e1293d; border-radius: 9px; }
+    .dash-hero h2 { font-size: 24px; margin: 7px 0 4px; letter-spacing: -.02em; }
+    .dash-hero p { font-size: 12.5px; color: #bccbe0; margin: 0; }
+    .dash-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 13px; position: relative; z-index: 1; }
+    .dash-chips span { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600;
+      padding: 5px 11px; border-radius: 99px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.16); }
+
+    .kpi-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 11px; }
+    .kpi { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: 15px;
+      padding: 14px 15px; box-shadow: var(--shadow); overflow: hidden; }
+    .kpi::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--kc, #1f6f9c); }
+    .kpi .l { font-size: 11px; color: var(--muted); font-weight: 600; }
+    .kpi .v { font-size: 27px; font-weight: 800; color: var(--ink); line-height: 1.15; margin-top: 5px; letter-spacing: -.02em; }
+    .kpi .u { font-size: 11px; color: var(--muted); font-weight: 600; }
+    .kpi i.ki { position: absolute; right: 12px; top: 12px; font-size: 19px; color: var(--kc, #1f6f9c); opacity: .38; }
+
+    .flowbar { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; box-shadow: var(--shadow); }
+    .flowbar h3, .dcard h3 { font-size: 14px; color: var(--ink); margin: 0 0 13px; display: flex; align-items: center; gap: 8px; }
+    .flowbar h3 i, .dcard h3 i { font-size: 17px; color: #1f6f9c; }
+    .flow-row { display: flex; align-items: flex-start; gap: 4px; flex-wrap: wrap; }
+    .flow-step { flex: 1 1 0; min-width: 96px; text-align: center; position: relative; }
+    .flow-step .ic { width: 40px; height: 40px; margin: 0 auto 7px; border-radius: 13px; display: grid; place-items: center;
+      font-size: 19px; color: #fff; background: var(--fc); box-shadow: 0 7px 15px rgba(16,44,92,.16); }
+    .flow-step b { display: block; font-size: 12px; color: var(--ink); }
+    .flow-step small { display: block; font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+    .flow-step .cnt { display: inline-block; margin-top: 5px; font-size: 11px; font-weight: 800; color: var(--fc);
+      background: var(--fbg); border-radius: 99px; padding: 2px 10px; }
+    .flow-arrow { align-self: center; color: #c3ccd8; font-size: 15px; padding-top: 8px; }
+    .flow-other { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-top: 15px; padding-top: 14px; border-top: 1px dashed var(--line); }
+    .flow-other div { text-align: center; border: 1px solid var(--line); border-radius: 11px; padding: 9px; background: #fbfcfd; }
+    .flow-other b { display: block; font-size: 17px; }
+    .flow-other small { font-size: 10.5px; color: var(--muted); }
+
+    .dgrid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 13px; align-items: start; }
+    .dgrid.two { grid-template-columns: 1.15fr 1fr; }
+    .dcard { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; box-shadow: var(--shadow); }
+    .dcard .empty-mini { color: #97a1b0; font-size: 12.5px; text-align: center; padding: 18px 0; }
+
+    .funnel { display: flex; flex-direction: column; gap: 8px; }
+    .fn-row { display: grid; grid-template-columns: 78px 1fr 46px; gap: 9px; align-items: center; font-size: 12px; }
+    .fn-row .lb { color: var(--ink); font-weight: 600; }
+    .fn-bar { height: 24px; border-radius: 7px; background: #eef1f6; overflow: hidden; }
+    .fn-bar i { display: block; height: 100%; border-radius: 7px; }
+    .fn-row .nv { text-align: right; font-weight: 800; color: var(--ink); }
+    .conv { margin-top: 13px; padding-top: 12px; border-top: 1px dashed var(--line); display: flex; align-items: flex-end; justify-content: space-between; }
+    .conv .lb { font-size: 11.5px; color: var(--muted); }
+    .conv .vv { font-size: 25px; font-weight: 800; color: #17845f; }
+
+    .donut-wrap { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .donut-lg { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 130px; }
+    .dl { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: #46536b; }
+    .dl i { width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0; }
+    .dl b { margin-left: auto; color: var(--ink); }
+
+    .dtable { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .dtable th { text-align: left; font-size: 10.5px; color: var(--muted); font-weight: 700; padding: 0 6px 8px; }
+    .dtable td { padding: 8px 6px; border-top: 1px solid var(--line); color: var(--ink); }
+    .dtable td.n { text-align: center; font-weight: 700; }
+    .dtag { font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 99px; white-space: nowrap; }
+
+    .isch { display: flex; align-items: center; gap: 11px; padding: 10px; border: 1px solid var(--line);
+      border-radius: 12px; margin-bottom: 8px; background: #fbfcfd; cursor: pointer; transition: .15s; }
+    .isch:hover { border-color: #1f6f9c; background: #f2f8fd; }
+    .isch .tm { flex-shrink: 0; text-align: center; min-width: 52px; }
+    .isch .tm b { display: block; font-size: 13.5px; color: #16294d; }
+    .isch .tm small { font-size: 10px; color: var(--muted); }
+    .isch .nm { flex: 1; min-width: 0; }
+    .isch .nm b { display: block; font-size: 12.5px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .isch .nm small { font-size: 11px; color: var(--muted); }
+
+    @media (max-width: 1180px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } .dgrid, .dgrid.two { grid-template-columns: 1fr; } }
+    @media (max-width: 640px) { .kpi-grid { grid-template-columns: 1fr 1fr; } .flow-other { grid-template-columns: 1fr; } }
     .stat-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 20px; }
     .stat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); }
     .stat-lbl { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
@@ -569,12 +653,7 @@
     <!-- Reports -->
     <div class="pg" id="pg-rep">
       <div class="rep-wrap">
-        <div class="rep-title">รายงานการรับสมัคร</div>
-        <div class="stat-grid" id="stat-grid"></div>
-        <div class="pipe">
-          <h3>Pipeline การรับสมัคร</h3>
-          <div id="pipe-bars"></div>
-        </div>
+        <div class="dash" id="dash-root"></div>
       </div>
     </div>
   </div>
@@ -1804,34 +1883,244 @@
     }
 
     // ═══════════════════ REPORTS ═══════════════════
+    // ═══════════════════ DASHBOARD ═══════════════════
+    const D_PAL = ['#2c67ad', '#17845f', '#c9992a', '#c1443f', '#6555c7', '#0f8b9e', '#9a6b3a', '#7a8899'];
+    const dNum = v => (v || 0).toLocaleString('th-TH');
+    function dDays(a, b) {
+      if (!a || !b) return null;
+      const x = Date.parse(a), y = Date.parse(b);
+      if (isNaN(x) || isNaN(y)) return null;
+      const d = Math.round((y - x) / 86400000);
+      return d >= 0 && d < 400 ? d : null;
+    }
+    // วงกลมโดนัท (วาดเอง ไม่ต้องใช้ไลบรารี)
+    function donutSvg(items, size = 132) {
+      const total = items.reduce((s, x) => s + x.v, 0);
+      if (!total) return `<div class="empty-mini">ยังไม่มีข้อมูล</div>`;
+      const R = size / 2, r = R * .68, C = 2 * Math.PI * r;
+      let off = 0;
+      const rings = items.map((x, i) => {
+        const len = C * (x.v / total);
+        const seg = `<circle cx="${R}" cy="${R}" r="${r}" fill="none" stroke="${x.c || D_PAL[i % D_PAL.length]}"
+          stroke-width="${R * .44}" stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}"
+          stroke-dashoffset="${(-off).toFixed(2)}" transform="rotate(-90 ${R} ${R})"></circle>`;
+        off += len; return seg;
+      }).join('');
+      return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${rings}
+        <text x="${R}" y="${R - 3}" text-anchor="middle" font-size="21" font-weight="800" fill="#16294d">${total}</text>
+        <text x="${R}" y="${R + 14}" text-anchor="middle" font-size="9.5" fill="#7A8398">ทั้งหมด</text></svg>`;
+    }
+    function legend(items) {
+      const total = items.reduce((s, x) => s + x.v, 0) || 1;
+      return items.map((x, i) => `<div class="dl"><i style="background:${x.c || D_PAL[i % D_PAL.length]}"></i>
+        <span>${esc(x.l)}</span><b>${x.v} (${Math.round(x.v / total * 100)}%)</b></div>`).join('');
+    }
+    // กราฟเส้นแนวโน้ม
+    function lineSvg(pts, w = 330, h = 96) {
+      const vals = pts.map(p => p.v).filter(v => v != null);
+      if (!vals.length) return `<div class="empty-mini">ยังไม่มีข้อมูลพอสร้างแนวโน้ม</div>`;
+      const mx = Math.max(...vals, 1), mn = Math.min(...vals, 0);
+      const pad = 22, sw = (w - pad * 2) / Math.max(pts.length - 1, 1);
+      const y = v => h - 22 - ((v - mn) / Math.max(mx - mn, 1)) * (h - 44);
+      const coords = pts.map((p, i) => [pad + i * sw, p.v == null ? null : y(p.v)]);
+      const line = coords.filter(c => c[1] != null).map((c, i) => `${i ? 'L' : 'M'}${c[0].toFixed(1)},${c[1].toFixed(1)}`).join(' ');
+      const dots = coords.map((c, i) => c[1] == null ? '' :
+        `<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="3.4" fill="#2c67ad" stroke="#fff" stroke-width="1.6"></circle>
+         <text x="${c[0].toFixed(1)}" y="${(c[1] - 9).toFixed(1)}" text-anchor="middle" font-size="9.5" font-weight="700" fill="#16294d">${pts[i].v}</text>`).join('');
+      const labs = pts.map((p, i) => `<text x="${(pad + i * sw).toFixed(1)}" y="${h - 5}" text-anchor="middle" font-size="9" fill="#8A94A6">${esc(p.l)}</text>`).join('');
+      return `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}">
+        <path d="${line}" fill="none" stroke="#2c67ad" stroke-width="2.2" stroke-linejoin="round"></path>${dots}${labs}</svg>`;
+    }
+
     function renderRep() {
       const tot = DATA.length;
-      const hired = DATA.filter(a => statusOf(a) === 'hired').length;
-      const rejected = DATA.filter(a => statusOf(a) === 'rejected').length;
-      const cancelled = DATA.filter(a => statusOf(a) === 'cancelled').length;
+      const cnt = s => DATA.filter(a => statusOf(a) === s).length;
+      const hired = cnt('hired'), rejected = cnt('rejected'), cancelled = cnt('cancelled');
       const active = tot - hired - rejected - cancelled;
-      document.getElementById('stat-grid').innerHTML = `
-        <div class="stat"><div class="stat-lbl">ผู้สมัครทั้งหมด</div><div class="stat-val">${tot}</div></div>
-        <div class="stat"><div class="stat-lbl">กำลังดำเนินการ</div><div class="stat-val" style="color:#8a5a12">${active}</div></div>
-        <div class="stat"><div class="stat-lbl">รับเข้าทำงาน</div><div class="stat-val" style="color:var(--green)">${hired}</div></div>
-        <div class="stat"><div class="stat-lbl">ไม่ผ่าน</div><div class="stat-val" style="color:#9a2b48">${rejected}</div></div>
-        <div class="stat"><div class="stat-lbl">ยกเลิก</div><div class="stat-val" style="color:#556066">${cancelled}</div></div>`;
-
       const reach = s => DATA.filter(a => {
-        const idx = FLOW.indexOf(statusOf(a));
-        return idx >= FLOW.indexOf(s) || statusOf(a) === 'hired';
+        const st = statusOf(a);
+        if (st === 'hired') return true;
+        const i = FLOW.indexOf(st);
+        return i >= 0 && i >= FLOW.indexOf(s);
       }).length;
+
+      const openPos = new Set(DATA.filter(a => !['hired', 'rejected', 'cancelled'].includes(statusOf(a))).map(a => a.pos).filter(Boolean)).size;
+      const scheduled = DATA.filter(a => a.intDate && !['hired', 'rejected', 'cancelled'].includes(statusOf(a))).length;
+      const offerSent = DATA.filter(a => a.offerSentAt || statusOf(a) === 'offer' || statusOf(a) === 'hired').length;
+
+      // Time to Hire = วันที่สมัคร -> วันตอบรับ (หรือวันเริ่มงาน)
+      const tth = DATA.filter(a => statusOf(a) === 'hired')
+        .map(a => dDays(a.date, a.respondedAt || a.offerSentAt || a.offerStart)).filter(v => v != null);
+      const avgTth = tth.length ? Math.round(tth.reduce((s, v) => s + v, 0) / tth.length) : null;
+
+      const KPI = [
+        { l: 'ตำแหน่งที่เปิดรับ', v: openPos, i: 'ti-briefcase', c: '#2c67ad' },
+        { l: 'ผู้สมัครทั้งหมด', v: tot, i: 'ti-users', c: '#17845f' },
+        { l: 'นัดสัมภาษณ์', v: scheduled, i: 'ti-calendar-event', c: '#c9992a' },
+        { l: 'ส่ง Offer แล้ว', v: offerSent, i: 'ti-mail-forward', c: '#7a4a12' },
+        { l: 'รับเข้าทำงาน', v: hired, i: 'ti-user-check', c: '#16294d' },
+        { l: 'Time to Hire', v: avgTth == null ? '—' : avgTth, u: 'วัน (เฉลี่ย)', i: 'ti-clock-hour-4', c: '#c1443f' },
+      ];
+
+      // ---------- Workflow ----------
+      const FL = [
+        { k: 'new', n: 'รับใบสมัคร', d: 'ผู้สมัครส่งเข้ามา', i: 'ti-inbox' },
+        { k: 'screening', n: 'คัดกรอง', d: 'HR คัดเบื้องต้น', i: 'ti-file-search' },
+        { k: 'interview', n: 'สัมภาษณ์', d: 'นัดและประเมิน', i: 'ti-users-group' },
+        { k: 'offer', n: 'เสนอเงินเดือน', d: 'ส่ง Offer', i: 'ti-mail-forward' },
+        { k: 'hired', n: 'รับเข้าทำงาน', d: 'เริ่มงานจริง', i: 'ti-circle-check' },
+      ];
+      const flowHtml = FL.map((f, i) => {
+        const m = stMeta(f.k);
+        return `<div class="flow-step" style="--fc:${m.color};--fbg:${m.bg}">
+            <div class="ic"><i class="ti ${f.i}"></i></div>
+            <b>${i + 1}. ${f.n}</b><small>${f.d}</small>
+            <span class="cnt">${cnt(f.k)} คน</span></div>` +
+          (i < FL.length - 1 ? `<div class="flow-arrow"><i class="ti ti-chevron-right"></i></div>` : '');
+      }).join('');
+
+      // ---------- Funnel ----------
       const stages = [
         { l: 'รับสมัคร', v: tot, c: '#3a5a7a' },
-        { l: 'ผ่านคัดกรอง', v: reach('screening'), c: '#8a5a12' },
+        { l: 'คัดกรอง', v: reach('screening'), c: '#8a5a12' },
         { l: 'สัมภาษณ์', v: reach('interview'), c: '#1f6f9c' },
         { l: 'Offer', v: reach('offer'), c: '#7a4a12' },
-        { l: 'รับเข้าทำงาน', v: hired, c: 'var(--green)' },
+        { l: 'รับเข้าทำงาน', v: hired, c: '#16294d' },
       ];
       const mx = tot || 1;
-      document.getElementById('pipe-bars').innerHTML = stages.map(s => `
-        <div class="pbar"><div class="pb-lbl"><span>${s.l}</span><span class="n">${s.v} คน</span></div>
-        <div class="pb-tr"><div class="pb-fl" style="width:${Math.round(s.v / mx * 100)}%;background:${s.c}"></div></div></div>`).join('');
+      const funnel = stages.map(s => `<div class="fn-row"><span class="lb">${s.l}</span>
+        <div class="fn-bar"><i style="width:${Math.max(Math.round(s.v / mx * 100), s.v ? 4 : 0)}%;background:${s.c}"></i></div>
+        <span class="nv">${s.v}</span></div>`).join('');
+
+      // ---------- ช่องทางที่มา ----------
+      const bySrc = {};
+      DATA.forEach(a => { const k = (a.src || '').trim() || 'ไม่ระบุ'; bySrc[k] = (bySrc[k] || 0) + 1; });
+      const srcItems = Object.entries(bySrc).sort((x, y) => y[1] - x[1]).slice(0, 6).map(([l, v]) => ({ l, v }));
+      // ช่องทางที่ได้คนจริงมากสุด
+      const hiredBySrc = {};
+      DATA.filter(a => statusOf(a) === 'hired').forEach(a => { const k = (a.src || '').trim() || 'ไม่ระบุ'; hiredBySrc[k] = (hiredBySrc[k] || 0) + 1; });
+      const bestSrc = Object.entries(hiredBySrc).sort((x, y) => y[1] - x[1])[0];
+      const bestRate = bestSrc ? Math.round(bestSrc[1] / (bySrc[bestSrc[0]] || 1) * 100) : 0;
+
+      // ---------- แยกตามตำแหน่ง ----------
+      const byPos = {};
+      DATA.forEach(a => {
+        const k = (a.pos || '').trim() || 'ไม่ระบุ';
+        byPos[k] = byPos[k] || { open: 0, intv: 0, hired: 0 };
+        const st = statusOf(a);
+        if (st === 'hired') byPos[k].hired++;
+        else if (!['rejected', 'cancelled'].includes(st)) byPos[k].open++;
+        if (st === 'interview' || a.intDate) byPos[k].intv++;
+      });
+      const posRows = Object.entries(byPos).sort((x, y) => (y[1].open + y[1].hired) - (x[1].open + x[1].hired)).slice(0, 8)
+        .map(([p, v]) => {
+          const tag = v.hired > 0 && v.open === 0 ? { t: 'ปิดรับแล้ว', c: '#166534', b: '#DCFCE7' }
+            : v.intv > 0 ? { t: 'กำลังสัมภาษณ์', c: '#1F6F9C', b: '#E2EFF8' }
+            : v.open > 0 ? { t: 'รอดำเนินการ', c: '#8A5A12', b: '#FBF0D9' }
+            : { t: 'ไม่มีผู้สมัคร', c: '#6B7280', b: '#F1F1EE' };
+          return `<tr><td>${esc(p)}</td><td class="n">${v.open}</td><td class="n">${v.intv}</td><td class="n">${v.hired}</td>
+            <td><span class="dtag" style="color:${tag.c};background:${tag.b}">${tag.t}</span></td></tr>`;
+        }).join('');
+
+      // ---------- นัดสัมภาษณ์ที่กำลังจะถึง ----------
+      const today = new Date().toISOString().slice(0, 10);
+      const upcoming = DATA.filter(a => a.intDate && a.intDate >= today && !['hired', 'rejected', 'cancelled'].includes(statusOf(a)))
+        .sort((x, y) => (x.intDate + (x.intTime || '')).localeCompare(y.intDate + (y.intTime || ''))).slice(0, 5);
+      const upHtml = upcoming.length ? upcoming.map(a => `
+        <div class="isch" onclick="gotoCand('${a.id}')">
+          <div class="tm"><b>${esc((a.intTime || '--:--').slice(0, 5))}</b><small>${esc(thDate(a.intDate) || '')}</small></div>
+          <div class="nm"><b>${esc(a.name)}</b><small>${esc(a.pos || '-')}${a.intBy ? ' · ' + esc(a.intBy) : ''}</small></div>
+          <span class="dtag" style="color:#1F6F9C;background:#E2EFF8">${a.intMode === 'online' ? 'ออนไลน์' : 'ออนไซต์'}</span>
+        </div>`).join('') : `<div class="empty-mini">ไม่มีนัดสัมภาษณ์ที่กำลังจะถึง</div>`;
+
+      // ---------- แนวโน้ม Time to Hire ----------
+      const TH_M = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+      const buckets = [];
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(); d.setMonth(d.getMonth() - i);
+        buckets.push({ key: d.toISOString().slice(0, 7), l: TH_M[d.getMonth()], vals: [] });
+      }
+      DATA.filter(a => statusOf(a) === 'hired').forEach(a => {
+        const end = a.respondedAt || a.offerSentAt || a.offerStart;
+        const dd = dDays(a.date, end);
+        if (dd == null || !end) return;
+        const b = buckets.find(x => String(end).slice(0, 7) === x.key);
+        if (b) b.vals.push(dd);
+      });
+      const trend = buckets.map(b => ({ l: b.l, v: b.vals.length ? Math.round(b.vals.reduce((s, v) => s + v, 0) / b.vals.length) : null }));
+
+      // ---------- เหตุผลที่ไม่ผ่าน ----------
+      const reasons = {};
+      DATA.filter(a => ['rejected', 'cancelled'].includes(statusOf(a))).forEach(a => {
+        const k = (a.closeReason || a.resultNote || '').trim() || 'ไม่ระบุเหตุผล';
+        const s = k.length > 22 ? k.slice(0, 22) + '…' : k;
+        reasons[s] = (reasons[s] || 0) + 1;
+      });
+      const rItems = Object.entries(reasons).sort((x, y) => y[1] - x[1]).slice(0, 6).map(([l, v]) => ({ l, v }));
+
+      document.getElementById('dash-root').innerHTML = `
+        <div class="dash-hero">
+          <div class="dash-eyebrow">Recruitment Pipeline Dashboard</div>
+          <h2>ภาพรวมการสรรหาพนักงาน</h2>
+          <p>ติดตามทุกขั้นตอนการจ้างงานแบบเรียลไทม์ · ข้อมูล ณ ${esc(new Date().toLocaleString('th-TH', { dateStyle: 'long', timeStyle: 'short' }))}</p>
+          <div class="dash-chips"><span><i class="ti ti-circle-check"></i>รับคนได้เร็วขึ้น</span>
+            <span><i class="ti ti-circle-check"></i>คัดคนได้แม่นยำ</span>
+            <span><i class="ti ti-circle-check"></i>ตัดสินใจด้วยข้อมูล</span></div>
+        </div>
+
+        <div class="kpi-grid">${KPI.map(k => `<div class="kpi" style="--kc:${k.c}">
+          <i class="ti ${k.i} ki"></i><div class="l">${k.l}</div>
+          <div class="v">${typeof k.v === 'number' ? dNum(k.v) : k.v}</div>
+          ${k.u ? `<div class="u">${k.u}</div>` : ''}</div>`).join('')}</div>
+
+        <div class="flowbar">
+          <h3><i class="ti ti-route"></i>WORKFLOW กระบวนการสรรหา</h3>
+          <div class="flow-row">${flowHtml}</div>
+          <div class="flow-other">
+            <div><b style="color:#9a2b48">${rejected}</b><small>ไม่ผ่านการคัดเลือก</small></div>
+            <div><b style="color:#556066">${cancelled}</b><small>ผู้สมัครยกเลิก</small></div>
+            <div><b style="color:#8a5a12">${active}</b><small>กำลังดำเนินการ</small></div>
+          </div>
+        </div>
+
+        <div class="dgrid">
+          <div class="dcard"><h3><i class="ti ti-filter"></i>Pipeline ภาพรวม</h3>
+            <div class="funnel">${funnel}</div>
+            <div class="conv"><div><div class="lb">อัตราการรับเข้าทำงาน</div>
+              <div class="vv">${tot ? (hired / tot * 100).toFixed(1) : '0.0'}%</div></div>
+              <div style="text-align:right"><div class="lb">กำลังดำเนินการ</div>
+                <div style="font-size:19px;font-weight:800;color:#8a5a12">${active} คน</div></div></div>
+          </div>
+
+          <div class="dcard"><h3><i class="ti ti-chart-donut"></i>ช่องทางที่ผู้สมัครเข้ามา</h3>
+            <div class="donut-wrap">${donutSvg(srcItems)}<div class="donut-lg">${srcItems.length ? legend(srcItems) : '<div class="empty-mini">ยังไม่มีข้อมูล</div>'}</div></div>
+            ${bestSrc ? `<div class="conv"><div><div class="lb">🏆 ช่องทางที่ได้คนจริงมากสุด</div>
+              <div style="font-size:15px;font-weight:800;color:#16294d">${esc(bestSrc[0])}</div></div>
+              <div style="text-align:right"><div class="lb">อัตราสำเร็จ</div>
+              <div class="vv" style="font-size:21px">${bestRate}%</div></div></div>` : ''}
+          </div>
+
+          <div class="dcard"><h3><i class="ti ti-briefcase"></i>แยกตามตำแหน่ง</h3>
+            ${posRows ? `<table class="dtable"><thead><tr><th>ตำแหน่ง</th><th style="text-align:center">เปิดอยู่</th>
+              <th style="text-align:center">สัมภาษณ์</th><th style="text-align:center">รับแล้ว</th><th>สถานะ</th></tr></thead>
+              <tbody>${posRows}</tbody></table>` : '<div class="empty-mini">ยังไม่มีข้อมูล</div>'}
+          </div>
+        </div>
+
+        <div class="dgrid two">
+          <div class="dcard"><h3><i class="ti ti-chart-line"></i>รายงานเชิงวิเคราะห์</h3>
+            <div style="font-size:11.5px;color:var(--muted);margin-bottom:4px">แนวโน้ม Time to Hire (วัน) — 6 เดือนล่าสุด</div>
+            ${lineSvg(trend)}
+            <div style="font-size:11.5px;color:var(--muted);margin:14px 0 8px;padding-top:12px;border-top:1px dashed var(--line)">เหตุผลที่ไม่ผ่าน / ยกเลิก</div>
+            <div class="donut-wrap">${donutSvg(rItems, 110)}<div class="donut-lg">${rItems.length ? legend(rItems) : '<div class="empty-mini">ยังไม่มีข้อมูล</div>'}</div></div>
+          </div>
+
+          <div class="dcard"><h3><i class="ti ti-calendar-event"></i>ตารางสัมภาษณ์ที่กำลังจะถึง</h3>
+            ${upHtml}
+            <div style="margin-top:10px;text-align:right">
+              <button class="btn btn-line" style="font-size:12px" onclick="navTo('int')">ดูตารางทั้งหมด <i class="ti ti-arrow-right"></i></button></div>
+          </div>
+        </div>`;
     }
 
     // ═══════════════════ AUTO-SAVE ═══════════════════
