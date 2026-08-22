@@ -343,6 +343,25 @@
     @keyframes dashPulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
     @media (prefers-reduced-motion: reduce) { .dash-chips .live.on i { animation: none } }
 
+    .repbar { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; background: var(--card);
+      border: 1px solid var(--line); border-radius: 16px; padding: 12px 16px; box-shadow: var(--shadow); }
+    .repbar .rb-l { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 700; color: var(--ink); }
+    .repbar .rb-l i { font-size: 17px; color: #1f6f9c; }
+    .repbar input[type=date] { font-family: inherit; font-size: 12.5px; padding: 7px 10px; border: 1px solid var(--line);
+      border-radius: 9px; color: var(--ink); outline: none; background: #fff; }
+    .repbar input[type=date]:focus { border-color: #1f6f9c; box-shadow: 0 0 0 3px rgba(31,111,156,.12); }
+    .repbar .rb-to { font-size: 12px; color: var(--muted); }
+    .repbar .rb-quick { display: flex; gap: 5px; margin-left: 4px; }
+    .repbar .rb-quick button { font-family: inherit; font-size: 11.5px; font-weight: 600; padding: 6px 11px;
+      border: 1px solid var(--line); background: #f8fafc; color: #4a586f; border-radius: 8px; cursor: pointer; transition: .15s; }
+    .repbar .rb-quick button:hover { border-color: #1f6f9c; color: #1f6f9c; background: #eff6ff; }
+    .repbar .rb-go { margin-left: auto; display: inline-flex; align-items: center; gap: 7px; font-family: inherit;
+      font-size: 12.5px; font-weight: 700; padding: 9px 16px; border: 0; border-radius: 10px; cursor: pointer;
+      color: #fff; background: linear-gradient(135deg, #be123c, #e11d3f); box-shadow: 0 8px 18px -8px rgba(190,18,60,.6); }
+    .repbar .rb-go:hover { filter: brightness(1.08); transform: translateY(-1px); }
+    .repbar .rb-go i { font-size: 16px; }
+    @media (max-width: 760px) { .repbar .rb-go { margin-left: 0; width: 100%; justify-content: center; } }
+
     /* ---- KPI ---- */
     .kpi-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
     .kpi { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: 16px;
@@ -1945,6 +1964,255 @@
     }
 
     // ═══════════════════ REPORTS ═══════════════════
+    // ═══════════════════ ช่วงเวลาสำหรับรายงาน ═══════════════════
+    let repFrom = '', repTo = '';
+    const isoOf = d => d.toISOString().slice(0, 10);
+    function repEnsureRange() {
+      if (repFrom && repTo) return;
+      const t = new Date();
+      repTo = isoOf(t);
+      repFrom = isoOf(new Date(t.getTime() - 29 * 86400000));
+    }
+    function repSetDays(n) {
+      const t = new Date();
+      repTo = isoOf(t);
+      repFrom = isoOf(new Date(t.getTime() - (n - 1) * 86400000));
+      renderRep();
+    }
+    function repSetMonth() {
+      const t = new Date();
+      repFrom = isoOf(new Date(t.getFullYear(), t.getMonth(), 1));
+      repTo = isoOf(t);
+      renderRep();
+    }
+    function repSetQuarter() {
+      const t = new Date(), q = Math.floor(t.getMonth() / 3) * 3;
+      repFrom = isoOf(new Date(t.getFullYear(), q, 1));
+      repTo = isoOf(t);
+      renderRep();
+    }
+    function repOnDate(which, v) { if (which === 'f') repFrom = v; else repTo = v; renderRep(); }
+    // วันที่ใช้จัดกลุ่ม "ผู้สมัครเข้ามาช่วงไหน"
+    const repAppDate = a => a.date || a.createdAt || '';
+    const inRange = (d, f, t) => !!d && d >= f && d <= t;
+
+    // ═══════════════════ รายงานสรุปตามช่วงเวลา (PDF) ═══════════════════
+    function openPeriodReport() {
+      repEnsureRange();
+      const f = repFrom, t = repTo;
+      if (f > t) { showToast('ช่วงวันที่ไม่ถูกต้อง', true); return; }
+
+      const inP = a => inRange(repAppDate(a), f, t);
+      const newOnes = DATA.filter(inP);
+      const intInP = DATA.filter(a => inRange(a.intDate, f, t));
+      const offerInP = DATA.filter(a => inRange(a.offerSentAt, f, t));
+      const hiredInP = DATA.filter(a => statusOf(a) === 'hired' &&
+        inRange(a.respondedAt || a.offerStart || a.offerSentAt || repAppDate(a), f, t));
+      const closedInP = DATA.filter(a => ['rejected', 'cancelled'].includes(statusOf(a)) &&
+        inRange(a.closedAt || repAppDate(a), f, t));
+
+      const logoVar = getComputedStyle(document.documentElement).getPropertyValue('--logo').trim();
+      const lm = logoVar.match(/url\(["']?(data:[^"')]+)["']?\)/);
+      const logoSrc = lm ? lm[1] : '';
+      const thD = d => thDate(d) || '-';
+      const dayCount = Math.round((Date.parse(t) - Date.parse(f)) / 86400000) + 1;
+
+      // ---- KPI ----
+      const kpis = [
+        { l: 'ผู้สมัครใหม่', v: newOnes.length, c: '#2c67ad' },
+        { l: 'นัดสัมภาษณ์', v: intInP.length, c: '#c9992a' },
+        { l: 'ส่ง Offer', v: offerInP.length, c: '#7a4a12' },
+        { l: 'รับเข้าทำงาน', v: hiredInP.length, c: '#17845f' },
+        { l: 'ไม่ผ่าน / ยกเลิก', v: closedInP.length, c: '#9a2b48' },
+      ];
+
+      // ---- สรุปตามตำแหน่ง ----
+      const gp = {};
+      newOnes.forEach(a => { const k = (a.pos || '').trim() || 'ไม่ระบุ'; gp[k] = (gp[k] || 0) + 1; });
+      hiredInP.forEach(a => { const k = (a.pos || '').trim() || 'ไม่ระบุ'; gp[k] = gp[k] || 0; });
+      const posRows = Object.keys(gp).sort((x, y) => gp[y] - gp[x]).map(k => {
+        const nw = newOnes.filter(a => ((a.pos || '').trim() || 'ไม่ระบุ') === k).length;
+        const iv = intInP.filter(a => ((a.pos || '').trim() || 'ไม่ระบุ') === k).length;
+        const hr = hiredInP.filter(a => ((a.pos || '').trim() || 'ไม่ระบุ') === k).length;
+        return `<tr><td>${esc(k)}</td><td class="c">${nw}</td><td class="c">${iv}</td><td class="c b">${hr}</td></tr>`;
+      }).join('') || `<tr><td colspan="4" class="none">ไม่มีข้อมูลในช่วงนี้</td></tr>`;
+
+      // ---- สรุปตามช่องทาง ----
+      const gs = {};
+      newOnes.forEach(a => { const k = (a.src || '').trim() || 'ไม่ระบุ'; gs[k] = (gs[k] || 0) + 1; });
+      const srcRows = Object.keys(gs).sort((x, y) => gs[y] - gs[x]).map(k => {
+        const hr = hiredInP.filter(a => ((a.src || '').trim() || 'ไม่ระบุ') === k).length;
+        const pct = newOnes.length ? Math.round(gs[k] / newOnes.length * 100) : 0;
+        return `<tr><td>${esc(k)}</td><td class="c">${gs[k]}</td><td class="c">${pct}%</td><td class="c b">${hr}</td></tr>`;
+      }).join('') || `<tr><td colspan="4" class="none">ไม่มีข้อมูลในช่วงนี้</td></tr>`;
+
+      // ---- ตารางรายชื่อ ----
+      const badge = a => { const m = stMeta(statusOf(a));
+        return `<span class="bg" style="color:${m.color};background:${m.bg}">${m.label}</span>`; };
+      const listRows = (arr, cols) => arr.length
+        ? arr.map((a, i) => `<tr>
+            <td class="c">${i + 1}</td>
+            <td>${esc(a.name)}</td>
+            <td>${esc(a.pos || '-')}</td>
+            ${cols.map(fn => `<td>${fn(a)}</td>`).join('')}
+          </tr>`).join('')
+        : `<tr><td colspan="${3 + cols.length}" class="none">ไม่มีข้อมูลในช่วงนี้</td></tr>`;
+
+      const sortByDate = (k) => (x, y) => String(x[k] || '').localeCompare(String(y[k] || ''));
+
+      const tblNew = listRows([...newOnes].sort(sortByDate('date')), [
+        a => thD(repAppDate(a)), a => esc(a.src || '-'), a => esc(a.phone || '-'), a => badge(a),
+      ]);
+      const tblInt = listRows([...intInP].sort(sortByDate('intDate')), [
+        a => `${thD(a.intDate)}${a.intTime ? ' ' + esc(a.intTime.slice(0, 5)) + ' น.' : ''}`,
+        a => esc(a.intBy || '-'),
+        a => a.intMode === 'online' ? 'ออนไลน์' : 'ออนไซต์',
+        a => esc(a.result || '-'),
+      ]);
+      const tblHired = listRows([...hiredInP].sort(sortByDate('offerStart')), [
+        a => thD(a.offerStart), a => esc(a.offerSalary ? a.offerSalary + ' บาท' : '-'),
+        a => esc(a.offerType || '-'), a => thD(a.respondedAt),
+      ]);
+      const tblClosed = listRows([...closedInP].sort(sortByDate('closedAt')), [
+        a => thD(a.closedAt || repAppDate(a)), a => badge(a),
+        a => esc(a.closeReason || a.resultNote || '-'),
+      ]);
+
+      const SEC = (no, title, sub, inner) => `
+        <section class="sec">
+          <div class="sh"><span class="no">${no}</span><div><b>${title}</b>${sub ? `<small>${sub}</small>` : ''}</div></div>
+          ${inner}
+        </section>`;
+
+      const fname = `รายงานสรรหา_${f}_ถึง_${t}.pdf`;
+      const now = new Date().toLocaleString('th-TH', { dateStyle: 'long', timeStyle: 'short' });
+
+      const html = `<!DOCTYPE html><html lang="th"><head><meta charset="utf-8">
+<title>รายงานสรุปการสรรหา ${f} - ${t}</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"><\/script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#e9edf3;font-family:'IBM Plex Sans Thai',sans-serif;color:#16233f;padding:22px 12px 60px}
+.bar{position:fixed;top:0;left:0;right:0;background:#0e1c38;color:#fff;padding:11px 18px;display:flex;
+ align-items:center;gap:12px;z-index:9;box-shadow:0 3px 14px rgba(0,0,0,.2)}
+.bar b{font-size:14px}.bar .sp{margin-left:auto;display:flex;gap:8px}
+.bar button{border:0;border-radius:9px;padding:9px 16px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer}
+#savebtn{background:#d42027;color:#fff}#prbtn{background:rgba(255,255,255,.16);color:#fff}
+.bar button:disabled{opacity:.6;cursor:wait}
+.sheet{width:794px;margin:56px auto 0;background:#fff;padding:0 0 26px;box-shadow:0 10px 34px rgba(16,35,63,.14)}
+.hd{position:relative;overflow:hidden;padding:22px 30px;background:linear-gradient(125deg,#07142c,#12305e 62%,#1f4b80);
+ color:#fff;border-bottom:4px solid #d42027}
+.hd::after{content:"";position:absolute;width:190px;height:190px;right:-56px;top:-96px;border:1px solid rgba(255,255,255,.13);border-radius:50%}
+.hd img{height:26px;display:block;margin-bottom:11px}
+.hd small{display:block;font-size:9px;letter-spacing:1.7px;color:#e6bd6b;font-weight:700}
+.hd h1{font-size:20px;margin-top:4px}
+.hd .pr{margin-top:7px;font-size:12px;color:#c3d1e4}
+.hd .meta{position:absolute;right:30px;top:24px;text-align:right;font-size:9.5px;color:#aebdd2;z-index:1}
+.hd .meta b{display:block;color:#fff;font-size:11px}
+.body{padding:20px 30px 0}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin-bottom:20px}
+.kpi{border:1px solid #e2e7ef;border-left:4px solid var(--c);border-radius:11px;padding:11px 12px;background:#fbfcfe}
+.kpi .l{font-size:10px;color:#7a8398}
+.kpi .v{font-size:22px;font-weight:700;color:#0e1c38;line-height:1.2;margin-top:3px}
+.sec{margin-bottom:19px;page-break-inside:avoid}
+.sh{display:flex;align-items:center;gap:10px;margin-bottom:9px;padding-bottom:7px;border-bottom:1.5px solid #16294d}
+.sh .no{width:23px;height:23px;border-radius:7px;background:#16294d;color:#fff;font-size:11px;font-weight:700;
+ display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sh b{font-size:13.5px;color:#0e1c38}
+.sh small{display:block;font-size:10px;color:#8a94a6;font-weight:400;margin-top:1px}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{background:#eef2f7;color:#43526b;font-size:9.5px;font-weight:700;text-align:left;padding:7px 8px;border:1px solid #dde3ec}
+td{padding:6px 8px;border:1px solid #e6eaf1;vertical-align:top}
+tbody tr:nth-child(even) td{background:#fafbfd}
+td.c{text-align:center}td.b{font-weight:700;color:#16294d}
+td.none{text-align:center;color:#9aa4b5;padding:14px;font-style:italic}
+.bg{display:inline-block;font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.sign{display:grid;grid-template-columns:1fr 1fr;gap:34px;margin-top:26px;padding-top:8px}
+.sign div{text-align:center;font-size:11px;color:#43526b}
+.sign .ln{border-bottom:1px dotted #8a94a6;height:34px;margin-bottom:6px}
+.ft{margin-top:20px;padding:9px 30px 0;border-top:1px solid #eef1f6;display:flex;justify-content:space-between;
+ font-size:9px;color:#9aa4b5}
+@media print{body{background:#fff;padding:0}.bar{display:none}.sheet{margin:0;box-shadow:none;width:auto}}
+</style></head><body>
+<div class="bar"><b>📄 รายงานสรุปการสรรหา</b>
+  <span style="font-size:12px;color:#b9c8dd">${thD(f)} - ${thD(t)} (${dayCount} วัน)</span>
+  <span class="sp"><button id="prbtn" onclick="window.print()">🖨️ พิมพ์</button>
+  <button id="savebtn" onclick="dl()">💾 บันทึกเป็น PDF</button></span></div>
+
+<div class="sheet">
+  <div class="hd">
+    ${logoSrc ? `<img src="${logoSrc}" alt="">` : ''}
+    <small>RECRUITMENT PERIOD REPORT</small>
+    <h1>รายงานสรุปการสรรหาพนักงาน</h1>
+    <div class="pr">ช่วงวันที่ ${thD(f)} ถึง ${thD(t)} · รวม ${dayCount} วัน</div>
+    <div class="meta"><b>MASARU HR</b>ออกรายงาน ${esc(now)}<br>เอกสารภายใน (ความลับ)</div>
+  </div>
+  <div class="body">
+    <div class="kpis">${kpis.map(k => `<div class="kpi" style="--c:${k.c}"><div class="l">${k.l}</div><div class="v">${k.v}</div></div>`).join('')}</div>
+
+    <div class="two">
+      ${SEC(1, 'สรุปตามตำแหน่ง', 'จำนวนในช่วงเวลาที่เลือก',
+        `<table><thead><tr><th>ตำแหน่ง</th><th style="text-align:center">สมัครใหม่</th><th style="text-align:center">สัมภาษณ์</th><th style="text-align:center">รับเข้า</th></tr></thead><tbody>${posRows}</tbody></table>`)}
+      ${SEC(2, 'สรุปตามช่องทาง', 'ที่มาของผู้สมัคร',
+        `<table><thead><tr><th>ช่องทาง</th><th style="text-align:center">จำนวน</th><th style="text-align:center">สัดส่วน</th><th style="text-align:center">รับเข้า</th></tr></thead><tbody>${srcRows}</tbody></table>`)}
+    </div>
+
+    ${SEC(3, `ผู้สมัครใหม่ในช่วงนี้ (${newOnes.length} คน)`, 'เรียงตามวันที่สมัคร',
+      `<table><thead><tr><th style="width:26px;text-align:center">#</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th style="width:74px">วันที่สมัคร</th><th style="width:88px">ช่องทาง</th><th style="width:84px">เบอร์โทร</th><th style="width:80px">สถานะปัจจุบัน</th></tr></thead><tbody>${tblNew}</tbody></table>`)}
+
+    ${SEC(4, `นัดสัมภาษณ์ในช่วงนี้ (${intInP.length} คน)`, 'เรียงตามวันสัมภาษณ์',
+      `<table><thead><tr><th style="width:26px;text-align:center">#</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th style="width:104px">วัน/เวลา</th><th style="width:80px">ผู้สัมภาษณ์</th><th style="width:62px">รูปแบบ</th><th style="width:78px">ผล</th></tr></thead><tbody>${tblInt}</tbody></table>`)}
+
+    ${SEC(5, `รับเข้าทำงานในช่วงนี้ (${hiredInP.length} คน)`, 'ผู้ที่ตอบรับข้อเสนอแล้ว',
+      `<table><thead><tr><th style="width:26px;text-align:center">#</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th style="width:78px">วันเริ่มงาน</th><th style="width:86px">เงินเดือน</th><th style="width:86px">ประเภทจ้าง</th><th style="width:78px">วันตอบรับ</th></tr></thead><tbody>${tblHired}</tbody></table>`)}
+
+    ${SEC(6, `ไม่ผ่าน / ยกเลิก ในช่วงนี้ (${closedInP.length} คน)`, 'พร้อมเหตุผล',
+      `<table><thead><tr><th style="width:26px;text-align:center">#</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th style="width:78px">วันที่ปิดเคส</th><th style="width:82px">สถานะ</th><th>เหตุผล</th></tr></thead><tbody>${tblClosed}</tbody></table>`)}
+
+    <div class="sign">
+      <div><div class="ln"></div>ผู้จัดทำ (ฝ่ายบุคคล)</div>
+      <div><div class="ln"></div>ผู้รับทราบ (ผู้บริหาร)</div>
+    </div>
+  </div>
+  <div class="ft"><span>MASARU HR — เหนือกว่า ทุกวัน</span><span>เอกสารใช้ภายในองค์กร</span></div>
+</div>
+
+<script>
+async function dl(){
+  var b=document.getElementById('savebtn'); b.disabled=true; b.textContent='กำลังสร้าง PDF...';
+  try{
+    if(typeof html2canvas==='undefined'||!window.jspdf) throw new Error('lib');
+    var jsPDF=window.jspdf.jsPDF;
+    var pdf=new jsPDF({unit:'pt',format:'a4',orientation:'portrait'});
+    var pw=pdf.internal.pageSize.getWidth(), ph=pdf.internal.pageSize.getHeight();
+    var m=22, availW=pw-m*2, availH=ph-m*2;
+    var sheet=document.querySelector('.sheet');
+    var cv=await html2canvas(sheet,{scale:2,backgroundColor:'#ffffff',useCORS:true});
+    var ratio=availW/cv.width, pageHpx=Math.floor(availH/ratio);
+    var y=0, first=true;
+    while(y<cv.height){
+      var hpx=Math.min(pageHpx, cv.height-y);
+      var c=document.createElement('canvas'); c.width=cv.width; c.height=hpx;
+      c.getContext('2d').drawImage(cv,0,y,cv.width,hpx,0,0,cv.width,hpx);
+      if(!first) pdf.addPage();
+      pdf.addImage(c.toDataURL('image/jpeg',0.95),'JPEG',m,m,availW,hpx*ratio);
+      first=false; y+=hpx;
+    }
+    pdf.save(${JSON.stringify(fname)});
+    b.disabled=false; b.textContent='💾 บันทึกเป็น PDF';
+  }catch(e){ window.print(); b.disabled=false; b.textContent='💾 บันทึกเป็น PDF'; }
+}
+<\/script>
+</body></html>`;
+
+      const w = window.open('', '_blank');
+      if (!w) { showToast('เบราว์เซอร์บล็อกป็อปอัป กรุณาอนุญาต', true); return; }
+      w.document.write(html); w.document.close();
+    }
+
     // ═══════════════════ DASHBOARD ═══════════════════
     const D_PAL = ['#2c67ad', '#17845f', '#c9992a', '#c1443f', '#6555c7', '#0f8b9e', '#9a6b3a', '#7a8899'];
     const dNum = v => (v || 0).toLocaleString('th-TH');
@@ -2137,6 +2405,7 @@
       });
       const rItems = Object.entries(reasons).sort((x, y) => y[1] - x[1]).slice(0, 6).map(([l, v]) => ({ l, v }));
 
+      repEnsureRange();
       document.getElementById('dash-root').innerHTML = `
         <div class="dash-hero">
           <div class="dash-eyebrow">Recruitment Pipeline Dashboard</div>
@@ -2147,6 +2416,20 @@
             <span><i class="ti ti-circle-check"></i>รับคนได้เร็วขึ้น</span>
             <span><i class="ti ti-circle-check"></i>คัดคนได้แม่นยำ</span>
             <span><i class="ti ti-circle-check"></i>ตัดสินใจด้วยข้อมูล</span></div>
+        </div>
+
+        <div class="repbar">
+          <div class="rb-l"><i class="ti ti-calendar-stats"></i>สรุปรายงานช่วงวันที่</div>
+          <input type="date" value="${repFrom}" onchange="repOnDate('f', this.value)">
+          <span class="rb-to">ถึง</span>
+          <input type="date" value="${repTo}" onchange="repOnDate('t', this.value)">
+          <div class="rb-quick">
+            <button onclick="repSetDays(7)">7 วัน</button>
+            <button onclick="repSetDays(30)">30 วัน</button>
+            <button onclick="repSetMonth()">เดือนนี้</button>
+            <button onclick="repSetQuarter()">ไตรมาสนี้</button>
+          </div>
+          <button class="rb-go" onclick="openPeriodReport()"><i class="ti ti-file-type-pdf"></i>สร้างรายงาน PDF</button>
         </div>
 
         <div class="kpi-grid">${KPI.map(k => `<div class="kpi" style="--kc:${k.c}">
