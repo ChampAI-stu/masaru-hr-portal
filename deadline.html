@@ -119,7 +119,23 @@
 
   .section-title{font-weight:700;color:var(--green-dark);margin:18px 0 8px;font-size:1rem}
 
-  /* Modal */
+    .sync-hint{font-size:13px;color:#64708a;margin:-4px 0 12px;line-height:1.7}
+  .sync-tools{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:10px 12px;background:#f4f7fb;
+    border:1px solid #e2e7ef;border-radius:10px;margin-bottom:10px;font-size:13px}
+  .sync-tools label{display:flex;align-items:center;gap:6px;cursor:pointer}
+  .sync-tools input{width:15px;height:15px;accent-color:#1B2D51}
+  .sync-count{margin-left:auto;font-weight:700;color:#16294d}
+  .sync-list{max-height:360px;overflow:auto;border:1px solid #e2e7ef;border-radius:10px}
+  .sync-row{display:grid;grid-template-columns:26px 1fr 120px 108px 92px;gap:8px;align-items:center;
+    padding:9px 12px;border-bottom:1px solid #f0f3f8;font-size:13px}
+  .sync-row:last-child{border-bottom:none}
+  .sync-row:hover{background:#f8fafd}
+  .sync-row input{width:15px;height:15px;accent-color:#1B2D51}
+  .sync-row .nm{font-weight:600;color:#16233f}
+  .sync-row .dp{color:#64708a;font-size:12px}
+  .sync-row .dt{color:#16294d;font-size:12px;text-align:center}
+  .sync-row .bd{font-size:11px;font-weight:700;padding:3px 8px;border-radius:99px;text-align:center;white-space:nowrap}
+  .sync-none{padding:26px;text-align:center;color:#8a94a6;font-size:13.5px;line-height:1.8}
   .overlay{position:fixed;inset:0;background:rgba(20,30,55,.5);display:none;align-items:center;justify-content:center;padding:24px;overflow:auto;z-index:200000}
   .overlay.show{display:flex}
   .modal{background:#fff;border-radius:14px;width:100%;max-width:520px;padding:22px}
@@ -552,6 +568,7 @@ body.locked{overflow:hidden}
     <button class="btn ghost" id="toggleDone">แสดงที่เสร็จแล้ว</button>
     <button class="btn ghost" id="exportXlsxBtn">📤 ส่งออก Excel</button>
     <button class="btn" id="tmplBtn">📄 ไฟล์แม่แบบ</button>
+    <button class="btn gold" id="syncEmpBtn">🔄 ซิงก์พนักงานใหม่</button>
     <button class="btn gold" id="importBtn">📥 นำเข้า / กู้ข้อมูล</button>
     <button class="btn" id="addBtn">+ เพิ่มรายการ</button>
     <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" class="hide">
@@ -884,6 +901,24 @@ body.locked{overflow:hidden}
     <div class="modal-actions">
       <button class="btn ghost" id="extCancel">ยกเลิก</button>
       <button class="btn" id="extSave">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal ซิงก์พนักงานใหม่ -->
+<div class="overlay" id="syncOverlay">
+  <div class="modal" style="max-width:760px">
+    <h2>🔄 ซิงก์พนักงานใหม่เข้ารายการเตือน</h2>
+    <p class="sync-hint">เทียบทะเบียนพนักงาน (daiki_employees) กับรายการทดลองงานที่มีอยู่ — คนที่ยังไม่มีรายการเตือนจะแสดงด้านล่าง</p>
+    <div class="sync-tools">
+      <label><input type="checkbox" id="syncAll"> เลือกทั้งหมด</label>
+      <label><input type="checkbox" id="syncOnlyNew" checked> เฉพาะคนที่ยังไม่พ้นทดลองงาน (ไม่เกิน 119 วัน)</label>
+      <span class="sync-count" id="syncCount"></span>
+    </div>
+    <div class="sync-list" id="syncList"></div>
+    <div class="modal-actions">
+      <button class="btn ghost" id="syncClose">ปิด</button>
+      <button class="btn" id="syncAdd">เพิ่มรายการที่เลือก</button>
     </div>
   </div>
 </div>
@@ -1709,6 +1744,84 @@ function daysWorked(ref){
   return isFinite(d) ? d : "";
 }
 
+
+/* ═══════════ ซิงก์พนักงานใหม่จากทะเบียน -> สร้างรายการเตือนทดลองงาน ═══════════
+   แก้ปัญหา "พนักงานใหม่ไม่ขึ้นในหน้า Deadline" เพราะต้องเพิ่มเองทีละคน */
+var _syncCands = [];
+function _syncKey(str){ return String(str==null?"":str).replace(/\s+/g,"").toLowerCase(); }
+function _syncNameParts(raw){
+  var t=String(raw==null?"":raw).trim(), m=t.match(/^(.+?)\s*[\(（]\s*(.+?)\s*[\)）]\s*$/);
+  return m ? { nick:m[1].trim(), full:m[2].trim() } : { nick:"", full:t };
+}
+function buildSyncList(){
+  // ชื่อที่มีรายการทดลองงานอยู่แล้ว (เทียบทั้งชื่อเต็มและชื่อเล่น)
+  var have = {};
+  (state.records||[]).filter(function(r){ return r.type==="probation"; }).forEach(function(r){
+    var p=_syncNameParts(r.name);
+    if(p.full) have[_syncKey(p.full)]=1;
+    if(r.name) have[_syncKey(r.name)]=1;
+  });
+  var today=toISO(new Date());
+  _syncCands=(EMPLOYEES||[]).filter(function(e){
+    if(!e.start_date) return false;
+    if(have[_syncKey(e.full_name)] || have[_syncKey(_empLabel(e))]) return false;
+    return true;
+  }).map(function(e){
+    var w=Math.round((parseD(today)-parseD(String(e.start_date).slice(0,10)))/86400000);
+    return { id:e.id, label:_empLabel(e), name:e.full_name||"", dept:e.group_name||e.position||"",
+             ref:String(e.start_date).slice(0,10), worked:w };
+  }).sort(function(a,b){ return b.ref.localeCompare(a.ref); });
+  renderSyncList();
+}
+function renderSyncList(){
+  var onlyNew=_q("syncOnlyNew") && _q("syncOnlyNew").checked;
+  var arr=_syncCands.filter(function(c){ return !onlyNew || c.worked<=119; });
+  var box=_q("syncList"); if(!box) return;
+  if(!arr.length){
+    box.innerHTML='<div class="sync-none">✅ ไม่มีพนักงานที่ตกหล่น<br>ทุกคนในทะเบียนมีรายการเตือนทดลองงานครบแล้ว'
+      +(onlyNew?'<br><small style="color:#97a1b5">(กำลังกรองเฉพาะคนที่ยังไม่พ้นทดลองงาน — ติ๊กออกเพื่อดูทั้งหมด)</small>':'')+'</div>';
+    _q("syncCount").textContent="";
+    return;
+  }
+  box.innerHTML=arr.map(function(c){
+    var st = c.worked>119 ? {t:"พ้นทดลองงานแล้ว",c:"#1E7145",b:"#E2EFDA"}
+           : c.worked<0   ? {t:"ยังไม่เริ่มงาน",c:"#64708A",b:"#EEF1F6"}
+           : {t:"ทำงาน "+c.worked+" วัน",c:"#8A5A12",b:"#FBF0D9"};
+    return '<div class="sync-row">'
+      +'<input type="checkbox" class="sync-ck" data-id="'+_esc(String(c.id))+'"'+(c.worked<=119?' checked':'')+'>'
+      +'<div><div class="nm">'+_esc(c.label)+'</div><div class="dp">'+_esc(c.dept||"-")+'</div></div>'
+      +'<div class="dt">เริ่ม '+_esc(thDate(c.ref))+'</div>'
+      +'<div class="dt">ครบ 119: '+_esc(thDate(toISO(addDays(c.ref,119))))+'</div>'
+      +'<div class="bd" style="color:'+st.c+';background:'+st.b+'">'+st.t+'</div>'
+      +'</div>';
+  }).join("");
+  var ck=box.querySelectorAll(".sync-ck");
+  var upd=function(){ var k=box.querySelectorAll(".sync-ck:checked").length;
+    _q("syncCount").textContent="เลือกแล้ว "+k+" / "+arr.length+" คน"; };
+  ck.forEach(function(x){ x.onchange=upd; });
+  upd();
+}
+async function doSyncAdd(){
+  var box=_q("syncList"); if(!box) return;
+  var ids=[].slice.call(box.querySelectorAll(".sync-ck:checked")).map(function(x){ return x.dataset.id; });
+  if(!ids.length){ toast("ยังไม่ได้เลือกใครเลย"); return; }
+  var btn=_q("syncAdd"); btn.disabled=true; btn.textContent="กำลังเพิ่ม...";
+  var added=0;
+  for(var i=0;i<ids.length;i++){
+    var c=_syncCands.filter(function(x){ return String(x.id)===String(ids[i]); })[0];
+    if(!c) continue;
+    var rec={ id:"r"+Date.now()+Math.floor(Math.random()*10000), type:"probation",
+              name:c.label, dept:c.dept, ref:c.ref, note:"" };
+    state.records.push(rec);
+    try{ await sbUpsertRecord(rec); }catch(e){ console.warn("sync upsert", e); }
+    added++;
+  }
+  cacheSave(); render();
+  btn.disabled=false; btn.textContent="เพิ่มรายการที่เลือก";
+  _q("syncOverlay").classList.remove("show");
+  toast("เพิ่มรายการทดลองงาน "+added+" คนเรียบร้อย ✓");
+}
+
 async function exportExcel(){
   var ExcelJS; try{ ExcelJS=await loadExcelJS(); }catch(e){ alert(e.message); return; }
   var TYPE={probation:"ทดลองงาน",maternity:"ลาคลอด",contract:"สัญญา",document:"เอกสาร"};
@@ -1939,6 +2052,21 @@ async function init(){
   await sbLoad();  // then fetch fresh from Supabase
 
   _q("addBtn").onclick=()=>openModal(null);
+  var _sb1=_q("syncEmpBtn");
+  if(_sb1) _sb1.onclick=async function(){
+    if(!EMPLOYEES.length) await loadEmployees();
+    buildSyncList();
+    _q("syncOverlay").classList.add("show");
+  };
+  var _sc=_q("syncClose"); if(_sc) _sc.onclick=function(){ _q("syncOverlay").classList.remove("show"); };
+  var _sa=_q("syncAdd"); if(_sa) _sa.onclick=doSyncAdd;
+  var _so=_q("syncOnlyNew"); if(_so) _so.onchange=renderSyncList;
+  var _sal=_q("syncAll"); if(_sal) _sal.onchange=function(){
+    var on=this.checked;
+    document.querySelectorAll("#syncList .sync-ck").forEach(function(x){ x.checked=on; x.dispatchEvent(new Event("change")); });
+  };
+  var _sov=_q("syncOverlay");
+  if(_sov) _sov.onclick=function(ev){ if(ev.target===_sov) _sov.classList.remove("show"); };
   function downloadTemplate(){
   var rows=[
     ["คำแนะนำ: กรอกข้อมูลใต้หัวตาราง แล้วลบแถวตัวอย่างออกก่อนนำเข้า · ประเภทใช้คำว่า ทดลองงาน / ลาคลอด / สัญญา / เอกสาร · วันที่ใช้ dd/mm/yyyy (พ.ศ. หรือ ค.ศ. ก็ได้)","","","","",""],
