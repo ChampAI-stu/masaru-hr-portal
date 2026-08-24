@@ -157,7 +157,6 @@
 .fm-emp-cnt{font-size:11px;color:#7A8398;font-weight:400}
 .emp-list .emp-reload{margin-top:6px;border:1px solid #e3e3dc;background:#fff;border-radius:8px;padding:5px 10px;font-family:inherit;font-size:12px;cursor:pointer;color:#16294d}
 .emp-list .emp-reload:hover{background:#F4F7FB}
-.emp-out{margin-left:7px;font-size:10.5px;font-weight:700;color:#9A2B48;background:#FBE9EE;border-radius:99px;padding:2px 7px;vertical-align:middle}
 /* รายการค้นหาพนักงานในฟอร์มประเมิน — ให้กว้างพอ ไม่ตัดคำ */
 #fmEmpList{width:400px;max-width:76vw;left:0;right:auto;max-height:330px;z-index:5000}
 #fmEmpList .emp-opt{display:flex;align-items:center;gap:14px;padding:9px 13px;line-height:1.45}
@@ -2483,31 +2482,24 @@ function fmEmpHay(e){
 }
 function renderFormEmpOptions(q){
   var box = $F('fmEmpList'); if(!box) return;
-  var pool = EMP || [];
-  var act = pool.filter(empActive);
+  var all = (EMP || []).filter(empActive);   // เฉพาะพนักงานที่ยังทำงานอยู่เท่านั้น
   var cnt = $F('fmEmpCnt');
-  if(cnt) cnt.textContent = pool.length
-    ? '(ทำงานอยู่ ' + act.length + ' · ทั้งหมด ' + pool.length + ')'
-    : '(ยังไม่มีรายชื่อ)';
+  if(cnt) cnt.textContent = all.length ? '(' + all.length + ' คน)' : '(ยังไม่มีรายชื่อ)';
   q = fmNorm2(q);
-  // ไม่ได้พิมพ์ค้นหา -> โชว์เฉพาะคนที่ทำงานอยู่ / พิมพ์ค้นหา -> ค้นทุกคน (คนลาออกจะมีป้ายกำกับ)
-  var all = q ? pool : act;
-  if(!act.length && !pool.length){
+  if(!all.length){
     box.innerHTML = '<div class="emp-none">ยังโหลดรายชื่อพนักงานไม่ได้<br>'
       + '<button type="button" class="emp-reload" onclick="loadFormEmployees()">🔄 โหลดรายชื่อใหม่</button></div>';
     box.classList.add('open'); return;
   }
-  var arr = (q ? all.filter(function(e){ return fmEmpHay(e).indexOf(q) >= 0; }) : all);
-  arr = arr.sort(function(a,b){ return (empActive(b)?1:0) - (empActive(a)?1:0); }).slice(0, 60);
+  var arr = (q ? all.filter(function(e){ return fmEmpHay(e).indexOf(q) >= 0; }) : all).slice(0, 60);
   if(!arr.length){
-    box.innerHTML = '<div class="emp-none">ไม่พบชื่อนี้ในทะเบียนพนักงาน (มีทั้งหมด ' + pool.length + ' คน)<br>'
-      + '<small>ลองพิมพ์เฉพาะชื่อเล่น หรือชื่อจริงโดยไม่ต้องมีคำนำหน้า — ถ้ายังไม่เจอ แปลว่ายังไม่ได้เพิ่มเข้าทะเบียนพนักงาน</small></div>';
+    box.innerHTML = '<div class="emp-none">ไม่พบชื่อนี้ในพนักงานที่ทำงานอยู่ (' + all.length + ' คน)<br>'
+      + '<small>ลองพิมพ์เฉพาะชื่อเล่น หรือชื่อจริงโดยไม่ต้องมีคำนำหน้า<br>หมายเหตุ: ระบบไม่แสดงพนักงานที่ลาออกแล้ว</small></div>';
     box.classList.add('open'); return;
   }
   box.innerHTML = arr.map(function(e){
     var sub = [e.emp_code, e.position || e.group_name].filter(Boolean).join(' \u00b7 ');
-    var out = empActive(e) ? '' : '<b class="emp-out">ลาออกแล้ว</b>';
-    return '<div class="emp-opt" data-id="' + esc(String(e.id)) + '"><span>' + esc(fmEmpLabel(e)) + out + '</span>'
+    return '<div class="emp-opt" data-id="' + esc(String(e.id)) + '"><span>' + esc(fmEmpLabel(e)) + '</span>'
       + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</div>';
   }).join('');
   box.classList.add('open');
@@ -2530,9 +2522,10 @@ function fmCurEmp(){
   }
   var v = ($F('fmEmp').value||'').trim().toLowerCase();
   if(!v) return null;
-  return EMP.filter(function(e){ return fmEmpLabel(e).toLowerCase()===v; })[0]
-      || EMP.filter(function(e){ return (e.full_name||'').toLowerCase()===v; })[0]
-      || EMP.filter(function(e){ return fmEmpLabel(e).toLowerCase().indexOf(v)>=0; })[0]
+  var pool = EMP.filter(empActive);
+  return pool.filter(function(e){ return fmEmpLabel(e).toLowerCase()===v; })[0]
+      || pool.filter(function(e){ return (e.full_name||'').toLowerCase()===v; })[0]
+      || pool.filter(function(e){ return fmEmpLabel(e).toLowerCase().indexOf(v)>=0; })[0]
       || null;
 }
 var _fmSpecialTouched = false;
@@ -3052,16 +3045,15 @@ window.openProbationForm = function(rid, n){
 async function loadFormEmployees(){
   if(!_sb) return;
   try{
-    EMP = await fetchAllEmployees();
-    console.log('โหลดรายชื่อพนักงาน', EMP.length, 'คน (ทำงานอยู่ ' + EMP.filter(empActive).length + ')');
+    var _all = await fetchAllEmployees();
+    EMP = _all.filter(empActive);          // ตัดคนที่ลาออกแล้วทิ้ง ไม่ให้ค้นเจอในระบบ deadline
+    console.log('โหลดรายชื่อพนักงาน (ทำงานอยู่)', EMP.length, 'คน จากทั้งหมด', _all.length);
   }catch(e){
     EMP = [];
     console.warn('โหลดรายชื่อพนักงานไม่สำเร็จ', e);
   }
   var _c = $F('fmEmpCnt');
-  if(_c) _c.textContent = EMP.length
-    ? '(ทำงานอยู่ ' + EMP.filter(empActive).length + ' · ทั้งหมด ' + EMP.length + ')'
-    : '(ยังไม่มีรายชื่อ)';
+  if(_c) _c.textContent = EMP.length ? '(' + EMP.length + ' คน)' : '(ยังไม่มีรายชื่อ)';
 }
 (function initForm(){
   try{
