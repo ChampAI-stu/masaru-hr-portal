@@ -153,7 +153,10 @@
 .emp-opt{padding:9px 12px;cursor:pointer;font-size:14px;display:flex;justify-content:space-between;gap:10px;align-items:center}
 .emp-opt:hover,.emp-opt.active{background:#FBE7E8}
 .emp-opt small{color:#7A8398;white-space:nowrap}
-.emp-none{padding:11px 12px;color:#7A8398;font-size:13px}
+.emp-none{padding:11px 12px;color:#7A8398;font-size:13px;line-height:1.7}
+.fm-emp-cnt{font-size:11px;color:#7A8398;font-weight:400}
+.emp-list .emp-reload{margin-top:6px;border:1px solid #e3e3dc;background:#fff;border-radius:8px;padding:5px 10px;font-family:inherit;font-size:12px;cursor:pointer;color:#16294d}
+.emp-list .emp-reload:hover{background:#F4F7FB}
 .hide{display:none!important}
 
   /* Alert popup */
@@ -613,9 +616,9 @@ body.locked{overflow:hidden}
           <option value="masaru">MASARU</option>
           <option value="daiki">Daiki Fulfillment</option>
         </select></div>
-      <div class="fld" style="min-width:230px"><label>ดึงข้อมูลพนักงาน</label>
-        <input id="fmEmp" list="fmEmpList" placeholder="พิมพ์ชื่อเพื่อค้นหา..." autocomplete="off" style="min-width:250px">
-        <datalist id="fmEmpList"></datalist></div>
+      <div class="fld" style="min-width:230px;position:relative"><label>ดึงข้อมูลพนักงาน <span id="fmEmpCnt" class="fm-emp-cnt"></span></label>
+        <input id="fmEmp" placeholder="พิมพ์ชื่อ / ชื่อเล่น / รหัส..." autocomplete="off" style="min-width:250px">
+        <div class="emp-list" id="fmEmpList"></div></div>
       <button class="btn" id="fmPull">ดึงสถิติขาด-ลา-มาสาย</button>
       <div style="flex:1"></div>
       <div class="fld" style="min-width:250px"><label>เอกสารที่ต้องการ</label>
@@ -2443,11 +2446,51 @@ function fmEmpLabel(e){
   return (e.full_name||'') + (e.nickname? ' ('+e.nickname+')':'')
        + (e.group_name? ' · '+e.group_name : '');
 }
-function renderFormEmpOptions(){
-  var list = EMP.filter(function(e){ return e.is_active!==false; });
-  $F('fmEmpList').innerHTML = list.map(function(e){
-    return '<option value="'+esc(fmEmpLabel(e))+'"></option>';
+/* ค้นหาแบบยืดหยุ่น: ตัดคำนำหน้า (นาย/นาง/นางสาว) ตัดช่องว่าง ตัดวงเล็บ
+   ค้นได้ทั้ง ชื่อจริง / ชื่อเล่น / รหัสพนักงาน / ตำแหน่ง */
+function fmNorm2(x){
+  return String(x==null?'':x)
+    .replace(/[()\uFF08\uFF09]/g,' ')
+    .replace(/(นางสาว|นาย|นาง|น\.ส\.|ด\.ช\.|ด\.ญ\.)/g,' ')
+    .replace(/\s+/g,'')
+    .toLowerCase();
+}
+function fmEmpHay(e){
+  return fmNorm2([e.full_name, e.nickname, e.emp_code, e.position, e.group_name].filter(Boolean).join(' '));
+}
+function renderFormEmpOptions(q){
+  var box = $F('fmEmpList'); if(!box) return;
+  var all = (EMP||[]).filter(function(e){ return e.is_active!==false; });
+  var cnt = $F('fmEmpCnt'); if(cnt) cnt.textContent = all.length ? '(' + all.length + ' คน)' : '(ยังไม่มีรายชื่อ)';
+  q = fmNorm2(q);
+  if(!all.length){
+    box.innerHTML = '<div class="emp-none">ยังโหลดรายชื่อพนักงานไม่ได้<br>'
+      + '<button type="button" class="emp-reload" onclick="loadFormEmployees()">🔄 โหลดรายชื่อใหม่</button></div>';
+    box.classList.add('open'); return;
+  }
+  var arr = (q ? all.filter(function(e){ return fmEmpHay(e).indexOf(q) >= 0; }) : all).slice(0, 60);
+  if(!arr.length){
+    box.innerHTML = '<div class="emp-none">ไม่พบชื่อนี้ในทะเบียนพนักงาน (มีทั้งหมด ' + all.length + ' คน)<br>'
+      + '<small>ลองพิมพ์เฉพาะชื่อเล่น หรือชื่อจริงโดยไม่ต้องมีคำนำหน้า — ถ้ายังไม่เจอ แปลว่ายังไม่ได้เพิ่มเข้าทะเบียนพนักงาน</small></div>';
+    box.classList.add('open'); return;
+  }
+  box.innerHTML = arr.map(function(e){
+    var sub = [e.emp_code, e.position || e.group_name].filter(Boolean).join(' \u00b7 ');
+    return '<div class="emp-opt" data-id="' + esc(String(e.id)) + '"><span>' + esc(fmEmpLabel(e)) + '</span>'
+      + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</div>';
   }).join('');
+  box.classList.add('open');
+  box.querySelectorAll('.emp-opt').forEach(function(o){
+    o.onmousedown = function(ev){
+      ev.preventDefault();
+      var e = (EMP||[]).filter(function(x){ return String(x.id) === String(o.dataset.id); })[0];
+      if(!e) return;
+      fmEmpId = e.id;
+      $F('fmEmp').value = fmEmpLabel(e);
+      box.classList.remove('open');
+      fmFillFromEmp();
+    };
+  });
 }
 function fmCurEmp(){
   if(fmEmpId){
@@ -2517,10 +2560,14 @@ function fmFillFromEmp(){
   applyFormType();
   toast('ดึงข้อมูล '+(e.full_name||'')+' แล้ว — กด “ดึงสถิติขาด-ลา-มาสาย” เพื่อเติมสถิติ');
 }
-$F('fmEmp').addEventListener('change', fmFillFromEmp);
 $F('fmEmp').addEventListener('input', function(){
   fmEmpId = null;
-  if(fmCurEmp()) fmFillFromEmp();       // พิมพ์/เลือกตรงกับรายชื่อ → เติมให้ทันที
+  renderFormEmpOptions(this.value);
+  if(fmCurEmp()) fmFillFromEmp();       // พิมพ์ตรงกับรายชื่อ -> เติมให้ทันที
+});
+$F('fmEmp').addEventListener('focus', function(){ renderFormEmpOptions(this.value); });
+$F('fmEmp').addEventListener('blur', function(){
+  setTimeout(function(){ var b=$F('fmEmpList'); if(b) b.classList.remove('open'); }, 150);
 });
 $F('pf_round').addEventListener('change', function(){
   if($F('fmType').value==='pspecial') return;   /* รอบพิเศษ: ใส่ครั้งที่อะไรก็ได้ */
@@ -2979,8 +3026,12 @@ async function loadFormEmployees(){
       .limit(2000);
     if(r.error) throw r.error;
     EMP = r.data || [];
-  }catch(e){ EMP = []; }
-  renderFormEmpOptions();
+    console.log('โหลดรายชื่อพนักงาน', EMP.length, 'คน');
+  }catch(e){
+    EMP = [];
+    console.warn('โหลดรายชื่อพนักงานไม่สำเร็จ', e);
+  }
+  var _c = $F('fmEmpCnt'); if(_c) _c.textContent = EMP.length ? '(' + EMP.length + ' คน)' : '(ยังไม่มีรายชื่อ)';
 }
 (function initForm(){
   try{
