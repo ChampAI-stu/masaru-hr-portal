@@ -157,6 +157,14 @@
 .fm-emp-cnt{font-size:11px;color:#7A8398;font-weight:400}
 .emp-list .emp-reload{margin-top:6px;border:1px solid #e3e3dc;background:#fff;border-radius:8px;padding:5px 10px;font-family:inherit;font-size:12px;cursor:pointer;color:#16294d}
 .emp-list .emp-reload:hover{background:#F4F7FB}
+.emp-out{margin-left:7px;font-size:10.5px;font-weight:700;color:#9A2B48;background:#FBE9EE;border-radius:99px;padding:2px 7px;vertical-align:middle}
+/* รายการค้นหาพนักงานในฟอร์มประเมิน — ให้กว้างพอ ไม่ตัดคำ */
+#fmEmpList{width:400px;max-width:76vw;left:0;right:auto;max-height:330px;z-index:5000}
+#fmEmpList .emp-opt{display:flex;align-items:center;gap:14px;padding:9px 13px;line-height:1.45}
+#fmEmpList .emp-opt>span{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#fmEmpList .emp-opt>small{flex:0 0 auto;white-space:nowrap;font-size:11.5px;color:#7A8398}
+#fmEmpList .emp-none{white-space:normal}
+#fmEmpList .emp-none small{display:block;margin-top:5px;color:#97a1b5;font-size:11.5px}
 .hide{display:none!important}
 
   /* Alert popup */
@@ -1075,16 +1083,31 @@ function setStatus(ok){
   const el=_q("syncDot");
   if(el){ el.className="sync "+(ok?"ok":"off"); el.textContent = ok ? "● ซิงค์แล้ว" : "● ออฟไลน์"; }
 }
-/* ---------- employee source: daiki_employees (จาก chack) ---------- */
+/* ---------- employee source: daiki_employees (จาก chack) ----------
+   หมายเหตุ: Supabase คืนสูงสุด 1000 แถว/ครั้ง จึงต้องดึงเป็นหน้า ๆ ไม่งั้นคนหาย
+   เกณฑ์ "ทำงานอยู่" ใช้แบบเดียวกับหน้า chack คือ "ยังไม่มีวันลาออก" */
+var EMP_COLS = "id,emp_code,full_name,nickname,position,group_name,start_date,resign_date,is_active";
+function empActive(e){ return !e.resign_date; }
+async function fetchAllEmployees(){
+  var all = [], from = 0, size = 1000;
+  for(var i = 0; i < 25; i++){
+    var r = await _sb.from("daiki_employees").select(EMP_COLS).order("id").range(from, from + size - 1);
+    if(r.error) throw r.error;
+    var d = r.data || [];
+    all = all.concat(d);
+    if(d.length < size) break;
+    from += size;
+  }
+  return all;
+}
+
 var EMPLOYEES=[], _empActive=-1, _empLoaded=false;
 function _empLabel(e){ var nm=e.full_name||""; return e.nickname?(e.nickname+" ("+nm+")"):nm; }
 async function loadEmployees(){
   if(!_sb) return;
   try{
-    var r=await _sb.from("daiki_employees")
-      .select("id,full_name,nickname,position,group_name,start_date,resign_date,is_active");
-    if(r.error) throw r.error;
-    EMPLOYEES=(r.data||[]).filter(function(e){ return e.is_active!==false && !e.resign_date; })
+    var all=await fetchAllEmployees();
+    EMPLOYEES=all.filter(empActive)
       .sort(function(a,b){ return (""+(a.full_name||"")).localeCompare(""+(b.full_name||""),"th"); });
     _empLoaded=true;
   }catch(err){ console.warn("โหลดรายชื่อพนักงานไม่ได้", err); _empLoaded=false; }
@@ -2460,23 +2483,31 @@ function fmEmpHay(e){
 }
 function renderFormEmpOptions(q){
   var box = $F('fmEmpList'); if(!box) return;
-  var all = (EMP||[]).filter(function(e){ return e.is_active!==false; });
-  var cnt = $F('fmEmpCnt'); if(cnt) cnt.textContent = all.length ? '(' + all.length + ' คน)' : '(ยังไม่มีรายชื่อ)';
+  var pool = EMP || [];
+  var act = pool.filter(empActive);
+  var cnt = $F('fmEmpCnt');
+  if(cnt) cnt.textContent = pool.length
+    ? '(ทำงานอยู่ ' + act.length + ' · ทั้งหมด ' + pool.length + ')'
+    : '(ยังไม่มีรายชื่อ)';
   q = fmNorm2(q);
-  if(!all.length){
+  // ไม่ได้พิมพ์ค้นหา -> โชว์เฉพาะคนที่ทำงานอยู่ / พิมพ์ค้นหา -> ค้นทุกคน (คนลาออกจะมีป้ายกำกับ)
+  var all = q ? pool : act;
+  if(!act.length && !pool.length){
     box.innerHTML = '<div class="emp-none">ยังโหลดรายชื่อพนักงานไม่ได้<br>'
       + '<button type="button" class="emp-reload" onclick="loadFormEmployees()">🔄 โหลดรายชื่อใหม่</button></div>';
     box.classList.add('open'); return;
   }
-  var arr = (q ? all.filter(function(e){ return fmEmpHay(e).indexOf(q) >= 0; }) : all).slice(0, 60);
+  var arr = (q ? all.filter(function(e){ return fmEmpHay(e).indexOf(q) >= 0; }) : all);
+  arr = arr.sort(function(a,b){ return (empActive(b)?1:0) - (empActive(a)?1:0); }).slice(0, 60);
   if(!arr.length){
-    box.innerHTML = '<div class="emp-none">ไม่พบชื่อนี้ในทะเบียนพนักงาน (มีทั้งหมด ' + all.length + ' คน)<br>'
+    box.innerHTML = '<div class="emp-none">ไม่พบชื่อนี้ในทะเบียนพนักงาน (มีทั้งหมด ' + pool.length + ' คน)<br>'
       + '<small>ลองพิมพ์เฉพาะชื่อเล่น หรือชื่อจริงโดยไม่ต้องมีคำนำหน้า — ถ้ายังไม่เจอ แปลว่ายังไม่ได้เพิ่มเข้าทะเบียนพนักงาน</small></div>';
     box.classList.add('open'); return;
   }
   box.innerHTML = arr.map(function(e){
     var sub = [e.emp_code, e.position || e.group_name].filter(Boolean).join(' \u00b7 ');
-    return '<div class="emp-opt" data-id="' + esc(String(e.id)) + '"><span>' + esc(fmEmpLabel(e)) + '</span>'
+    var out = empActive(e) ? '' : '<b class="emp-out">ลาออกแล้ว</b>';
+    return '<div class="emp-opt" data-id="' + esc(String(e.id)) + '"><span>' + esc(fmEmpLabel(e)) + out + '</span>'
       + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</div>';
   }).join('');
   box.classList.add('open');
@@ -3021,17 +3052,16 @@ window.openProbationForm = function(rid, n){
 async function loadFormEmployees(){
   if(!_sb) return;
   try{
-    var r = await _sb.from('daiki_employees')
-      .select('id,emp_code,full_name,nickname,position,group_name,start_date,is_active,resign_date')
-      .limit(2000);
-    if(r.error) throw r.error;
-    EMP = r.data || [];
-    console.log('โหลดรายชื่อพนักงาน', EMP.length, 'คน');
+    EMP = await fetchAllEmployees();
+    console.log('โหลดรายชื่อพนักงาน', EMP.length, 'คน (ทำงานอยู่ ' + EMP.filter(empActive).length + ')');
   }catch(e){
     EMP = [];
     console.warn('โหลดรายชื่อพนักงานไม่สำเร็จ', e);
   }
-  var _c = $F('fmEmpCnt'); if(_c) _c.textContent = EMP.length ? '(' + EMP.length + ' คน)' : '(ยังไม่มีรายชื่อ)';
+  var _c = $F('fmEmpCnt');
+  if(_c) _c.textContent = EMP.length
+    ? '(ทำงานอยู่ ' + EMP.filter(empActive).length + ' · ทั้งหมด ' + EMP.length + ')'
+    : '(ยังไม่มีรายชื่อ)';
 }
 (function initForm(){
   try{
