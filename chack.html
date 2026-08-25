@@ -191,7 +191,9 @@
 .view > .dbbar .dbbar-in input.url,.view > .dbbar .dbbar-in input.key{display:none}
 .view > .dbbar .dbbtn.go{display:none}
 .print-head{display:none}
-.grpchip{display:inline-block;background:var(--navy);color:#fff;font-size:10px;padding:1px 8px;border-radius:999px;margin-left:6px;vertical-align:middle;font-weight:600}
+.telx{color:#1F6F9C;text-decoration:none;font-weight:600}
+    .telx:hover{text-decoration:underline}
+    .grpchip{display:inline-block;background:var(--navy);color:#fff;font-size:10px;padding:1px 8px;border-radius:999px;margin-left:6px;vertical-align:middle;font-weight:600}
 #view-dash #tblWrap, #view-employees #empWrap, #view-summary #sumTable, #view-leave #quotaWrap{overflow:visible}
 #view-dash #tblWrap thead th, #view-employees #empWrap thead th, #view-summary #sumTable thead th, #view-leave #quotaWrap thead th{position:sticky;top:var(--tabbarH,62px);z-index:5;background:#F4F4EF;box-shadow:inset 0 -1px 0 var(--line)}
 @media print{
@@ -1624,7 +1626,7 @@ window.__gridEnsure=function(){try{ if(SB && loadedYM===null) loadMonth(); }catc
     var sb=getSB(); if(!sb){ say('ยังเชื่อมต่อฐานข้อมูลไม่ได้','err'); return; }
     say('กำลังโหลด...','');
     try{
-      var r=await sb.from('daiki_employees').select('id,emp_code,full_name,nickname,position,start_date,day_off,is_active,resign_date,seq,group_name')
+      var r=await sb.from('daiki_employees').select('id,emp_code,full_name,nickname,position,phone,start_date,day_off,is_active,resign_date,seq,group_name')
         .order('seq',{ascending:true,nullsFirst:false}).order('full_name',{ascending:true}).limit(5000);
       if(r.error) throw r.error;
       LIST=r.data||[];
@@ -1650,14 +1652,14 @@ window.__gridEnsure=function(){try{ if(SB && loadedYM===null) loadMonth(); }catc
       var active=(e.is_active!==false);
       if(f==='active' && !active) return false;
       if(f==='resigned' && active) return false;
-      if(q){ var hay=((e.full_name||'')+' '+(e.nickname||'')+' '+(e.emp_code||'')+' '+(e.position||'')).toLowerCase(); if(hay.indexOf(q)<0) return false; }
+      if(q){ var hay=((e.full_name||'')+' '+(e.nickname||'')+' '+(e.emp_code||'')+' '+(e.position||'')+' '+(e.phone||'')).toLowerCase(); if(hay.indexOf(q)<0) return false; }
       if(grp==='__none'){ if(e.group_name) return false; } else if(grp){ if((e.group_name||'')!==grp) return false; }
       return true;
     });
     var nActive=LIST.filter(function(e){return e.is_active!==false;}).length;
     var nOut=LIST.length-nActive;
     $('empSub').textContent='ทั้งหมด '+LIST.length+' คน · ทำงานอยู่ '+nActive+' · ลาออกแล้ว '+nOut+' · แสดง '+rows.length;
-    var head='<table><thead><tr><th style=\"width:40px\">#</th><th>รหัส</th><th class=\"l\">ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th>แผนก</th><th>เริ่มงาน</th><th>สถานะ</th><th style=\"width:210px\">จัดการ</th></tr></thead><tbody>';
+    var head='<table><thead><tr><th style=\"width:40px\">#</th><th>รหัส</th><th class=\"l\">ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th>แผนก</th><th>เบอร์โทร</th><th>เริ่มงาน</th><th>สถานะ</th><th style=\"width:210px\">จัดการ</th></tr></thead><tbody>';
     var body=rows.map(function(e,i){
       var active=(e.is_active!==false);
       var pill=active?'<span class=\"pill on\">ทำงานอยู่</span>':'<span class=\"pill off\">ลาออก'+(e.resign_date?(' '+e.resign_date):'')+'</span>';
@@ -1667,6 +1669,7 @@ window.__gridEnsure=function(){try{ if(SB && loadedYM===null) loadMonth(); }catc
         '<td class=\"who\"><div class=\"nm\">'+esc(e.full_name)+(e.nickname?' <span class=\"nick\">('+esc(e.nickname)+')</span>':'')+'</div></td>'+
         '<td>'+esc(e.position||'—')+'</td>'+
         '<td>'+(e.group_name?'<span class=\"grpchip\">'+esc(e.group_name)+'</span>':'—')+'</td>'+
+        '<td class=\"num\">'+(e.phone?('<a class=\"telx\" href=\"tel:'+esc(String(e.phone).replace(/[^0-9+]/g,''))+'\">'+esc(fmtPhone(e.phone))+'</a>'):'—')+'</td>'+
         '<td class=\"num\">'+esc(e.start_date||'—')+'</td>'+
         '<td>'+pill+'</td>'+
         '<td><div class=\"act\">'+
@@ -1685,6 +1688,14 @@ window.__gridEnsure=function(){try{ if(SB && loadedYM===null) loadMonth(); }catc
     });
   }
 
+  // เบอร์โทร: เก็บเป็นตัวเลขล้วน แสดงผลเป็น 08x-xxx-xxxx
+  function cleanPhone(v){ if(!v) return null; var d=String(v).replace(/[^0-9+]/g,''); return d||null; }
+  function fmtPhone(v){
+    var d=String(v||'').replace(/[^0-9]/g,'');
+    if(d.length===10) return d.slice(0,3)+'-'+d.slice(3,6)+'-'+d.slice(6);
+    if(d.length===9)  return d.slice(0,2)+'-'+d.slice(2,5)+'-'+d.slice(5);
+    return v||'';
+  }
   function byId(id){ for(var i=0;i<LIST.length;i++){ if((""+LIST[i].id)===(""+id)) return LIST[i]; } return null; }
 
   function toDMY(ymd){ if(!ymd) return ''; var p=(''+ymd).slice(0,10).split('-'); if(p.length!==3) return ''+ymd; return (+p[2])+'/'+(+p[1])+'/'+p[0]; }
@@ -1700,12 +1711,14 @@ window.__gridEnsure=function(){try{ if(SB && loadedYM===null) loadMonth(); }catc
     var e=emp||{};
     var F=[
       ['emp_code','รหัสพนักงาน',''],['full_name','ชื่อ-นามสกุล','req'],['nickname','ชื่อเล่น',''],
-      ['position','ตำแหน่ง',''],['group_name','แผนก (คนแผนกเดียวกันจะแสดงติดกัน)',''],['start_date','วันเริ่มงาน (พิมพ์ 5/7/2025)',''],['day_off','วันหยุดประจำ','']
+      ['position','ตำแหน่ง',''],['group_name','แผนก (คนแผนกเดียวกันจะแสดงติดกัน)',''],['phone','เบอร์โทรศัพท์',''],['start_date','วันเริ่มงาน (พิมพ์ 5/7/2025)',''],['day_off','วันหยุดประจำ','']
     ];
     var fields=F.map(function(f){
       var isDate=(f[0]==='start_date');
-      var val=isDate? toDMY(e[f[0]]) : (e[f[0]]||'');
-      var ph=isDate? ' placeholder=\"วัน/เดือน/ปี เช่น 5/7/2025\"' : '';
+      var isTel=(f[0]==='phone');
+      var val=isDate? toDMY(e[f[0]]) : (isTel? fmtPhone(e[f[0]]||'') : (e[f[0]]||''));
+      var ph=isDate? ' placeholder=\"วัน/เดือน/ปี เช่น 5/7/2025\"'
+            : (isTel? ' placeholder=\"08x-xxx-xxxx\" inputmode=\"tel\" maxlength=\"20\"' : '');
       return '<div class=\"ef-f\"><label>'+f[1]+(f[2]==='req'?' <span class=\"req\">*</span>':'')+'</label>'+
         '<input id=\"ef_'+f[0]+'\" type=\"text\" value=\"'+esc(val)+'\"'+ph+'></div>';
     }).join('');
@@ -1722,7 +1735,7 @@ window.__gridEnsure=function(){try{ if(SB && loadedYM===null) loadMonth(); }catc
     var sb=getSB(); if(!sb) return;
     function v(k){ var el=$('ef_'+k); var s=(el.value||'').trim(); return s===''?null:s; }
     var name=v('full_name'); if(!name){ say('กรุณากรอกชื่อ-นามสกุล','err'); return; }
-    var rec={emp_code:v('emp_code'), full_name:name, nickname:v('nickname'), position:v('position'), group_name:v('group_name'), start_date:parseDMY($('ef_start_date').value), day_off:v('day_off')};
+    var rec={emp_code:v('emp_code'), full_name:name, nickname:v('nickname'), position:v('position'), group_name:v('group_name'), phone:cleanPhone(v('phone')), start_date:parseDMY($('ef_start_date').value), day_off:v('day_off')};
     say('กำลังบันทึก...','');
     try{
       if(editingId){ var r=await sb.from('daiki_employees').update(rec).eq('id',editingId); if(r.error) throw r.error; }
