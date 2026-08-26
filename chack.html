@@ -1731,22 +1731,77 @@ window.__gridEnsure=function(){try{ if(SB && loadedYM===null) loadMonth(); }catc
   }
   function closeForm(){ $('empForm').style.display='none'; $('empBackdrop').style.display='none'; }
 
+  // ===== ตรวจข้อมูลซ้ำก่อนบันทึก (แก้ปัญหา unique constraint daiki_employees_*) =====
+  function dupMsg(e){
+    var m=(e&&(e.message||e.details||e.hint))||String(e||'');
+    if((e&&e.code==='23505')||/duplicate key|unique constraint/i.test(m)){
+      var f=/full_name/.test(m)?'ชื่อ-นามสกุล':(/emp_code/.test(m)?'รหัสพนักงาน':(/phone/.test(m)?'เบอร์โทรศัพท์':'ข้อมูล'));
+      return 'ข้อมูลซ้ำ — มี '+f+' นี้อยู่ในระบบแล้ว (ส่วนใหญ่คือคนที่ "ลาออกแล้ว" จึงไม่เห็นในตาราง) ให้เปลี่ยนตัวกรองเป็น "ทั้งหมด" แล้วค้นหาชื่อนี้ → กด "คืนสภาพ" หรือ "แก้ไข" แทนการเพิ่มใหม่';
+    }
+    return m;
+  }
+  async function findDup(sb, rec, excludeId){
+    var cols='id,emp_code,full_name,nickname,position,is_active,resign_date,start_date';
+    var hits=[];
+    var q1=await sb.from('daiki_employees').select(cols).eq('full_name',rec.full_name).limit(5);
+    if(q1.error) throw q1.error;
+    (q1.data||[]).forEach(function(x){ x.__why='full_name'; hits.push(x); });
+    if(rec.emp_code){
+      var q2=await sb.from('daiki_employees').select(cols).eq('emp_code',rec.emp_code).limit(5);
+      if(q2.error) throw q2.error;
+      (q2.data||[]).forEach(function(x){
+        if(!hits.some(function(h){ return (''+h.id)===(''+x.id); })){ x.__why='emp_code'; hits.push(x); }
+      });
+    }
+    if(excludeId) hits=hits.filter(function(h){ return (''+h.id)!==(''+excludeId); });
+    return hits.length? hits[0] : null;
+  }
+  function focusDup(dup){
+    try{ $('empFilter').value='all'; $('empSearch').value=dup.full_name; render(); }catch(e){}
+  }
+  // return true = จัดการให้แล้ว (อัปเดต/คืนสภาพ) , false = ต้องให้ผู้ใช้แก้ก่อน
+  async function handleDup(sb, rec, dup){
+    var who=dup.full_name+(dup.nickname?' ('+dup.nickname+')':'')+(dup.emp_code?' · รหัส '+dup.emp_code:'');
+    if(dup.is_active!==false){
+      say('❌ บันทึกไม่ได้ — มี '+who+' อยู่ในระบบแล้ว สถานะ "ทำงานอยู่" กรุณากดปุ่ม "แก้ไข" ที่แถวของคนนี้แทน','err');
+      closeForm(); focusDup(dup); return false;
+    }
+    if(dup.__why==='emp_code' && rec.full_name!==dup.full_name){
+      say('❌ รหัสพนักงาน "'+rec.emp_code+'" ถูกใช้ไปแล้วโดย '+who+' (ลาออกแล้ว) กรุณาเปลี่ยนรหัสพนักงานใหม่','err');
+      return false;
+    }
+    if(!confirm('พบ '+who+' อยู่ในระบบแล้ว\nสถานะ: ลาออกแล้ว'+(dup.resign_date?' ('+dup.resign_date+')':'')+'\n\nต้องการ "คืนสภาพ + อัปเดตข้อมูลใหม่ทับ" ให้คนนี้หรือไม่?\n(ประวัติการมาทำงานเดิมยังอยู่ครบ)\n\nถ้ากดยกเลิก = ไม่บันทึก')) { closeForm(); focusDup(dup); return false; }
+    var upd={}; Object.keys(rec).forEach(function(k){ if(rec[k]!=null) upd[k]=rec[k]; });
+    upd.is_active=true; upd.resign_date=null;
+    var r=await sb.from('daiki_employees').update(upd).eq('id',dup.id);
+    if(r.error) throw r.error;
+    return true;
+  }
+
   async function saveForm(){
     var sb=getSB(); if(!sb) return;
     function v(k){ var el=$('ef_'+k); var s=(el.value||'').trim(); return s===''?null:s; }
     var name=v('full_name'); if(!name){ say('กรุณากรอกชื่อ-นามสกุล','err'); return; }
     var rec={emp_code:v('emp_code'), full_name:name, nickname:v('nickname'), position:v('position'), group_name:v('group_name'), phone:cleanPhone(v('phone')), start_date:parseDMY($('ef_start_date').value), day_off:v('day_off')};
-    say('กำลังบันทึก...','');
+    if($('ef_start_date').value.trim() && !rec.start_date){ say('วันเริ่มงานไม่ถูกต้อง ใช้รูปแบบ วัน/เดือน/ปี เช่น 3/8/2026','err'); return; }
+    say('กำลังตรวจข้อมูลซ้ำ...','');
     try{
-      if(editingId){ var r=await sb.from('daiki_employees').update(rec).eq('id',editingId); if(r.error) throw r.error; }
-      else{
-        var maxSeq=LIST.reduce(function(m,e){ return Math.max(m, e.seq==null?0:e.seq); },0);
-        rec.seq=maxSeq+1; rec.is_active=true;
-        var r2=await sb.from('daiki_employees').insert(rec); if(r2.error) throw r2.error;
+      var dup=await findDup(sb, rec, editingId);
+      if(editingId){
+        if(dup){ if(!await handleDup(sb, rec, dup)) return; }
+        else{ var r=await sb.from('daiki_employees').update(rec).eq('id',editingId); if(r.error) throw r.error; }
+      }else{
+        if(dup){ if(!await handleDup(sb, rec, dup)) return; }
+        else{
+          say('กำลังบันทึก...','');
+          var maxSeq=LIST.reduce(function(m,e){ return Math.max(m, e.seq==null?0:e.seq); },0);
+          rec.seq=maxSeq+1; rec.is_active=true;
+          var r2=await sb.from('daiki_employees').insert(rec); if(r2.error) throw r2.error;
+        }
       }
       closeForm();
       await loadList(); say('บันทึกสำเร็จ ✓','ok');
-    }catch(e){ say('บันทึกไม่สำเร็จ: '+(e.message||e),'err'); }
+    }catch(e){ say('บันทึกไม่สำเร็จ: '+dupMsg(e),'err'); }
   }
 
   async function act(a,id){
