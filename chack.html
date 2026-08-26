@@ -1001,7 +1001,12 @@ window.__commitStaged=async function(){
   var btn=document.getElementById("btnSave"); if(btn) btn.disabled=true;
   try{
     dbSay("กำลังบันทึกพนักงาน "+st.roster.length+" คน...","");
-    var up=await SB.from("daiki_employees").upsert(st.roster,{onConflict:"full_name"}).select("id,full_name");
+    // ใช้ RPC daiki_resolve_employees (daiki_migrate5_rehire.sql) — รองรับคนลาออกแล้วกลับมาทำใหม่
+    var up=await SB.rpc("daiki_resolve_employees",{p_roster:st.roster});
+    if(up.error){
+      console.warn("daiki_resolve_employees ไม่พร้อมใช้ (ยังไม่ได้รัน daiki_migrate5_rehire.sql) → fallback upsert:", up.error);
+      up=await SB.from("daiki_employees").upsert(st.roster,{onConflict:"full_name"}).select("id,full_name");
+    }
     if(up.error){
       // เผื่อยังไม่ได้รัน migrate (คอลัมน์ seq/is_active ไม่มี) → ลองใหม่แบบใส่เฉพาะคอลัมน์พื้นฐาน
       console.error("employee upsert error (full):", up.error);
@@ -1397,8 +1402,15 @@ $("addEmp").addEventListener("click", async function(){
   var pos=(prompt("ตำแหน่ง (เว้นว่างได้):")||"").trim();
   var row={id:"tmp_"+Date.now(), dbId:null, code:"", name:name, nick:nick, pos:pos, cells:{}, notes:{}, paid:{}, hours:{}};
   if(LIVE){
-    try{ var r=await SB.from("daiki_employees").upsert({full_name:name,nickname:nick||null,position:pos||null},{onConflict:"full_name"}).select("id").single();
-      if(r.error) throw r.error; row.dbId=r.data.id; }
+    try{
+      var one={full_name:name,nickname:nick||null,position:pos||null,is_active:true};
+      var r=await SB.rpc("daiki_resolve_employees",{p_roster:[one]});
+      if(r.error || !r.data || !r.data.length){
+        console.warn("resolve rpc ไม่พร้อม → fallback upsert:", r.error);
+        r=await SB.from("daiki_employees").upsert(one,{onConflict:"full_name"}).select("id").single();
+        if(r.error) throw r.error; row.dbId=r.data.id;
+      } else { row.dbId=r.data[0].id; }
+    }
     catch(e){ alert("เพิ่มพนักงานไม่สำเร็จ: "+(e.message||e)); return; }
   }
   EMP.push(row); renderGrid();
@@ -1736,7 +1748,7 @@ window.__gridEnsure=function(){try{ if(SB && loadedYM===null) loadMonth(); }catc
     var m=(e&&(e.message||e.details||e.hint))||String(e||'');
     if((e&&e.code==='23505')||/duplicate key|unique constraint/i.test(m)){
       var f=/full_name/.test(m)?'ชื่อ-นามสกุล':(/emp_code/.test(m)?'รหัสพนักงาน':(/phone/.test(m)?'เบอร์โทรศัพท์':'ข้อมูล'));
-      return 'ข้อมูลซ้ำ — มี '+f+' นี้อยู่ในระบบแล้ว (ส่วนใหญ่คือคนที่ "ลาออกแล้ว" จึงไม่เห็นในตาราง) ให้เปลี่ยนตัวกรองเป็น "ทั้งหมด" แล้วค้นหาชื่อนี้ → กด "คืนสภาพ" หรือ "แก้ไข" แทนการเพิ่มใหม่';
+      return 'ข้อมูลซ้ำ — มี '+f+' นี้อยู่ในระบบแล้ว (ถ้าเป็นคนละคนชื่อซ้ำ ให้รัน sql/daiki_migrate5_rehire.sql ใน Supabase ก่อน) (ส่วนใหญ่คือคนที่ "ลาออกแล้ว" จึงไม่เห็นในตาราง) ให้เปลี่ยนตัวกรองเป็น "ทั้งหมด" แล้วค้นหาชื่อนี้ → กด "คืนสภาพ" หรือ "แก้ไข" แทนการเพิ่มใหม่';
     }
     return m;
   }
@@ -1770,7 +1782,10 @@ window.__gridEnsure=function(){try{ if(SB && loadedYM===null) loadMonth(); }catc
       say('❌ รหัสพนักงาน "'+rec.emp_code+'" ถูกใช้ไปแล้วโดย '+who+' (ลาออกแล้ว) กรุณาเปลี่ยนรหัสพนักงานใหม่','err');
       return false;
     }
-    if(!confirm('พบ '+who+' อยู่ในระบบแล้ว\nสถานะ: ลาออกแล้ว'+(dup.resign_date?' ('+dup.resign_date+')':'')+'\n\nต้องการ "คืนสภาพ + อัปเดตข้อมูลใหม่ทับ" ให้คนนี้หรือไม่?\n(ประวัติการมาทำงานเดิมยังอยู่ครบ)\n\nถ้ากดยกเลิก = ไม่บันทึก')) { closeForm(); focusDup(dup); return false; }
+    if(!confirm('พบ '+who+' อยู่ในระบบแล้ว\nสถานะ: ลาออกแล้ว'+(dup.resign_date?' ('+dup.resign_date+')':'')+'\n\nต้องการ "คืนสภาพ + อัปเดตข้อมูลใหม่ทับ" ให้คนนี้หรือไม่?\n(ประวัติการมาทำงานเดิมยังอยู่ครบ · แนะนำกรณีคนเดิมกลับมาทำงาน)')){
+      if(!editingId && confirm('ไม่คืนสภาพ\n\nต้องการ "เพิ่มเป็นพนักงานใหม่ แยกคนละรายการ" แทนหรือไม่?\n(ใช้กรณีเป็นคนละคนแต่ชื่อซ้ำกัน · ต้องรัน daiki_migrate5_rehire.sql แล้ว)\n\nกดยกเลิก = ไม่บันทึกอะไรเลย')) return 'insert';
+      closeForm(); focusDup(dup); return false;
+    }
     var upd={}; Object.keys(rec).forEach(function(k){ if(rec[k]!=null) upd[k]=rec[k]; });
     upd.is_active=true; upd.resign_date=null;
     var r=await sb.from('daiki_employees').update(upd).eq('id',dup.id);
@@ -1787,17 +1802,18 @@ window.__gridEnsure=function(){try{ if(SB && loadedYM===null) loadMonth(); }catc
     say('กำลังตรวจข้อมูลซ้ำ...','');
     try{
       var dup=await findDup(sb, rec, editingId);
-      if(editingId){
-        if(dup){ if(!await handleDup(sb, rec, dup)) return; }
-        else{ var r=await sb.from('daiki_employees').update(rec).eq('id',editingId); if(r.error) throw r.error; }
-      }else{
-        if(dup){ if(!await handleDup(sb, rec, dup)) return; }
-        else{
-          say('กำลังบันทึก...','');
-          var maxSeq=LIST.reduce(function(m,e){ return Math.max(m, e.seq==null?0:e.seq); },0);
-          rec.seq=maxSeq+1; rec.is_active=true;
-          var r2=await sb.from('daiki_employees').insert(rec); if(r2.error) throw r2.error;
-        }
+      var mode='new';
+      if(dup){ var res=await handleDup(sb, rec, dup); if(!res) return; mode=(res==='insert')?'new':'done'; }
+      else if(editingId){ mode='update'; }
+
+      if(mode==='update'){
+        say('กำลังบันทึก...','');
+        var r=await sb.from('daiki_employees').update(rec).eq('id',editingId); if(r.error) throw r.error;
+      } else if(mode==='new'){
+        say('กำลังบันทึก...','');
+        var maxSeq=LIST.reduce(function(m,e){ return Math.max(m, e.seq==null?0:e.seq); },0);
+        rec.seq=maxSeq+1; rec.is_active=true;
+        var r2=await sb.from('daiki_employees').insert(rec); if(r2.error) throw r2.error;
       }
       closeForm();
       await loadList(); say('บันทึกสำเร็จ ✓','ok');
