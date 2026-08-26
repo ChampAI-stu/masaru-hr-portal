@@ -524,6 +524,16 @@
     }
     .overlay.on { display: flex; }
     .modal { background: var(--surface); border-radius: 16px; box-shadow: var(--shadow-lg); width: 480px; max-width: 100%; max-height: 90vh; overflow-y: auto; }
+    /* แก้ไขข้อมูลผู้สมัครในที่ */
+    .info-f .k { display: flex; align-items: center; gap: 6px; }
+    .fld-edit { border: 0; background: transparent; color: #9aa4b5; cursor: pointer; padding: 2px;
+      line-height: 1; border-radius: 5px; font-size: 12px; opacity: 0; transition: .15s; }
+    .info-f:hover .fld-edit { opacity: 1; }
+    .fld-edit:hover { color: #1f6f9c; background: #eff6ff; }
+    .fld-edit-wrap { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .fld-edit-input { flex: 1; min-width: 120px; font-family: inherit; font-size: 13.5px; padding: 6px 9px;
+      border: 1px solid #1f6f9c; border-radius: 8px; outline: none; box-shadow: 0 0 0 3px rgba(31,111,156,.12); }
+
     /* จัดการตำแหน่งงาน */
     .pos-edit { margin-left: 8px; border: 1px solid var(--line); background: #fff; color: #1f6f9c;
       border-radius: 7px; padding: 3px 9px; font-family: inherit; font-size: 11px; font-weight: 600; cursor: pointer;
@@ -1141,11 +1151,11 @@
             <button class="icon-btn" style="text-transform:none;letter-spacing:0" onclick="exportSummary('${a.id}')"><i class="ti ti-file-export"></i>ดาวน์โหลดสรุป</button>
           </span>
         </div>
-        <div class="info-grid">
-          <div class="info-f"><div class="k">ตำแหน่งที่สมัคร</div><div class="v">${esc(a.pos)}</div></div>
-          <div class="info-f"><div class="k">แหล่งที่มา</div><div class="v">${esc(a.src || '—')}</div></div>
-          <div class="info-f"><div class="k">เบอร์โทรศัพท์</div><div class="v">${esc(a.phone || '—')}</div></div>
-          <div class="info-f"><div class="k">วันที่รับสมัคร</div><div class="v">${esc(a.date || '—')}</div></div>
+        <div class="info-grid" id="info-grid">
+          <div class="info-f"><div class="k">ตำแหน่งที่สมัคร${isExec ? '' : `<button class="fld-edit" onclick="editField('${a.id}','pos')" title="แก้ไขตำแหน่ง"><i class="ti ti-pencil"></i></button>`}</div><div class="v" id="fv-pos">${esc(a.pos)}</div></div>
+          <div class="info-f"><div class="k">แหล่งที่มา${isExec ? '' : `<button class="fld-edit" onclick="editField('${a.id}','src')" title="แก้ไขแหล่งที่มา"><i class="ti ti-pencil"></i></button>`}</div><div class="v" id="fv-src">${esc(a.src || '—')}</div></div>
+          <div class="info-f"><div class="k">เบอร์โทรศัพท์${isExec ? '' : `<button class="fld-edit" onclick="editField('${a.id}','phone')" title="แก้ไขเบอร์โทร"><i class="ti ti-pencil"></i></button>`}</div><div class="v" id="fv-phone">${esc(a.phone || '—')}</div></div>
+          <div class="info-f"><div class="k">วันที่รับสมัคร${isExec ? '' : `<button class="fld-edit" onclick="editField('${a.id}','date')" title="แก้ไขวันที่"><i class="ti ti-pencil"></i></button>`}</div><div class="v" id="fv-date">${esc(a.date || '—')}</div></div>
         </div>
       </div>`;
 
@@ -1408,6 +1418,38 @@
       inp.focus(); inp.setSelectionRange(a.name.length, a.name.length);
     }
     function cancelEditName(id) { const a = getA(id); if (a) renderDetail(a); }
+
+    /* ── แก้ไขข้อมูลผู้สมัครในที่ (ตำแหน่ง / แหล่งที่มา / เบอร์ / วันที่) ── */
+    const FLD_META = {
+      pos:   { label: 'ตำแหน่งที่สมัคร', list: 'dl-pos', ph: 'เลือกหรือพิมพ์ตำแหน่ง', req: true },
+      src:   { label: 'แหล่งที่มา',      list: 'dl-src', ph: 'เลือกหรือพิมพ์' },
+      phone: { label: 'เบอร์โทรศัพท์',   ph: '08x-xxx-xxxx' },
+      date:  { label: 'วันที่รับสมัคร',   type: 'date' },
+    };
+    function editField(id, key) {
+      const a = getA(id), m = FLD_META[key], box = document.getElementById('fv-' + key);
+      if (!a || !m || !box) return;
+      const val = a[key] || '';
+      box.innerHTML = `<div class="fld-edit-wrap">
+          <input id="fe-inp" class="fld-edit-input" type="${m.type || 'text'}"
+            ${m.list ? `list="${m.list}"` : ''} autocomplete="off"
+            value="${esc(val)}" placeholder="${esc(m.ph || '')}"
+            onkeydown="if(event.key==='Enter')saveField('${id}','${key}');if(event.key==='Escape')cancelField('${id}')">
+          <button class="name-mini name-mini-ok" onclick="saveField('${id}','${key}')">บันทึก</button>
+          <button class="name-mini" onclick="cancelField('${id}')">ยกเลิก</button>
+        </div>`;
+      const inp = document.getElementById('fe-inp');
+      inp.focus();
+      try { inp.setSelectionRange(val.length, val.length); } catch (e) {}
+    }
+    function cancelField(id) { const a = getA(id); if (a) renderDetail(a); }
+    async function saveField(id, key) {
+      const m = FLD_META[key];
+      let v = (document.getElementById('fe-inp')?.value || '').trim();
+      if (m.req && !v) { showToast('กรุณากรอก' + m.label, true); return; }
+      if (key === 'phone') v = v.replace(/[^0-9+\-() ]/g, '');
+      if (await dbUpdate(id, { [key]: v })) { showToast('แก้ไข' + m.label + 'แล้ว ✓'); await refresh(); }
+    }
     async function saveName(id) {
       const v = document.getElementById('edit-name-inp')?.value.trim();
       if (!v) { showToast('กรุณากรอกชื่อ', true); return; }
