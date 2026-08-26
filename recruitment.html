@@ -524,6 +524,36 @@
     }
     .overlay.on { display: flex; }
     .modal { background: var(--surface); border-radius: 16px; box-shadow: var(--shadow-lg); width: 480px; max-width: 100%; max-height: 90vh; overflow-y: auto; }
+    /* จัดการตำแหน่งงาน */
+    .pos-edit { margin-left: 8px; border: 1px solid var(--line); background: #fff; color: #1f6f9c;
+      border-radius: 7px; padding: 3px 9px; font-family: inherit; font-size: 11px; font-weight: 600; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 4px; vertical-align: middle; }
+    .pos-edit:hover { background: #eff6ff; border-color: #1f6f9c; }
+    .pos-sub { font-size: 12px; font-weight: 400; color: var(--muted); margin-left: 6px; }
+    .pos-hint { background: #f2f8fd; border: 1px solid #d6e6f5; border-radius: 10px; padding: 10px 13px;
+      font-size: 12px; color: #46586f; line-height: 1.75; margin-bottom: 12px; }
+    .pos-list { max-height: 380px; overflow: auto; border: 1px solid var(--line); border-radius: 11px; }
+    .pos-row { display: grid; grid-template-columns: 30px 1fr 110px 92px; gap: 8px; align-items: center;
+      padding: 7px 10px; border-bottom: 1px solid #f1f4f8; }
+    .pos-row:last-child { border-bottom: none; }
+    .pos-no { font-size: 11px; color: #9aa4b5; text-align: center; }
+    .pos-in { width: 100%; font-family: inherit; font-size: 13px; padding: 7px 10px;
+      border: 1px solid var(--line); border-radius: 8px; outline: none; }
+    .pos-in:focus { border-color: #1f6f9c; box-shadow: 0 0 0 3px rgba(31,111,156,.1); }
+    .pos-cnt { font-size: 11px; color: #9aa4b5; text-align: center; }
+    .pos-cnt.on { color: #16294d; font-weight: 700; background: #eef3f9; border-radius: 99px; padding: 3px 8px; }
+    .pos-ops { display: flex; gap: 4px; justify-content: flex-end; }
+    .pos-ops button { width: 26px; height: 26px; border: 1px solid var(--line); background: #fff;
+      border-radius: 7px; cursor: pointer; color: #5b6980; font-size: 11px; line-height: 1; }
+    .pos-ops button:hover:not(:disabled) { border-color: #1f6f9c; color: #1f6f9c; }
+    .pos-ops button:disabled { opacity: .35; cursor: default; }
+    .pos-ops button.del:hover { border-color: #dc2626; color: #dc2626; }
+    .pos-add { width: 100%; margin-top: 10px; padding: 9px; border: 1px dashed #cbd5e2; background: #fbfcfe;
+      border-radius: 10px; font-family: inherit; font-size: 12.5px; font-weight: 600; color: #1f6f9c; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .pos-add:hover { background: #eff6ff; border-color: #1f6f9c; }
+    .pos-empty { padding: 24px; text-align: center; color: #9aa4b5; font-size: 13px; }
+
     .modal-head { padding: 20px 24px 0; display: flex; align-items: center; justify-content: space-between; }
     .modal-head h3 { font-size: 17px; font-weight: 700; }
     .modal-close { cursor: pointer; color: var(--faint); font-size: 22px; line-height: 1; padding: 2px; border-radius: 7px; }
@@ -739,6 +769,25 @@
     </div>
   </div>
 
+  <!-- ══ จัดการตำแหน่งงาน ══ -->
+  <div class="overlay" id="pos-overlay" onclick="if(event.target===this)closePosManager()">
+    <div class="modal" style="max-width:640px">
+      <div class="modal-head">
+        <h3>⚙️ จัดการตำแหน่งงาน <span class="pos-sub" id="pos-count"></span></h3>
+        <div class="modal-close" onclick="closePosManager()"><i class="ti ti-x"></i></div>
+      </div>
+      <div class="modal-body">
+        <div class="pos-hint">💡 พิมพ์แก้ชื่อได้ในช่องเลย · ตำแหน่งที่มีผู้สมัครใช้อยู่จะมีป้ายบอกจำนวน · ถ้าเปลี่ยนชื่อ ระบบจะถามว่าจะอัปเดตผู้สมัครเดิมด้วยไหม</div>
+        <div class="pos-list" id="pos-list"></div>
+        <button type="button" class="pos-add" onclick="posAdd()"><i class="ti ti-plus"></i> เพิ่มตำแหน่ง</button>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-line" onclick="closePosManager()">ยกเลิก</button>
+        <button class="btn btn-primary" id="pos-save" onclick="posSave()">บันทึก</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ══ ADD MODAL ══ -->
   <div class="overlay" id="add-overlay">
     <div class="modal">
@@ -753,18 +802,10 @@
           <div class="field"><label>เบอร์โทรศัพท์</label><input id="a-phone" placeholder="08x-xxx-xxxx" oninput="checkDup()"></div>
         </div>
         <div class="grid-2">
-          <div class="field"><label>ตำแหน่งที่สมัคร <span class="req">*</span></label>
+          <div class="field"><label>ตำแหน่งที่สมัคร <span class="req">*</span>
+              <button type="button" class="pos-edit" onclick="openPosManager()" title="เพิ่ม / แก้ไข / ลบ ตำแหน่งงาน"><i class="ti ti-settings"></i> จัดการตำแหน่ง</button></label>
             <input id="a-pos" list="dl-pos" placeholder="เลือกหรือพิมพ์ตำแหน่ง" autocomplete="off">
-            <datalist id="dl-pos">
-              <option>CS ประสานงาน</option><option>CS Facebook</option><option>Support Facebook</option>
-              <option>การตลาด Facebook</option><option>การตลาดออนไลน์</option><option>KOL Specialist</option><option>Branding</option><option>Live</option><option>Content Creator</option><option>Graphic Design</option>
-              <option>Sale Wholesale ขายส่ง</option><option>Add-order</option><option>Telesale</option><option>Sale Admin</option>
-              <option>Purchasing จัดซื้อต่างประเทศ</option><option>Purchasing จัดซื้อในประเทศ</option>
-              <option>Accountant</option><option>Internal Auditor</option>
-              <option>Human Resources</option><option>IT Support</option>
-              <option>หัวหน้าฝ่ายบุคคล</option><option>หัวหน้าการตลาด</option><option>หัวหน้าบัญชี</option><option>หัวหน้าคลังสินค้า</option>
-              <option>ช่างเคลม</option><option>เลขา</option>
-            </datalist>
+            <datalist id="dl-pos"></datalist>
           </div>
           <div class="field"><label>แหล่งที่มา</label>
             <input id="a-src" list="dl-src" placeholder="เลือกหรือพิมพ์" autocomplete="off">
@@ -976,6 +1017,7 @@
       const sub = document.getElementById('su-role');
       if (sub) sub.textContent = ROLE === 'exec' ? 'ผู้บริหาร' : 'ฝ่ายบุคคล';
       await dbLoad();
+      await loadPositions();
       await migrateLegacy();
       renderAll();
       bindAutosave();
@@ -1964,6 +2006,116 @@
     }
 
     // ═══════════════════ REPORTS ═══════════════════
+    // ═══════════════════ จัดการตำแหน่งงาน ═══════════════════
+    const POS_DEFAULT = ['CS ประสานงาน','CS Facebook','Support Facebook',
+      'การตลาด Facebook','การตลาดออนไลน์','KOL Specialist','Branding','Live','Content Creator','Graphic Design',
+      'Sale Wholesale ขายส่ง','Add-order','Telesale','Sale Admin',
+      'Purchasing จัดซื้อต่างประเทศ','Purchasing จัดซื้อในประเทศ',
+      'Accountant','Internal Auditor','Human Resources','IT Support',
+      'หัวหน้าฝ่ายบุคคล','หัวหน้าการตลาด','หัวหน้าบัญชี','หัวหน้าคลังสินค้า','ช่างเคลม','เลขา'];
+    let POSITIONS = POS_DEFAULT.slice();
+
+    async function loadPositions() {
+      try {
+        const { data } = await _sb.from('app_settings').select('value').eq('key', 'positions').single();
+        if (data && data.value) {
+          const arr = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
+          if (Array.isArray(arr) && arr.length) POSITIONS = arr.map(String);
+        }
+      } catch (e) { /* ยังไม่เคยตั้งค่า -> ใช้ค่าเริ่มต้น */ }
+      renderPosOptions();
+    }
+    function renderPosOptions() {
+      const dl = document.getElementById('dl-pos');
+      if (dl) dl.innerHTML = POSITIONS.map(p => `<option>${esc(p)}</option>`).join('');
+    }
+    async function savePositions(arr) {
+      POSITIONS = arr;
+      renderPosOptions();
+      const { error } = await _sb.from('app_settings')
+        .upsert({ key: 'positions', value: JSON.stringify(arr) }, { onConflict: 'key' });
+      if (error) { showToast('บันทึกไม่สำเร็จ: ' + error.message, true); return false; }
+      return true;
+    }
+    const posUse = p => DATA.filter(a => (a.pos || '').trim() === p).length;
+
+    /* ---- หน้าจัดการ ---- */
+    let POS_DRAFT = [];
+    function openPosManager() {
+      POS_DRAFT = POSITIONS.slice();
+      // ตำแหน่งที่มีผู้สมัครใช้อยู่ แต่ยังไม่อยู่ในรายการ -> เติมให้อัตโนมัติ
+      const extra = [...new Set(DATA.map(a => (a.pos || '').trim()).filter(Boolean))]
+        .filter(p => !POS_DRAFT.includes(p));
+      POS_DRAFT = POS_DRAFT.concat(extra);
+      renderPosList();
+      document.getElementById('pos-overlay').classList.add('show');
+    }
+    function closePosManager() { document.getElementById('pos-overlay').classList.remove('show'); }
+    function renderPosList() {
+      const box = document.getElementById('pos-list');
+      box.innerHTML = POS_DRAFT.map((p, i) => {
+        const n = posUse(p);
+        return `<div class="pos-row">
+          <span class="pos-no">${i + 1}</span>
+          <input class="pos-in" value="${esc(p)}" data-i="${i}" placeholder="ชื่อตำแหน่ง">
+          <span class="pos-cnt ${n ? 'on' : ''}">${n ? n + ' คน' : 'ยังไม่มีผู้สมัคร'}</span>
+          <div class="pos-ops">
+            <button type="button" onclick="posMove(${i},-1)" title="เลื่อนขึ้น" ${i === 0 ? 'disabled' : ''}>▲</button>
+            <button type="button" onclick="posMove(${i},1)" title="เลื่อนลง" ${i === POS_DRAFT.length - 1 ? 'disabled' : ''}>▼</button>
+            <button type="button" class="del" onclick="posDel(${i})" title="ลบ">✕</button>
+          </div>
+        </div>`;
+      }).join('') || '<div class="pos-empty">ยังไม่มีตำแหน่ง — กด “เพิ่มตำแหน่ง” ด้านล่าง</div>';
+      box.querySelectorAll('.pos-in').forEach(el => {
+        el.oninput = () => { POS_DRAFT[+el.dataset.i] = el.value; };
+      });
+      document.getElementById('pos-count').textContent = POS_DRAFT.length + ' ตำแหน่ง';
+    }
+    function posAdd() { POS_DRAFT.push(''); renderPosList();
+      const ins = document.querySelectorAll('#pos-list .pos-in'); if (ins.length) ins[ins.length - 1].focus(); }
+    function posMove(i, d) {
+      const j = i + d; if (j < 0 || j >= POS_DRAFT.length) return;
+      const t = POS_DRAFT[i]; POS_DRAFT[i] = POS_DRAFT[j]; POS_DRAFT[j] = t; renderPosList();
+    }
+    function posDel(i) {
+      const p = (POS_DRAFT[i] || '').trim(), n = p ? posUse(p) : 0;
+      if (n && !confirm(`"${p}" มีผู้สมัครใช้อยู่ ${n} คน\n\nลบออกจากรายการตัวเลือก? (ข้อมูลผู้สมัครยังอยู่ครบ แค่ไม่ขึ้นในลิสต์ให้เลือกอีก)`)) return;
+      POS_DRAFT.splice(i, 1); renderPosList();
+    }
+    async function posSave() {
+      const before = POSITIONS.slice();
+      const arr = POS_DRAFT.map(p => String(p || '').trim()).filter(Boolean);
+      const seen = {}, dup = [];
+      arr.forEach(p => { if (seen[p]) dup.push(p); seen[p] = 1; });
+      if (dup.length) { showToast('มีตำแหน่งซ้ำ: ' + [...new Set(dup)].join(', '), true); return; }
+      if (!arr.length) { showToast('ต้องมีอย่างน้อย 1 ตำแหน่ง', true); return; }
+
+      // ตรวจการเปลี่ยนชื่อ (ตำแหน่งเดิมหายไป + มีชื่อใหม่เข้ามาตำแหน่งเดียวกัน)
+      const renames = [];
+      before.forEach((old, i) => {
+        if (arr.includes(old)) return;
+        const nw = POS_DRAFT[i] ? String(POS_DRAFT[i]).trim() : '';
+        if (nw && nw !== old && !before.includes(nw) && posUse(old) > 0) renames.push([old, nw]);
+      });
+
+      const btn = document.getElementById('pos-save');
+      btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
+      const ok = await savePositions(arr);
+      if (ok && renames.length) {
+        const msg = renames.map(r => `• "${r[0]}" → "${r[1]}" (${posUse(r[0])} คน)`).join('\n');
+        if (confirm('เปลี่ยนชื่อตำแหน่งเหล่านี้ด้วยไหม?\n\n' + msg + '\n\nกด OK เพื่ออัปเดตผู้สมัครให้ใช้ชื่อใหม่')) {
+          for (const [oldP, newP] of renames) {
+            for (const a of DATA.filter(x => (x.pos || '').trim() === oldP)) {
+              await dbUpdate(a.id, { pos: newP });
+            }
+          }
+          await dbLoad();
+        }
+      }
+      btn.disabled = false; btn.textContent = 'บันทึก';
+      if (ok) { closePosManager(); renderAll(); showToast('บันทึกตำแหน่งงานเรียบร้อย ✓'); }
+    }
+
     // ═══════════════════ ช่วงเวลาสำหรับรายงาน ═══════════════════
     let repFrom = '', repTo = '';
     const isoOf = d => d.toISOString().slice(0, 10);
