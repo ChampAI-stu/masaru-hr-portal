@@ -676,6 +676,69 @@
 <link rel="stylesheet" href="masaru-cinematic.css" media="screen">
 <script src="masaru-cinematic.js" defer></script>
 <style media="print">.msr-atmosphere,.msr-mascot,.msr-login-story{display:none!important}</style>
+
+<!-- ═══ พิมพ์แดชบอร์ดรายงาน (เห็นภาพเหมือนบนจอ ไม่ใช่ตัวอักษรล้วน) ═══ -->
+<style id="dashPrintCSS">
+@media print{
+  body.print-dash *{ -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+  @page{ size:A4 portrait; margin:9mm 8mm; }
+
+  /* ปลดล็อกโครงหน้าจอ (flex + overflow:hidden) ให้ไหลลงหลายหน้าได้ */
+  body.print-dash{ display:block !important; height:auto !important; overflow:visible !important; background:#fff !important; }
+  body.print-dash #main{ display:block !important; overflow:visible !important; }
+  body.print-dash #pg-rep{ display:block !important; overflow:visible !important; }
+  body.print-dash #pg-rep .rep-wrap{ max-width:none !important; padding:0 !important; }
+  body.print-dash .dash{ zoom:.86; }
+
+  /* ซ่อนส่วนที่ไม่ต้องพิมพ์ */
+  body.print-dash #sidebar,
+  body.print-dash .pg:not(#pg-rep),
+  body.print-dash .repbar,
+  body.print-dash .dash-chips,
+  body.print-dash .modal, body.print-dash .modal-bg,
+  body.print-dash .toast, body.print-dash #login-wrap,
+  body.print-dash .msr-atmosphere, body.print-dash .msr-mascot,
+  body.print-dash .dcard .btn{ display:none !important; }
+
+  /* หัวกระดาษเฉพาะตอนพิมพ์ */
+  body.print-dash .dash-print-head{ display:flex !important; }
+
+  /* จัดกริดให้ลงกระดาษ A4 พอดี */
+  body.print-dash .kpi-grid{ grid-template-columns:repeat(3,1fr) !important; }
+  body.print-dash .dgrid.g3{ grid-template-columns:1fr 1fr !important; }
+  body.print-dash .dgrid.g3 > :last-child{ grid-column:1 / -1 !important; }
+  body.print-dash .dgrid.g2{ grid-template-columns:1fr 1fr !important; }
+
+  /* ห้ามหั่นการ์ดกลางหน้า */
+  body.print-dash .kpi,
+  body.print-dash .dcard,
+  body.print-dash .flowbar,
+  body.print-dash .dash-hero,
+  body.print-dash .dsource,
+  body.print-dash .dtable tr{ break-inside:avoid !important; page-break-inside:avoid !important; }
+
+  /* ขึ้นหน้าใหม่ก่อนบล็อกวิเคราะห์ */
+  body.print-dash .dgrid.g2{ break-before:page; page-break-before:always; }
+
+  body.print-dash .dash-hero{ box-shadow:none !important; }
+  body.print-dash .dcard{ box-shadow:none !important; border:1px solid #d8dee9 !important; }
+}
+/* หัวกระดาษ: ซ่อนบนจอ แสดงเฉพาะตอนพิมพ์ */
+.dash-print-head{ display:none; align-items:center; gap:14px; padding:0 0 12px; margin-bottom:12px;
+  border-bottom:2.5px solid #16294d; }
+.dash-print-head .dph-logo{ width:96px; height:30px; background:var(--logo) center/contain no-repeat; flex-shrink:0; }
+.dash-print-head .dph-t{ flex:1; min-width:0; }
+.dash-print-head .dph-t small{ display:block; font-size:8.5px; font-weight:800; letter-spacing:1.6px; color:#8a94a8; }
+.dash-print-head .dph-t h1{ font-size:16px; font-weight:800; color:#16294d; margin:2px 0 2px; }
+.dash-print-head .dph-p{ font-size:10px; color:#64708a; }
+.dash-print-head .dph-m{ text-align:right; font-size:9px; color:#64708a; line-height:1.5; flex-shrink:0; }
+.dash-print-head .dph-m b{ display:block; font-size:11px; color:#16294d; }
+/* ปุ่มพิมพ์ในแถบรายงาน */
+.rb-print{ display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-family:inherit;
+  font-size:12.5px; font-weight:700; padding:8px 14px; border-radius:9px;
+  border:1px solid #cdd6e6; background:#fff; color:#16294d; transition:all .12s; }
+.rb-print:hover{ background:#e7ecf5; border-color:#16294d; }
+</style>
 </head>
 
 <body>
@@ -2643,6 +2706,14 @@ setTimeout(function(){ if (!document.querySelector('.page')) paginate(); }, 2500
 
       repEnsureRange();
       document.getElementById('dash-root').innerHTML = `
+        <div class="dash-print-head">
+          <div class="dph-logo"></div>
+          <div class="dph-t"><small>RECRUITMENT PIPELINE DASHBOARD</small>
+            <h1>รายงานภาพรวมการสรรหาพนักงาน</h1>
+            <div class="dph-p">ช่วงข้อมูลรายงาน ${esc(thDate(repFrom) || '-')} ถึง ${esc(thDate(repTo) || '-')}</div></div>
+          <div class="dph-m"><b>MASARU HR</b>ออกรายงาน ${esc(new Date().toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' }))}<br>เอกสารภายใน (ความลับ)</div>
+        </div>
+
         <div class="dash-hero">
           <div class="dash-eyebrow">Recruitment Pipeline Dashboard</div>
           <h2>ภาพรวมการสรรหาพนักงาน</h2>
@@ -2665,6 +2736,7 @@ setTimeout(function(){ if (!document.querySelector('.page')) paginate(); }, 2500
             <button onclick="repSetMonth()">เดือนนี้</button>
             <button onclick="repSetQuarter()">ไตรมาสนี้</button>
           </div>
+          <button class="rb-print" onclick="printDashboard()"><i class="ti ti-printer"></i>พิมพ์แดชบอร์ด</button>
           <button class="rb-go" onclick="openPeriodReport()"><i class="ti ti-file-type-pdf"></i>สร้างรายงาน PDF</button>
         </div>
 
@@ -2737,6 +2809,18 @@ setTimeout(function(){ if (!document.querySelector('.page')) paginate(); }, 2500
         </div>`;
       updateLiveBadge();
     }
+
+    // ═══════════════════ พิมพ์แดชบอร์ด (ภาพเหมือนบนจอ) ═══════════════════
+    function printDashboard() {
+      const root = document.getElementById('dash-root');
+      if (!root || !root.innerHTML.trim()) { showToast('ยังไม่มีข้อมูลให้พิมพ์ รอโหลดสักครู่', true); return; }
+      navTo('rep');                                  // กันกรณีอยู่แท็บอื่น
+      document.body.classList.add('print-dash');
+      const done = () => document.body.classList.remove('print-dash');
+      window.addEventListener('afterprint', done, { once: true });
+      setTimeout(() => { window.print(); setTimeout(done, 1200); }, 120);  // รอ SVG/ฟอนต์วาดเสร็จ
+    }
+    window.printDashboard = printDashboard;
 
     // ป้ายสถานะการเชื่อมต่อสด (เขียว = สด / เหลือง = ใช้การรีเฟรชสำรอง)
     let rtOk = false;
