@@ -578,6 +578,7 @@ body.locked{overflow:hidden}
     <button class="btn ghost" id="toggleDone">แสดงที่เสร็จแล้ว</button>
     <button class="btn ghost" id="exportXlsxBtn">📤 ส่งออก Excel</button>
     <button class="btn" id="tmplBtn">📄 ไฟล์แม่แบบ</button>
+    <button class="btn ghost" id="dupBtn" title="ตรวจและลบรายการที่ซ้ำกัน">🧹 ตรวจรายการซ้ำ</button>
     <button class="btn gold" id="syncEmpBtn">🔄 ซิงก์พนักงานใหม่</button>
     <button class="btn gold" id="importBtn">📥 นำเข้า / กู้ข้อมูล</button>
     <button class="btn" id="addBtn">+ เพิ่มรายการ</button>
@@ -1634,6 +1635,66 @@ function syncFields(){
   else { lblName.textContent="ชื่อ / เรื่องเอกสาร"; lblDue.textContent="วันครบกำหนด"; }
 }
 
+/* ---------- กันข้อมูลซ้ำ ----------
+   เทียบด้วย "ชื่อเต็ม + ประเภท + วันอ้างอิง" โดยตัดชื่อเล่นในวงเล็บและช่องว่างออก
+   เพื่อให้ "บีบ (นางสาวธัญพิชชา สุทาทัด)" กับ "นางสาวธัญพิชชา สุทาทัด" ถือเป็นคนเดียวกัน */
+function _dupName(raw){
+  var t=String(raw==null?"":raw).trim();
+  var m=t.match(/^(.+?)\s*[\(（]\s*(.+?)\s*[\)）]\s*$/);
+  var full=m?m[2]:t;                                   // เอาชื่อเต็มในวงเล็บ
+  return full.replace(/\s+/g,"").toLowerCase();
+}
+function _dupKey(rec){
+  return _dupName(rec.name)+"|"+rec.type+"|"+(rec.ref||rec.due||"");
+}
+/* คืนรายการที่ซ้ำกับ rec (ไม่นับตัวเอง) */
+function findDupRecords(rec, excludeId){
+  var k=_dupKey(rec);
+  return (state.records||[]).filter(function(r){
+    return String(r.id)!==String(excludeId||"") && _dupKey(r)===k;
+  });
+}
+/* ตรวจทั้งระบบว่ามีรายการซ้ำไหม → คืน [{key, recs:[...]}] */
+function scanDupRecords(){
+  var by={};
+  (state.records||[]).forEach(function(r){ var k=_dupKey(r); (by[k]=by[k]||[]).push(r); });
+  return Object.keys(by).filter(function(k){ return by[k].length>1; })
+    .map(function(k){ return { key:k, recs:by[k] }; });
+}
+/* ปุ่ม "ตรวจรายการซ้ำ" — แสดงรายการซ้ำและให้เลือกลบตัวที่สร้างทีหลัง
+   ตัวที่มีสถานะ "เสร็จแล้ว" จะถูกเก็บไว้เสมอ */
+async function fixDupRecords(){
+  var dups=scanDupRecords();
+  if(!dups.length){ alert("✅ ไม่พบรายการซ้ำ"); return; }
+
+  var lines=[], toDelete=[];
+  dups.forEach(function(g){
+    // จัดลำดับ: ตัวที่มี done มาก่อน แล้วค่อยเรียงตาม id (เก่า→ใหม่) → เก็บตัวแรก
+    var ranked=g.recs.slice().sort(function(a,b){
+      var da=state.done.filter(function(m){ return m.indexOf(a.id+"-")===0; }).length;
+      var db=state.done.filter(function(m){ return m.indexOf(b.id+"-")===0; }).length;
+      if(da!==db) return db-da;
+      return String(a.id).localeCompare(String(b.id));
+    });
+    var keep=ranked[0], drop=ranked.slice(1);
+    lines.push("• "+keep.name+"  ("+typeName(keep.type)+")  ซ้ำ "+g.recs.length+" รายการ → เก็บ 1 ลบ "+drop.length);
+    drop.forEach(function(r){ toDelete.push(r); });
+  });
+
+  if(!confirm("พบรายการซ้ำ "+dups.length+" ชุด\n\n"+lines.join("\n")
+    +"\n\nจะลบทั้งหมด "+toDelete.length+" รายการ\n(ตัวที่มีสถานะ \"เสร็จแล้ว\" จะถูกเก็บไว้)\n\nยืนยันลบ?")) return;
+
+  for(var i=0;i<toDelete.length;i++){
+    var id=toDelete[i].id;
+    state.records=state.records.filter(function(x){ return x.id!==id; });
+    state.done=state.done.filter(function(m){ return m.indexOf(id+"-")!==0; });
+    try{ await sbDeleteRecord(id); }catch(e){ console.warn("ลบไม่สำเร็จ", id, e); }
+  }
+  cacheSave(); render();
+  alert("ลบรายการซ้ำแล้ว "+toDelete.length+" รายการ ✅");
+}
+window.fixDupRecords=fixDupRecords;
+
 function saveRec(){
   const id=_q("f_id").value || ("r"+Date.now());
   const type=_q("f_type").value;
@@ -1647,6 +1708,13 @@ function saveRec(){
   }else{
     rec.due=_q("f_due").value;
     if(!rec.due){ alert("กรุณาเลือกวันครบกำหนด"); return; }
+  }
+  const dups=findDupRecords(rec, id);
+  if(dups.length){
+    const d0=dups[0];
+    if(!confirm("⚠️ มีรายการนี้อยู่แล้ว\n\n"+d0.name+"  ("+typeName(d0.type)+")\nวันอ้างอิง "+thDate(d0.ref||d0.due)
+      +(d0.dept?"\nแผนก "+d0.dept:"")
+      +"\n\n[ตกลง] = เพิ่มซ้ำอีกรายการ\n[ยกเลิก] = ไม่บันทึก (แนะนำ — ไปแก้รายการเดิมแทน)")) return;
   }
   const idx=state.records.findIndex(x=>x.id===id);
   if(idx>=0) state.records[idx]=rec; else state.records.push(rec);
@@ -1843,13 +1911,25 @@ async function doSyncAdd(){
   var box=_q("syncList"); if(!box) return;
   var ids=[].slice.call(box.querySelectorAll(".sync-ck:checked")).map(function(x){ return x.dataset.id; });
   if(!ids.length){ toast("ยังไม่ได้เลือกใครเลย"); return; }
-  var btn=_q("syncAdd"); btn.disabled=true; btn.textContent="กำลังเพิ่ม...";
-  var added=0;
+  var btn=_q("syncAdd"); btn.disabled=true; btn.textContent="กำลังตรวจข้อมูลล่าสุด...";
+
+  /* ดึงรายการล่าสุดจากฐานข้อมูลก่อน — กันกรณีเครื่องนี้ถือข้อมูลเก่า
+     (สาเหตุหลักที่เคยเกิดรายการซ้ำ: อีกเครื่องเพิ่มไปแล้วแต่เครื่องนี้ยังไม่เห็น) */
+  if(_sb){
+    try{
+      var fresh=await _sb.from("hr_deadlines").select("*");
+      if(!fresh.error && fresh.data) state.records=fresh.data.map(rowToRec);
+    }catch(e){ console.warn("refresh ก่อนเพิ่มไม่สำเร็จ", e); }
+  }
+
+  btn.textContent="กำลังเพิ่ม...";
+  var added=0, dup=0, dupNames=[];
   for(var i=0;i<ids.length;i++){
     var c=_syncCands.filter(function(x){ return String(x.id)===String(ids[i]); })[0];
     if(!c) continue;
     var rec={ id:"r"+Date.now()+Math.floor(Math.random()*10000), type:"probation",
               name:c.label, dept:c.dept, ref:c.ref, note:"" };
+    if(findDupRecords(rec, null).length){ dup++; dupNames.push(c.label); continue; }   // มีอยู่แล้ว → ข้าม
     state.records.push(rec);
     try{ await sbUpsertRecord(rec); }catch(e){ console.warn("sync upsert", e); }
     added++;
@@ -1857,7 +1937,8 @@ async function doSyncAdd(){
   cacheSave(); render();
   btn.disabled=false; btn.textContent="เพิ่มรายการที่เลือก";
   _q("syncOverlay").classList.remove("show");
-  toast("เพิ่มรายการทดลองงาน "+added+" คนเรียบร้อย ✓");
+  toast("เพิ่มรายการทดลองงาน "+added+" คน"+(dup?" · ข้ามที่มีอยู่แล้ว "+dup+" คน":"")+" ✓");
+  if(dup) console.log("ข้ามเพราะมีอยู่แล้ว:", dupNames.join(", "));
 }
 
 async function exportExcel(){
@@ -2091,6 +2172,7 @@ async function init(){
   await sbLoad();  // then fetch fresh from Supabase
 
   _q("addBtn").onclick=()=>openModal(null);
+  var _db=_q("dupBtn"); if(_db) _db.onclick=fixDupRecords;
   var _sb1=_q("syncEmpBtn");
   if(_sb1) _sb1.onclick=async function(){
     if(!EMPLOYEES.length) await loadEmployees();
@@ -2222,6 +2304,8 @@ function ensureRealRecord(rid){
   if(!e || !e.start_date) return null;
   rec = { id:"r"+Date.now(), type:"probation", name:(e.full_name||"").trim(),
           dept:e.group_name||"", note:"", ref:String(e.start_date).slice(0,10) };
+  var already=findDupRecords(rec, null);
+  if(already.length) return already[0];              // มีรายการจริงอยู่แล้ว ใช้ตัวเดิม
   state.records.push(rec);
   /* ย้ายสถานะ "ผ่าน" ของงวดเดิม (auto) มาที่ id ใหม่ */
   [30,60,90].forEach(function(n){
