@@ -1150,6 +1150,35 @@
 
     function statusOf(a) { return a.status || 'new'; }
 
+    // ── แหล่งความจริงเดียวของสถานะ pass/fail (ใช้ทั้งการ์ด รายงาน และแดชบอร์ด) ──
+    // แยก 2 เรื่องที่เคยปนกัน:
+    //   interviewResult = ผลสัมภาษณ์เท่านั้น (pass/fail/ยังไม่มีผล)
+    //   outcomeOf       = ผลสรุปปลายทางของเคส (รับ/ไม่ผ่าน/ยกเลิก/ยังดำเนินการ)
+    function interviewResult(a) {
+      const r = a.result === 'pass' ? 'pass' : a.result === 'fail' ? 'fail' : '';
+      if (!r) return { code: '', label: '' };
+      // เคยสัมภาษณ์ผ่าน แต่ปลายทางไม่ได้จ้าง → บอกให้ชัด ไม่ให้อ่านแล้วขัดกับสรุปผล
+      const S = statusOf(a);
+      if (r === 'pass' && (S === 'rejected' || S === 'cancelled'))
+        return { code: 'pass', label: 'ผ่าน (ปิดเคสภายหลัง)' };
+      return { code: r, label: r === 'pass' ? 'ผ่าน' : 'ไม่ผ่าน' };
+    }
+    function outcomeOf(a) {
+      const S = statusOf(a), reason = (a.closeReason || '').trim();
+      if (S === 'hired')   return { code: 'hired', label: 'รับเข้าทำงาน',
+                                    sub: 'ผู้สมัครตอบรับ Offer' + (a.respondedAt ? ' · ' + a.respondedAt : '') };
+      if (S === 'cancelled') return { code: 'cancelled', label: 'ยกเลิก',
+                                    sub: reason + (a.closedAt ? ' · เมื่อ ' + a.closedAt : '') };
+      if (S === 'rejected') {
+        // ป้ายต้องสอดคล้องกับผลสัมภาษณ์จริง ไม่เหมาเรียก "ไม่ผ่าน" ทุกกรณี
+        const label = a.result === 'fail' ? 'ไม่ผ่านการสัมภาษณ์'
+                    : a.result === 'pass' ? 'ผ่านสัมภาษณ์ แต่ไม่ได้รับเลือก'
+                    : 'ไม่ผ่านการคัดเลือก';
+        return { code: 'rejected', label: label, sub: reason + (a.closedAt ? ' · เมื่อ ' + a.closedAt : '') };
+      }
+      return { code: 'active', label: '', sub: '' };
+    }
+
     function renderList() {
       const q = (document.getElementById('search')?.value || '').trim().toLowerCase();
       let list = DATA.filter(a => a.name.toLowerCase().includes(q) || a.pos.toLowerCase().includes(q));
@@ -1185,7 +1214,8 @@
     function stepperHtml(a) {
       const st = statusOf(a);
       if (st === 'rejected') {
-        return `<div class="banner banner-err"><i class="ti ti-circle-x"></i><div><b>ไม่ผ่าน</b>${a.closeReason ? ' — ' + esc(a.closeReason) : ''}${a.closedAt ? ` · เมื่อ ${esc(a.closedAt)}` : ''}</div></div>`;
+        const _o = outcomeOf(a);
+        return `<div class="banner banner-err"><i class="ti ti-circle-x"></i><div><b>${esc(_o.label)}</b>${_o.sub ? ' — ' + esc(_o.sub) : ''}</div></div>`;
       }
       if (st === 'cancelled') {
         return `<div class="banner banner-cancel"><i class="ti ti-user-x"></i><div><b>ยกเลิก</b>${a.closeReason ? ' — ' + esc(a.closeReason) : ''}${a.closedAt ? ` · เมื่อ ${esc(a.closedAt)}` : ''}${a.prevStatus ? ` · สถานะก่อนยกเลิก: <b>${stMeta(a.prevStatus).label}</b>` : ''}</div></div>`;
@@ -1262,7 +1292,7 @@
               ${isExec ? '' : `<button class="icon-btn" style="text-transform:none;letter-spacing:0" onclick="editInterview('${a.id}')"><i class="ti ti-pencil"></i>แก้ไขวัน/เวลา</button>`}
             </div>
             <div class="note-box">📅 ${esc(thDate(a.intDate))} เวลา ${esc(a.intTime)} น.${a.intBy ? ' · ผู้สัมภาษณ์: ' + esc(a.intBy) : ''} ${modeBadge(a.intMode)}${a.intMode === 'online' && a.intLink ? ` · <a href="${esc(a.intLink)}" target="_blank" rel="noopener" class="mlink"><i class="ti ti-external-link"></i>เข้าห้องสัมภาษณ์</a>` : ''}</div>
-            ${a.result ? `<div class="note-box" style="margin-top:8px">${a.result === 'pass' ? '✅ ผ่านการสัมภาษณ์' : '❌ ไม่ผ่าน'}${a.resultNote ? ' — ' + esc(a.resultNote) : ''}${a.agreedSalary ? `<br>💰 เงินเดือนที่ตกลง: <b>${money(a.agreedSalary)} บาท</b>` : ''}</div>` : ''}</div>`;
+            ${a.result ? `<div class="note-box" style="margin-top:8px">${interviewResult(a).code === 'pass' ? '✅ ' : '❌ '}${esc(interviewResult(a).label)}${a.resultNote ? ' — ' + esc(a.resultNote) : ''}${a.agreedSalary ? `<br>💰 เงินเดือนที่ตกลง: <b>${money(a.agreedSalary)} บาท</b>` : ''}</div>` : ''}</div>`;
         }
       }
 
@@ -1566,6 +1596,8 @@
       const _a = getA(id);
       const fields = { status: 'rejected', closeReason: reason, closedAt: todayTh(),
                        prevStatus: (_a && statusOf(_a) !== 'rejected') ? statusOf(_a) : '' };
+      // ตัดออกตอนคัดกรอง (ยังไม่เคยสัมภาษณ์) → ต้องไม่มีผลสัมภาษณ์ค้างอยู่
+      if (_a && !_a.intDate && !_a.result) fields.result = '';
       if (note) fields.hrNote = note;
       if (await dbUpdate(id, fields)) { showToast('บันทึกว่าไม่ผ่านแล้ว'); await refresh(); }
     }
@@ -1608,6 +1640,9 @@
           { title: 'ย้อนกลับสถานะ', okText: 'ย้อนกลับ' })) return;
       const fields = { status: prev, closeReason: '', closedAt: '', prevStatus: '' };
       if (cur !== 'hired') { fields.offerResult = ''; fields.respondedAt = ''; }
+      // ย้อนกลับมาก่อนขั้น Offer = ผลสัมภาษณ์เดิมใช้ไม่ได้แล้ว ต้องล้าง
+      // ไม่งั้นการ์ดจะขึ้น "ไม่ผ่าน" ทั้งที่สถานะกลับมาเป็น "กำลังสัมภาษณ์"
+      if (FLOW.indexOf(prev) <= FLOW.indexOf('interview')) { fields.result = ''; fields.resultNote = ''; }
       if (await dbUpdate(id, fields)) { showToast('ย้อนกลับสถานะแล้ว'); await refresh(); }
     }
     async function doDelete(id) {
@@ -1693,7 +1728,8 @@
       </section>` : '';
 
       const screening = F('ผู้ตรวจ', esc(a.hrBy)) + FULL('ความเห็นคัดกรอง', esc(a.hrNote));
-      const resTag = a.result === 'pass' ? '<span class="tag ok">ผ่าน</span>' : a.result === 'fail' ? '<span class="tag no">ไม่ผ่าน</span>' : '';
+      const _ir = interviewResult(a);
+      const resTag = _ir.code ? `<span class="tag ${_ir.code === 'pass' ? 'ok' : 'no'}">${esc(_ir.label)}</span>` : '';
       const interview = F('วัน/เวลาสัมภาษณ์', a.intDate ? esc(thDate(a.intDate)) + ' · ' + esc(a.intTime) + ' น.' : '') +
         F('รูปแบบ', a.intDate ? modeBadge(a.intMode) : '') +
         (a.intMode === 'online' && a.intLink ? F('ลิงก์ประชุม', `<a href="${esc(a.intLink)}" target="_blank" rel="noopener" class="mlink">${esc(a.intLink)}</a>`) : '') +
@@ -1713,13 +1749,11 @@
       const progress = FLOW.map((key, i) => `<div class="step ${i < progressIndex ? 'done' : ''} ${i === progressIndex ? 'current' : ''}">
         <div class="step-dot">${i < progressIndex ? '✓' : (i + 1)}</div><div class="step-label">${progressLabels[key]}</div>
       </div>`).join('');
-      const outcome = S === 'hired'
-        ? `<div class="outcome oc-ok"><div class="oc-ic">✓</div><div><div class="oc-t">รับเข้าทำงาน</div><div class="oc-s">ผู้สมัครตอบรับ Offer${a.respondedAt ? ' · ' + esc(a.respondedAt) : ''}</div></div></div>`
-        : S === 'rejected'
-          ? `<div class="outcome oc-no"><div class="oc-ic">✕</div><div><div class="oc-t">ไม่ผ่าน</div><div class="oc-s">${esc(a.closeReason || '')}${a.closedAt ? ' · เมื่อ ' + esc(a.closedAt) : ''}</div></div></div>`
-          : S === 'cancelled'
-            ? `<div class="outcome oc-cancel"><div class="oc-ic">–</div><div><div class="oc-t">ยกเลิก</div><div class="oc-s">${esc(a.closeReason || '')}${a.closedAt ? ' · เมื่อ ' + esc(a.closedAt) : ''}</div></div></div>`
-            : '';
+      const _oc = outcomeOf(a);
+      const _ocStyle = { hired: ['oc-ok', '✓'], rejected: ['oc-no', '✕'], cancelled: ['oc-cancel', '–'] }[_oc.code];
+      const outcome = _ocStyle
+        ? `<div class="outcome ${_ocStyle[0]}"><div class="oc-ic">${_ocStyle[1]}</div><div><div class="oc-t">${esc(_oc.label)}</div><div class="oc-s">${esc(_oc.sub)}</div></div></div>`
+        : '';
 
       const resumePage = resumeImgs.length
         ? resumeImgs.map(src => `<div class="resume-page"><div class="rp-title">เรซูเม่ · ${esc(a.name)}</div><img class="rp-img" src="${src}"></div>`).join('')
