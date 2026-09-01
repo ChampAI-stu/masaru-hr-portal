@@ -177,6 +177,17 @@
   .picker .pitem .pd{color:var(--faint);font-size:12px;margin-left:auto}
   .add-join{margin-top:16px;border:1px solid var(--line);border-radius:14px;padding:16px;background:#fafbfd}
   .add-join .aj-head{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--green-dark);margin-bottom:12px}
+  .bulkbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:0 0 12px;padding:9px 13px;
+    background:#FBF0D9;border:1px solid #EBD9AE;border-radius:9px;font-size:13px;color:#7A5A12}
+  .bulkbar.hide{display:none}
+  .res-sel{font-family:inherit;font-size:12.5px;font-weight:700;padding:4px 7px;border-radius:7px;
+    border:1px solid #D5DBE6;background:#fff;cursor:pointer;min-width:104px}
+  .res-sel.ok{color:#166534;background:#DCFCE7;border-color:#BBE9C8}
+  .res-sel.bad{color:#9B1C1C;background:#FDE4E4;border-color:#F3C0C0}
+  .res-sel.warn{color:#8A5A12;background:#FBF0D9;border-color:#EBD9AE}
+  .res-sel:focus{outline:2px solid #2c67ad;outline-offset:1px}
+  .score-in{width:70px;font-family:inherit;font-size:12.5px;padding:4px 6px;border-radius:7px;
+    border:1px solid #D5DBE6;text-align:right}
   .picker .pitem.joined{opacity:.5}
   .picker .pitem.joined .pd{color:var(--ok);font-weight:700}
   .picker .pfoot{padding:8px 11px;border-top:1px solid var(--line-soft);font-size:12.5px;color:var(--muted);display:flex;gap:10px;align-items:center;background:#fafbfd}
@@ -457,9 +468,15 @@
         <div class="fld" style="grid-column:1/-1"><label>หมายเหตุ</label><input id="cmNote"></div>
       </div>
 
-      <div class="sec-title"><i class="ti ti-users-group"></i> ผู้เข้าร่วมอบรม <span class="badge grey" id="cmJoinCount">0 คน</span></div>
+      <div class="sec-title"><i class="ti ti-users-group"></i> ผู้เข้าร่วมอบรม <span class="badge grey" id="cmJoinCount">0 คน</span>
+        <span class="hint" style="margin:0 0 0 auto;font-size:12.5px">เปลี่ยนผลได้ในตาราง — บันทึกทันที</span></div>
+      <div class="bulkbar" id="cmBulkBar">
+        <i class="ti ti-wand"></i> ตั้งผลให้ <b id="cmPendCount">0</b> คนที่ยัง “รอประเมิน”:
+        <button class="btn sm ok" data-bulk="ผ่าน"><i class="ti ti-check"></i> ผ่านทั้งหมด</button>
+        <button class="btn sm danger" data-bulk="ไม่ผ่าน"><i class="ti ti-x"></i> ไม่ผ่านทั้งหมด</button>
+      </div>
       <div class="tbl-wrap">
-        <table><thead><tr><th class="ctr">ที่</th><th>ชื่อ-นามสกุล</th><th>แผนก</th><th class="ctr">วันที่</th><th class="ctr">ผล</th><th class="num">ชม.</th><th class="ctr">ลบ</th></tr></thead>
+        <table><thead><tr><th class="ctr">ที่</th><th>ชื่อ-นามสกุล</th><th>แผนก</th><th class="ctr">วันที่</th><th class="ctr">ผลการอบรม</th><th class="num">คะแนน</th><th class="num">ชม.</th><th class="ctr">ลบ</th></tr></thead>
         <tbody id="cmJoinBody"></tbody></table>
       </div>
       <div class="sec-title" style="margin-top:20px"><i class="ti ti-file-certificate"></i> ผลสอบที่เชื่อมกับหลักสูตรนี้ <span class="badge grey" id="cmExamCount">—</span></div>
@@ -1043,18 +1060,82 @@ $('courseAdd').addEventListener('click', async function(){
   if(c) toast('เพิ่มในแผนปี '+be(c.year)+' แล้ว — กรอกรายละเอียดในตาราง');
 });
 
+var RESULT_OPTIONS = ['ผ่าน','รอประเมิน','ไม่ผ่าน'];
+function resultClass(v){ return v==='ผ่าน'?'ok':v==='ไม่ผ่าน'?'bad':'warn'; }
+function resultSelect(r){
+  var cur = r.result || 'รอประเมิน';
+  return '<select class="res-sel '+resultClass(cur)+'" data-res="'+esc(r.id)+'">'
+    + RESULT_OPTIONS.map(function(o){
+        return '<option value="'+o+'"'+(o===cur?' selected':'')+'>'+o+'</option>'; }).join('')
+    + '</select>';
+}
 function renderCmJoin(){
   var rs = RECORDS.filter(function(r){ return String(r.course_id)===String(curCourseId); })
                   .sort(function(a,b){ return String(a.employee_name||'').localeCompare(String(b.employee_name||''),'th'); });
   $('cmJoinCount').textContent = rs.length+' คน';
+
+  var pending = rs.filter(function(r){ return (r.result||'รอประเมิน')==='รอประเมิน'; }).length;
+  $('cmPendCount').textContent = pending;
+  $('cmBulkBar').classList.toggle('hide', pending===0);
+
   $('cmJoinBody').innerHTML = rs.length ? rs.map(function(r,i){
     return '<tr><td class="ctr">'+(i+1)+'</td><td>'+esc(r.employee_name||'-')+'</td><td>'+esc(r.department||'-')+'</td>'
-      +'<td class="ctr">'+thDate(r.train_date)+'</td><td class="ctr">'+resultBadge(r.result)+'</td><td class="num">'+fmt(r.hours)+'</td>'
+      +'<td class="ctr">'+thDate(r.train_date)+'</td>'
+      +'<td class="ctr">'+resultSelect(r)+'</td>'
+      +'<td class="num"><input class="score-in" type="number" min="0" step="1" placeholder="-" '
+        +'value="'+(r.score==null?'':esc(String(r.score)))+'" data-score="'+esc(r.id)+'"></td>'
+      +'<td class="num">'+fmt(r.hours)+'</td>'
       +'<td class="ctr"><button class="btn sm danger" data-rec="'+esc(r.id)+'"><i class="ti ti-trash"></i></button></td></tr>';
-  }).join('') : '<tr><td colspan="7"><div class="empty" style="border:none">ยังไม่มีผู้เข้าร่วมอบรม</div></td></tr>';
+  }).join('') : '<tr><td colspan="8"><div class="empty" style="border:none">ยังไม่มีผู้เข้าร่วมอบรม</div></td></tr>';
+
   $('cmJoinBody').querySelectorAll('button[data-rec]').forEach(function(b){
     b.addEventListener('click', function(){ deleteRecord(b.dataset.rec, function(){ openCourse(curCourseId); }); });
   });
+  // เปลี่ยนผลการอบรม → บันทึกทันที
+  $('cmJoinBody').querySelectorAll('select[data-res]').forEach(function(s){
+    s.addEventListener('change', function(){
+      s.className = 'res-sel '+resultClass(s.value);
+      updateRecordFields(s.dataset.res, { result: s.value });
+    });
+  });
+  // เปลี่ยนคะแนน → บันทึกเมื่อออกจากช่อง
+  $('cmJoinBody').querySelectorAll('input[data-score]').forEach(function(inp){
+    inp.addEventListener('change', function(){
+      var v = inp.value.trim();
+      updateRecordFields(inp.dataset.score, { score: v==='' ? null : Number(v) });
+    });
+  });
+}
+
+/* บันทึกการแก้ไขประวัติการอบรมลงฐานข้อมูล (ใช้ร่วมกันทุกจุด) */
+async function updateRecordFields(id, fields, silent){
+  var rec = RECORDS.filter(function(x){ return String(x.id)===String(id); })[0];
+  var before = rec ? JSON.parse(JSON.stringify(rec)) : null;
+  if(rec) Object.keys(fields).forEach(function(k){ rec[k] = fields[k]; });   // อัปเดตจอทันที
+  try{
+    var r = await sb.from('training_records').update(fields).eq('id', id);
+    if(r.error) throw r.error;
+    if(!silent) toast('บันทึกแล้ว ✓');
+    renderHist(); renderEmp(); renderPlan(); renderCourses();
+    return true;
+  }catch(e){
+    if(before && rec) Object.keys(before).forEach(function(k){ rec[k] = before[k]; });  // ย้อนกลับถ้าพลาด
+    toast('บันทึกไม่สำเร็จ: '+errText(e), true);
+    renderCmJoin();
+    return false;
+  }
+}
+
+/* ตั้งผลหมู่ให้คนที่ยัง "รอประเมิน" */
+async function bulkSetResult(value){
+  var rs = RECORDS.filter(function(r){ return String(r.course_id)===String(curCourseId)
+                                          && (r.result||'รอประเมิน')==='รอประเมิน'; });
+  if(!rs.length){ toast('ไม่มีคนที่รอประเมิน'); return; }
+  if(!confirm('ตั้งผลเป็น "'+value+'" ให้ '+rs.length+' คนที่ยังรอประเมิน?\n\n(คนที่มีผลอยู่แล้วจะไม่ถูกแก้)')) return;
+  var ok = 0;
+  for(var i=0;i<rs.length;i++){ if(await updateRecordFields(rs[i].id, { result: value }, true)) ok++; }
+  renderCmJoin();
+  toast('อัปเดตผลการอบรม '+ok+' คนแล้ว ✓');
 }
 function openCourse(id){
   var c = COURSES.filter(function(x){ return String(x.id)===String(id); })[0];
@@ -1232,6 +1313,9 @@ function stopCoursePoll(){ if(_coursePollT){ clearInterval(_coursePollT); _cours
 $('cmClose').addEventListener('click', function(){ stopCoursePoll(); $('courseOverlay').classList.add('hide'); });
 $('cmCancel').addEventListener('click', function(){ stopCoursePoll(); $('courseOverlay').classList.add('hide'); });
 $('courseOverlay').addEventListener('click', function(ev){ if(ev.target===$('courseOverlay')){ stopCoursePoll(); $('courseOverlay').classList.add('hide'); } });
+$('cmBulkBar').querySelectorAll('button[data-bulk]').forEach(function(b){
+  b.addEventListener('click', function(){ bulkSetResult(b.dataset.bulk); });
+});
 $('cmDelete').addEventListener('click', function(){ if(curCourseId) deleteCourse(curCourseId); });
 $('cmSave').addEventListener('click', async function(){
   if(!curCourseId) return;
