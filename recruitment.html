@@ -2864,6 +2864,63 @@ setTimeout(function(){ if (!document.querySelector('.page')) paginate(); }, 2500
       const posItems    = topItems(groupBy(newOnes, a => a.pos), 6);
       const reasonItems = topItems(groupBy(closedInP, a => a.closeReason || a.resultNote), 6);
 
+      // ───── โดนัท (เหมือนบนหน้าจอ) ─────
+      const withColor = items => items.map((x, i) => ({ l: x.l, v: x.v, c: D_PAL[i % D_PAL.length] }));
+      const srcDonut  = withColor(srcItems);
+      const posDonut  = withColor(posItems);
+      const stItems   = [
+        { l: 'ยังดำเนินการอยู่', v: newOnes.filter(a => !['hired','rejected','cancelled'].includes(statusOf(a))).length, c: '#2c67ad' },
+        { l: 'รับเข้าทำงาน',     v: newOnes.filter(a => statusOf(a) === 'hired').length,     c: '#17845f' },
+        { l: 'ไม่ผ่าน',          v: newOnes.filter(a => statusOf(a) === 'rejected').length,  c: '#c1443f' },
+        { l: 'ยกเลิก',           v: newOnes.filter(a => statusOf(a) === 'cancelled').length, c: '#7a8899' },
+      ].filter(x => x.v > 0);
+      const donutBox = (items, size) => items.length
+        ? `<div class="dnwrap"><div class="dnc">${donutSvg(items, size || 128)}</div><div class="dnl">${legend(items)}</div></div>`
+        : '<div class="nodata">ไม่มีข้อมูลในช่วงนี้</div>';
+
+      // ───── กิจกรรมที่ HR ทำจริงในช่วงนี้ ─────
+      const intOnline  = intInP.filter(a => a.intMode === 'online').length;
+      const intOnsite  = intInP.length - intOnline;
+      const passInP    = intInP.filter(a => a.result === 'pass').length;
+      const failInP    = intInP.filter(a => a.result === 'fail').length;
+      const waitInP    = intInP.length - passInP - failInP;
+      const acceptInP  = DATA.filter(a => a.offerResult === 'accepted' && inRange(a.respondedAt, f, t)).length;
+      const declineInP = DATA.filter(a => a.offerResult === 'rejected'  && inRange(a.respondedAt, f, t)).length;
+      const rejInP     = closedInP.filter(a => statusOf(a) === 'rejected').length;
+      const canInP     = closedInP.length - rejInP;
+      const ACT = [
+        { l: 'คัดกรองใบสมัคร',      v: screenInP.length, s: `จากผู้สมัครใหม่ ${newOnes.length} คน` },
+        { l: 'จัดสัมภาษณ์',         v: intInP.length,    s: `ออนไซต์ ${intOnsite} · ออนไลน์ ${intOnline}` },
+        { l: 'บันทึกผลสัมภาษณ์',    v: passInP + failInP, s: `ผ่าน ${passInP} · ไม่ผ่าน ${failInP} · รอผล ${waitInP}` },
+        { l: 'ส่ง Offer',           v: offerInP.length,  s: `ตอบรับ ${acceptInP} · ปฏิเสธ ${declineInP}` },
+        { l: 'ปิดเคส',             v: closedInP.length, s: `ไม่ผ่าน ${rejInP} · ยกเลิก ${canInP}` },
+        { l: 'รวมกิจกรรมทั้งหมด',   v: screenInP.length + intInP.length + offerInP.length + closedInP.length,
+          s: `เฉลี่ย ${((screenInP.length + intInP.length + offerInP.length + closedInP.length) / dayCount).toFixed(1)} ครั้ง/วัน` },
+      ];
+      const actHtml = `<div class="actgrid">${ACT.map(x => `<div class="act"><div class="av">${x.v}</div>
+        <div class="al">${esc(x.l)}</div><div class="as">${esc(x.s)}</div></div>`).join('')}</div>`;
+
+      // ───── ผู้สัมภาษณ์ที่ทำงานมากสุดในช่วงนี้ ─────
+      const byInterviewer = groupBy(intInP, a => a.intBy);
+      const ivRows = topItems(byInterviewer, 8).map(x => {
+        const mine = intInP.filter(a => ((a.intBy || '').trim() || 'ไม่ระบุ') === x.l);
+        const p = mine.filter(a => a.result === 'pass').length;
+        const fl = mine.filter(a => a.result === 'fail').length;
+        return `<tr><td>${esc(x.l)}</td><td class="c">${x.v}</td><td class="c">${p}</td><td class="c">${fl}</td>
+          <td class="c">${mine.length ? pct(p, p + fl || 1) + '%' : '—'}</td></tr>`;
+      }).join('') || '<tr><td colspan="5" class="none">ไม่มีข้อมูลในช่วงนี้</td></tr>';
+
+      // ───── แนวโน้มผู้สมัครใหม่รายสัปดาห์ ─────
+      const wkN = Math.min(8, Math.max(2, Math.ceil(dayCount / 7)));
+      const wkSize = Math.ceil(dayCount / wkN);
+      const trendPts = [];
+      for (let i = 0; i < wkN; i++) {
+        const s0 = new Date(Date.parse(f) + i * wkSize * 86400000);
+        const s1 = new Date(Math.min(Date.parse(f) + ((i + 1) * wkSize - 1) * 86400000, Date.parse(t)));
+        const a0 = isoOf(s0), a1 = isoOf(s1);
+        trendPts.push({ l: thDate(a0).replace(/ \d{4}$/, ''), v: DATA.filter(a => inRange(repAppDate(a), a0, a1)).length });
+      }
+
       // ───── ตารางสรุปตามตำแหน่ง ─────
       const pkey = a => (a.pos || '').trim() || 'ไม่ระบุ';
       const allPos = {};
@@ -2950,6 +3007,20 @@ body{background:#e9edf3;font-family:'IBM Plex Sans Thai',sans-serif;color:#16233
 .fnnote{font-size:9.5px;color:#8a94a6;margin-top:6px;text-align:right}
 
 .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.dnwrap{display:flex;align-items:center;gap:14px}
+.dnc{flex-shrink:0}
+.dnl{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+.dl{display:flex;align-items:center;gap:7px;font-size:10.5px;color:#46536b}
+.dl i{width:9px;height:9px;border-radius:3px;flex-shrink:0;display:inline-block}
+.dl span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dl b{margin-left:auto;color:#16233f;font-weight:700;white-space:nowrap}
+.actgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.act{border:1px solid #e2e7ef;border-radius:10px;padding:10px 12px;background:#fbfcfe}
+.act .av{font-size:23px;font-weight:800;color:#16294d;line-height:1.15}
+.act .al{font-size:11px;font-weight:700;color:#43526b;margin-top:1px}
+.act .as{font-size:9.5px;color:#8a94a6;margin-top:2px}
+.empty-mini{font-size:11px;color:#9aa4b5;font-style:italic;padding:12px 0;text-align:center}
+.chartbox{padding:4px 0 0}
 .shrow{display:grid;grid-template-columns:1fr 92px 56px;align-items:center;gap:8px;margin-bottom:6px}
 .shl{font-size:10.5px;color:#43526b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .shbw{background:#f1f4f9;border-radius:5px;height:12px;overflow:hidden}
@@ -2985,28 +3056,39 @@ td.none{text-align:center;color:#9aa4b5;padding:14px;font-style:italic}
 <div id="flow">
   <div class="kpis">${KPI.map(k => `<div class="kpi" style="--c:${k.c}"><div class="l">${k.l}</div><div class="v">${k.v}</div><div class="s">${esc(k.s)}</div></div>`).join('')}</div>
 
-  ${SEC('01', 'เส้นทางผู้สมัคร (Funnel)', 'ตัวเลขขวาสุด = สัดส่วนที่ผ่านมาจากด่านก่อนหน้า',
+  ${SEC('01', 'กิจกรรมที่ดำเนินการในช่วงนี้', `รวม ${dayCount} วัน — นับเฉพาะงานที่เกิดขึ้นจริงในช่วงเวลาที่เลือก`, actHtml)}
+
+  ${SEC('02', 'เส้นทางผู้สมัคร (Funnel)', 'ตัวเลขขวาสุด = สัดส่วนที่ผ่านมาจากด่านก่อนหน้า',
     fnHtml + `<div class="fnnote">อัตราการรับเข้าโดยรวม ${pct(hiredInP.length, newOnes.length)}% ของผู้สมัครใหม่ในช่วงนี้</div>`)}
 
   <div class="two">
-    ${SEC('02', 'ช่องทางที่มาของผู้สมัคร', `จาก ${newOnes.length} คน`, shareHtml(srcItems, newOnes.length))}
-    ${SEC('03', 'ตำแหน่งที่มีผู้สมัครมากที่สุด', `จาก ${newOnes.length} คน`, shareHtml(posItems, newOnes.length))}
+    ${SEC('03', 'ช่องทางที่มาของผู้สมัคร', `จาก ${newOnes.length} คน`, donutBox(srcDonut))}
+    ${SEC('04', 'สถานะปัจจุบันของผู้สมัครในช่วงนี้', `จาก ${newOnes.length} คน`, donutBox(stItems))}
   </div>
 
-  ${SEC('04', 'สรุปตามตำแหน่งงาน', 'เรียงตามจำนวนที่รับเข้าได้',
+  <div class="two">
+    ${SEC('05', 'ตำแหน่งที่มีผู้สมัครมากที่สุด', `จาก ${newOnes.length} คน`, donutBox(posDonut))}
+    ${SEC('06', 'เหตุผลที่ไม่ผ่าน / ยกเลิก', `จาก ${closedInP.length} คนที่ปิดเคส`, donutBox(withColor(reasonItems)))}
+  </div>
+
+  ${SEC('07', 'แนวโน้มผู้สมัครใหม่', 'แบ่งช่วงเท่า ๆ กันตลอดระยะเวลาที่เลือก',
+    `<div class="chartbox">${lineSvg(trendPts, 700, 120)}</div>`)}
+
+  ${SEC('08', 'ผลงานผู้สัมภาษณ์', 'จำนวนที่สัมภาษณ์และผลการประเมินในช่วงนี้',
+    TB('<th>ผู้สัมภาษณ์</th><th style="text-align:center;width:76px">สัมภาษณ์</th><th style="text-align:center;width:60px">ผ่าน</th><th style="text-align:center;width:66px">ไม่ผ่าน</th><th style="text-align:center;width:80px">อัตราผ่าน</th>', ivRows))}
+
+  ${SEC('09', 'สรุปตามตำแหน่งงาน', 'เรียงตามจำนวนที่รับเข้าได้',
     TB('<th>ตำแหน่ง</th><th class="c" style="text-align:center;width:74px">สมัครใหม่</th><th style="text-align:center;width:74px">สัมภาษณ์</th><th style="text-align:center;width:66px">รับเข้า</th><th style="text-align:center;width:80px">อัตรารับเข้า</th>', posRows))}
 
-  ${SEC('05', 'เหตุผลที่ไม่ผ่าน / ยกเลิก', `จาก ${closedInP.length} คนที่ปิดเคสในช่วงนี้`, shareHtml(reasonItems, closedInP.length))}
-
-  ${SEC('06', `รับเข้าทำงานในช่วงนี้ (${hiredInP.length} คน)`, 'ผู้ที่ตอบรับข้อเสนอแล้ว',
+  ${SEC('10', `รับเข้าทำงานในช่วงนี้ (${hiredInP.length} คน)`, 'ผู้ที่ตอบรับข้อเสนอแล้ว',
     TB('<th style="width:26px;text-align:center">#</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th style="width:78px">วันเริ่มงาน</th><th style="width:88px">เงินเดือน</th><th style="width:82px">ประเภทจ้าง</th><th style="width:76px">ช่องทาง</th>',
       rows([...hiredInP].sort(byD('offerStart')), [a => thD(a.offerStart), a => money2(a.offerSalary), a => esc(a.offerType || '-'), a => esc(a.src || '-')], 7)))}
 
-  ${SEC('07', `ผู้สมัครใหม่ในช่วงนี้ (${newOnes.length} คน)`, 'เรียงตามวันที่สมัคร',
+  ${SEC('11', `ผู้สมัครใหม่ในช่วงนี้ (${newOnes.length} คน)`, 'เรียงตามวันที่สมัคร',
     TB('<th style="width:26px;text-align:center">#</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th style="width:74px">วันที่สมัคร</th><th style="width:84px">ช่องทาง</th><th style="width:86px">เบอร์โทร</th><th style="width:86px">สถานะปัจจุบัน</th>',
       rows([...newOnes].sort(byD('date')), [a => thD(repAppDate(a)), a => esc(a.src || '-'), a => esc(a.phone || '-'), a => badge(a)], 7)))}
 
-  ${SEC('08', `ไม่ผ่าน / ยกเลิก ในช่วงนี้ (${closedInP.length} คน)`, 'พร้อมเหตุผลปิดเคส',
+  ${SEC('12', `ไม่ผ่าน / ยกเลิก ในช่วงนี้ (${closedInP.length} คน)`, 'พร้อมเหตุผลปิดเคส',
     TB('<th style="width:26px;text-align:center">#</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th style="width:78px">วันที่ปิดเคส</th><th style="width:84px">สถานะ</th><th>เหตุผล</th>',
       rows([...closedInP].sort(byD('closedAt')), [a => thD(a.closedAt || repAppDate(a)), a => badge(a), a => esc(a.closeReason || a.resultNote || '-')], 6)))}
 
