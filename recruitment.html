@@ -2419,68 +2419,152 @@ td.none{text-align:center;color:#9aa4b5;padding:14px;font-style:italic}
 var HEAD_HTML = ${JSON.stringify(`<div class="hd">${logoSrc ? `<img src="${logoSrc}" alt="">` : ''}<small>RECRUITMENT PERIOD REPORT</small><h1>รายงานสรุปการสรรหาพนักงาน</h1><div class="pr">ช่วงวันที่ ${thD(f)} ถึง ${thD(t)} · รวม ${dayCount} วัน</div><div class="meta"><b>MASARU HR</b>ออกรายงาน ${now}<br>เอกสารภายใน (ความลับ)</div></div>`)};
 var MINI_HTML = ${JSON.stringify(`<div class="mini"><b>รายงานสรุปการสรรหาพนักงาน</b><span>${thD(f)} - ${thD(t)} · MASARU HR</span></div>`)};
 
-/* ───── จัดหน้า A4 อัตโนมัติ: ไม่ตัดกลางแถวตาราง ───── */
-function newPage(withBigHead){
+/* ───── จัดหน้า A4 ─────
+   .page สูงคงที่ + overflow:hidden → ถ้าไม่ซอยให้พอดี เนื้อหาจะถูกตัดหายเงียบ ๆ
+   ลำดับจัดการเมื่อบล็อกไม่พอในหน้า:
+     1) ขึ้นหน้าใหม่แล้ววางใหม่
+     2) ยังไม่พอแม้หน้าเปล่า → ซอย (.two แยกซ้าย/ขวา · ตารางแยกทีละแถว)
+     3) ซอยไม่ได้จริง ๆ → ย่อให้พอดีหน้า (ไม่ตัดทิ้ง)                        */
+function newPage(big){
   var pg = document.createElement('div'); pg.className = 'page';
-  pg.innerHTML = (withBigHead ? HEAD_HTML : MINI_HTML) +
+  pg.innerHTML = (big ? HEAD_HTML : MINI_HTML) +
     '<div class="parea"></div><div class="pft"><span>MASARU HR — เหนือกว่า ทุกวัน</span><span class="pno"></span></div>';
   document.getElementById('pages').appendChild(pg);
   return pg;
 }
-function overflow(pg){ var a = pg.querySelector('.parea'); return a.scrollHeight > a.clientHeight; }
+function overflow(pg){ var a = pg.querySelector('.parea'); return a.scrollHeight > a.clientHeight + 1; }
+
+/* ย่อบล็อกที่ใหญ่เกินหนึ่งหน้าจริง ๆ แทนการปล่อยให้ถูกตัด */
+function shrinkToFit(pg, area, node){
+  var wrap = document.createElement('div');
+  wrap.style.transformOrigin = 'top left';
+  wrap.appendChild(node);
+  area.appendChild(wrap);
+  var s = 1;
+  while (overflow(pg) && s > 0.5){
+    s -= 0.04;
+    wrap.style.transform = 'scale(' + s.toFixed(2) + ')';
+    wrap.style.width = (100 / s).toFixed(2) + '%';
+  }
+}
 
 function paginate(){
-  var flow = document.getElementById('flow');
+  var flow  = document.getElementById('flow');
   var pages = document.getElementById('pages');
   pages.innerHTML = '';
   var pg = newPage(true), area = pg.querySelector('.parea');
+  var MIN_ROWS = 2;                 // หัวตารางต้องมากับแถวอย่างน้อยเท่านี้ ไม่งั้นยกไปหน้าใหม่
 
-  function pushBlock(node){
-    area.appendChild(node);
-    if (overflow(pg)) { area.removeChild(node); pg = newPage(false); area = pg.querySelector('.parea'); area.appendChild(node); }
+  function fresh(){ pg = newPage(false); area = pg.querySelector('.parea'); }
+  function areaEmpty(){ return area.children.length === 0; }
+
+  /* ตารางยาว: เติมทีละแถว เต็มหน้าแล้วขึ้นหน้าใหม่พร้อมหัวตารางเดิม */
+  function placeTable(node, rows){
+    var titleEl = node.querySelector('.sh b');
+    var baseTitle = titleEl ? titleEl.textContent : '';
+
+    var shell = node.cloneNode(true);
+    var tb = shell.querySelector('table tbody'); tb.innerHTML = '';
+    area.appendChild(shell);
+    if (overflow(pg)){ area.removeChild(shell); fresh(); area.appendChild(shell); }
+
+    var curBody = tb, part = 1, inPart = 0, movedOnce = false;
+
+    for (var i = 0; i < rows.length; i++){
+      var c = rows[i].cloneNode(true);
+      curBody.appendChild(c); inPart++;
+      if (!overflow(pg)) continue;
+
+      curBody.removeChild(c); inPart--;
+
+      // กันหัวตารางโดดเดี่ยวท้ายหน้า: ยกทั้งบล็อกไปเริ่มหน้าใหม่ (ทำครั้งเดียวพอ)
+      if (inPart < MIN_ROWS && !movedOnce && area.children.length > 1){
+        var host = curBody;
+        while (host && !(host.classList && host.classList.contains('sec'))) host = host.parentNode;
+        if (host && host.parentNode === area){
+          movedOnce = true;
+          area.removeChild(host);
+          fresh();
+          area.appendChild(host);
+          curBody = host.querySelector('table tbody');
+          curBody.appendChild(c); inPart++;
+          if (!overflow(pg)) continue;
+          curBody.removeChild(c); inPart--;
+        }
+      }
+
+      part++;
+      fresh();
+      var cont = node.cloneNode(true);
+      curBody = cont.querySelector('table tbody'); curBody.innerHTML = '';
+      var b2 = cont.querySelector('.sh b');
+      if (b2) b2.textContent = baseTitle + ' (ต่อ ' + part + ')';
+      area.appendChild(cont);
+      curBody.appendChild(c); inPart = 1;
+
+      if (overflow(pg)){                       // แถวเดียวยังไม่พอในหน้าเปล่า
+        area.removeChild(cont);
+        shrinkToFit(pg, area, cont);
+      }
+    }
   }
 
-  var blocks = [].slice.call(flow.children);
-  blocks.forEach(function(blk){
-    var tbl = blk.tagName === 'SECTION' ? blk.querySelector('table') : null;
-    var bodyRows = tbl ? [].slice.call(tbl.querySelectorAll('tbody > tr')) : [];
+  function place(node){
+    area.appendChild(node);
+    if (!overflow(pg)) return;
+    area.removeChild(node);
 
-    // บล็อกธรรมดา หรือ ตารางสั้น -> ยัดทั้งก้อน
-    if (!tbl || bodyRows.length <= 2) { pushBlock(blk.cloneNode(true)); return; }
+    if (!areaEmpty()){
+      fresh();
+      area.appendChild(node);
+      if (!overflow(pg)) return;
+      area.removeChild(node);
+    }
 
-    // ตารางยาว -> ใส่ทีละแถว ขึ้นหน้าใหม่พร้อมหัวตารางเดิม
-    var shell = blk.cloneNode(true);
-    var shellTbl = shell.querySelector('table');
-    var tb = shellTbl.querySelector('tbody');
-    tb.innerHTML = '';
-    var titleEl = shell.querySelector('.sh b');
-    var baseTitle = titleEl ? titleEl.textContent : '';
-    area.appendChild(shell);
-    if (overflow(pg)) { area.removeChild(shell); pg = newPage(false); area = pg.querySelector('.parea'); area.appendChild(shell); }
+    if (node.classList && node.classList.contains('two')){
+      var kids = [].slice.call(node.children);
+      for (var i = 0; i < kids.length; i++) place(kids[i].cloneNode(true));
+      return;
+    }
+    var tbl  = node.querySelector ? node.querySelector('table') : null;
+    var rows = tbl ? [].slice.call(tbl.querySelectorAll('tbody > tr')) : [];
+    if (tbl && rows.length > 1){ placeTable(node, rows); return; }
 
-    var cur = shell, curBody = tb, part = 1;
-    bodyRows.forEach(function(tr){
-      var c = tr.cloneNode(true);
-      curBody.appendChild(c);
-      if (overflow(pg)) {
-        curBody.removeChild(c);
-        part++;
-        pg = newPage(false); area = pg.querySelector('.parea');
-        cur = blk.cloneNode(true);
-        var t2 = cur.querySelector('table'); curBody = t2.querySelector('tbody'); curBody.innerHTML = '';
-        var b2 = cur.querySelector('.sh b'); if (b2) b2.textContent = baseTitle + ' (ต่อ ' + part + ')';
-        area.appendChild(cur);
-        curBody.appendChild(c);
+    shrinkToFit(pg, area, node);
+  }
+
+  [].slice.call(flow.children).forEach(function(blk){
+    var tbl  = blk.tagName === 'SECTION' ? blk.querySelector('table') : null;
+    var rows = tbl ? [].slice.call(tbl.querySelectorAll('tbody > tr')) : [];
+    if (tbl && rows.length > MIN_ROWS){
+      var whole = blk.cloneNode(true);          // ตารางสั้นพอ → วางทั้งก้อน ไม่ต้องซอย
+      area.appendChild(whole);
+      if (!overflow(pg)) return;
+      area.removeChild(whole);
+      if (!areaEmpty()){
+        fresh();
+        area.appendChild(whole);
+        if (!overflow(pg)) return;
+        area.removeChild(whole);
       }
-    });
+      placeTable(blk.cloneNode(true), rows);
+      return;
+    }
+    place(blk.cloneNode(true));
   });
 
-  // เลขหน้า
+  [].slice.call(pages.querySelectorAll('.page')).forEach(function(p){
+    var a = p.querySelector('.parea');
+    if (a && a.children.length === 0) p.parentNode.removeChild(p);
+  });
+
   var all = [].slice.call(document.querySelectorAll('.page'));
   all.forEach(function(p, i){ p.querySelector('.pno').textContent = 'หน้า ' + (i + 1) + ' / ' + all.length; });
   var pc = document.getElementById('pgcount');
   if (pc) pc.textContent = 'รวม ' + all.length + ' หน้า';
-  return all.length;
+
+  var bad = all.filter(function(p){ return overflow(p); }).length;
+  if (bad) console.warn('[report] ยังมี ' + bad + ' หน้าที่เนื้อหาล้น');
 }
 
 async function dl(){
@@ -3123,7 +3207,12 @@ td.none{text-align:center;color:#9aa4b5;padding:14px;font-style:italic}
 var HEAD_HTML = ${JSON.stringify(`<div class="hd">${logoSrc ? `<img src="${logoSrc}" alt="">` : ''}<small>RECRUITMENT DASHBOARD REPORT</small><h1>รายงานแดชบอร์ดการสรรหาพนักงาน</h1><div class="pr">ช่วงวันที่ ${thD(f)} ถึง ${thD(t)} · รวม ${dayCount} วัน</div><div class="meta"><b>MASARU HR</b>ออกรายงาน ${now}<br>เอกสารภายใน (ความลับ)</div></div>`)};
 var MINI_HTML = ${JSON.stringify(`<div class="mini"><b>รายงานแดชบอร์ดการสรรหาพนักงาน</b><span>${thD(f)} – ${thD(t)} · MASARU HR</span></div>`)};
 
-/* ───── จัดหน้า A4: บล็อกไม่ขาดกลาง / ตารางยาวขึ้นหน้าใหม่พร้อมหัวตาราง ───── */
+/* ───── จัดหน้า A4 ─────
+   .page สูงคงที่ + overflow:hidden → ถ้าไม่ซอยให้พอดี เนื้อหาจะถูกตัดหายเงียบ ๆ
+   ลำดับจัดการเมื่อบล็อกไม่พอในหน้า:
+     1) ขึ้นหน้าใหม่แล้ววางใหม่
+     2) ยังไม่พอแม้หน้าเปล่า → ซอย (.two แยกซ้าย/ขวา · ตารางแยกทีละแถว)
+     3) ซอยไม่ได้จริง ๆ → ย่อให้พอดีหน้า (ไม่ตัดทิ้ง)                        */
 function newPage(big){
   var pg = document.createElement('div'); pg.className = 'page';
   pg.innerHTML = (big ? HEAD_HTML : MINI_HTML) +
@@ -3131,52 +3220,139 @@ function newPage(big){
   document.getElementById('pages').appendChild(pg);
   return pg;
 }
-function overflow(pg){ var a = pg.querySelector('.parea'); return a.scrollHeight > a.clientHeight; }
+function overflow(pg){ var a = pg.querySelector('.parea'); return a.scrollHeight > a.clientHeight + 1; }
+
+/* ย่อบล็อกที่ใหญ่เกินหนึ่งหน้าจริง ๆ แทนการปล่อยให้ถูกตัด */
+function shrinkToFit(pg, area, node){
+  var wrap = document.createElement('div');
+  wrap.style.transformOrigin = 'top left';
+  wrap.appendChild(node);
+  area.appendChild(wrap);
+  var s = 1;
+  while (overflow(pg) && s > 0.5){
+    s -= 0.04;
+    wrap.style.transform = 'scale(' + s.toFixed(2) + ')';
+    wrap.style.width = (100 / s).toFixed(2) + '%';
+  }
+}
 
 function paginate(){
-  var flow = document.getElementById('flow');
+  var flow  = document.getElementById('flow');
   var pages = document.getElementById('pages');
   pages.innerHTML = '';
   var pg = newPage(true), area = pg.querySelector('.parea');
+  var MIN_ROWS = 2;                 // หัวตารางต้องมากับแถวอย่างน้อยเท่านี้ ไม่งั้นยกไปหน้าใหม่
 
-  function pushBlock(node){
+  function fresh(){ pg = newPage(false); area = pg.querySelector('.parea'); }
+  function areaEmpty(){ return area.children.length === 0; }
+
+  /* ตารางยาว: เติมทีละแถว เต็มหน้าแล้วขึ้นหน้าใหม่พร้อมหัวตารางเดิม */
+  function placeTable(node, rows){
+    var titleEl = node.querySelector('.sh b');
+    var baseTitle = titleEl ? titleEl.textContent : '';
+
+    var shell = node.cloneNode(true);
+    var tb = shell.querySelector('table tbody'); tb.innerHTML = '';
+    area.appendChild(shell);
+    if (overflow(pg)){ area.removeChild(shell); fresh(); area.appendChild(shell); }
+
+    var curBody = tb, part = 1, inPart = 0, movedOnce = false;
+
+    for (var i = 0; i < rows.length; i++){
+      var c = rows[i].cloneNode(true);
+      curBody.appendChild(c); inPart++;
+      if (!overflow(pg)) continue;
+
+      curBody.removeChild(c); inPart--;
+
+      // กันหัวตารางโดดเดี่ยวท้ายหน้า: ยกทั้งบล็อกไปเริ่มหน้าใหม่ (ทำครั้งเดียวพอ)
+      if (inPart < MIN_ROWS && !movedOnce && area.children.length > 1){
+        var host = curBody;
+        while (host && !(host.classList && host.classList.contains('sec'))) host = host.parentNode;
+        if (host && host.parentNode === area){
+          movedOnce = true;
+          area.removeChild(host);
+          fresh();
+          area.appendChild(host);
+          curBody = host.querySelector('table tbody');
+          curBody.appendChild(c); inPart++;
+          if (!overflow(pg)) continue;
+          curBody.removeChild(c); inPart--;
+        }
+      }
+
+      part++;
+      fresh();
+      var cont = node.cloneNode(true);
+      curBody = cont.querySelector('table tbody'); curBody.innerHTML = '';
+      var b2 = cont.querySelector('.sh b');
+      if (b2) b2.textContent = baseTitle + ' (ต่อ ' + part + ')';
+      area.appendChild(cont);
+      curBody.appendChild(c); inPart = 1;
+
+      if (overflow(pg)){                       // แถวเดียวยังไม่พอในหน้าเปล่า
+        area.removeChild(cont);
+        shrinkToFit(pg, area, cont);
+      }
+    }
+  }
+
+  function place(node){
     area.appendChild(node);
-    if (overflow(pg)) { area.removeChild(node); pg = newPage(false); area = pg.querySelector('.parea'); area.appendChild(node); }
+    if (!overflow(pg)) return;
+    area.removeChild(node);
+
+    if (!areaEmpty()){
+      fresh();
+      area.appendChild(node);
+      if (!overflow(pg)) return;
+      area.removeChild(node);
+    }
+
+    if (node.classList && node.classList.contains('two')){
+      var kids = [].slice.call(node.children);
+      for (var i = 0; i < kids.length; i++) place(kids[i].cloneNode(true));
+      return;
+    }
+    var tbl  = node.querySelector ? node.querySelector('table') : null;
+    var rows = tbl ? [].slice.call(tbl.querySelectorAll('tbody > tr')) : [];
+    if (tbl && rows.length > 1){ placeTable(node, rows); return; }
+
+    shrinkToFit(pg, area, node);
   }
 
   [].slice.call(flow.children).forEach(function(blk){
-    var tbl = blk.tagName === 'SECTION' ? blk.querySelector('table') : null;
-    var bodyRows = tbl ? [].slice.call(tbl.querySelectorAll('tbody > tr')) : [];
-    if (!tbl || bodyRows.length <= 2) { pushBlock(blk.cloneNode(true)); return; }
-
-    var shell = blk.cloneNode(true);
-    var tb = shell.querySelector('table tbody'); tb.innerHTML = '';
-    var titleEl = shell.querySelector('.sh b');
-    var baseTitle = titleEl ? titleEl.textContent : '';
-    area.appendChild(shell);
-    if (overflow(pg)) { area.removeChild(shell); pg = newPage(false); area = pg.querySelector('.parea'); area.appendChild(shell); }
-
-    var curBody = tb, part = 1;
-    bodyRows.forEach(function(tr){
-      var c = tr.cloneNode(true);
-      curBody.appendChild(c);
-      if (overflow(pg)) {
-        curBody.removeChild(c);
-        part++;
-        pg = newPage(false); area = pg.querySelector('.parea');
-        var cur = blk.cloneNode(true);
-        curBody = cur.querySelector('table tbody'); curBody.innerHTML = '';
-        var b2 = cur.querySelector('.sh b'); if (b2) b2.textContent = baseTitle + ' (ต่อ ' + part + ')';
-        area.appendChild(cur);
-        curBody.appendChild(c);
+    var tbl  = blk.tagName === 'SECTION' ? blk.querySelector('table') : null;
+    var rows = tbl ? [].slice.call(tbl.querySelectorAll('tbody > tr')) : [];
+    if (tbl && rows.length > MIN_ROWS){
+      var whole = blk.cloneNode(true);          // ตารางสั้นพอ → วางทั้งก้อน ไม่ต้องซอย
+      area.appendChild(whole);
+      if (!overflow(pg)) return;
+      area.removeChild(whole);
+      if (!areaEmpty()){
+        fresh();
+        area.appendChild(whole);
+        if (!overflow(pg)) return;
+        area.removeChild(whole);
       }
-    });
+      placeTable(blk.cloneNode(true), rows);
+      return;
+    }
+    place(blk.cloneNode(true));
+  });
+
+  [].slice.call(pages.querySelectorAll('.page')).forEach(function(p){
+    var a = p.querySelector('.parea');
+    if (a && a.children.length === 0) p.parentNode.removeChild(p);
   });
 
   var all = [].slice.call(document.querySelectorAll('.page'));
   all.forEach(function(p, i){ p.querySelector('.pno').textContent = 'หน้า ' + (i + 1) + ' / ' + all.length; });
   var pc = document.getElementById('pgcount');
   if (pc) pc.textContent = 'รวม ' + all.length + ' หน้า';
+
+  var bad = all.filter(function(p){ return overflow(p); }).length;
+  if (bad) console.warn('[report] ยังมี ' + bad + ' หน้าที่เนื้อหาล้น');
 }
 
 async function dl(){
