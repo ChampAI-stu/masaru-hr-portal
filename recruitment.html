@@ -677,63 +677,10 @@
 <script src="masaru-cinematic.js" defer></script>
 <style media="print">.msr-atmosphere,.msr-mascot,.msr-login-story{display:none!important}</style>
 
-<!-- ═══ พิมพ์แดชบอร์ดรายงาน (เห็นภาพเหมือนบนจอ ไม่ใช่ตัวอักษรล้วน) ═══ -->
+<!-- ═══ สไตล์ปุ่มรายงานแดชบอร์ด ═══ -->
 <style id="dashPrintCSS">
-@media print{
-  body.print-dash *{ -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
-  @page{ size:A4 portrait; margin:9mm 8mm; }
-
-  /* ปลดล็อกโครงหน้าจอ (flex + overflow:hidden) ให้ไหลลงหลายหน้าได้ */
-  body.print-dash{ display:block !important; height:auto !important; overflow:visible !important; background:#fff !important; }
-  body.print-dash #main{ display:block !important; overflow:visible !important; }
-  body.print-dash #pg-rep{ display:block !important; overflow:visible !important; }
-  body.print-dash #pg-rep .rep-wrap{ max-width:none !important; padding:0 !important; }
-  body.print-dash .dash{ zoom:.86; }
-
-  /* ซ่อนส่วนที่ไม่ต้องพิมพ์ */
-  body.print-dash #sidebar,
-  body.print-dash .pg:not(#pg-rep),
-  body.print-dash .repbar,
-  body.print-dash .dash-chips,
-  body.print-dash .modal, body.print-dash .modal-bg,
-  body.print-dash .toast, body.print-dash #login-wrap,
-  body.print-dash .msr-atmosphere, body.print-dash .msr-mascot,
-  body.print-dash .dcard .btn{ display:none !important; }
-
-  /* หัวกระดาษเฉพาะตอนพิมพ์ */
-  body.print-dash .dash-print-head{ display:flex !important; }
-
-  /* จัดกริดให้ลงกระดาษ A4 พอดี */
-  body.print-dash .kpi-grid{ grid-template-columns:repeat(3,1fr) !important; }
-  body.print-dash .dgrid.g3{ grid-template-columns:1fr 1fr !important; }
-  body.print-dash .dgrid.g3 > :last-child{ grid-column:1 / -1 !important; }
-  body.print-dash .dgrid.g2{ grid-template-columns:1fr 1fr !important; }
-
-  /* ห้ามหั่นการ์ดกลางหน้า */
-  body.print-dash .kpi,
-  body.print-dash .dcard,
-  body.print-dash .flowbar,
-  body.print-dash .dash-hero,
-  body.print-dash .dsource,
-  body.print-dash .dtable tr{ break-inside:avoid !important; page-break-inside:avoid !important; }
-
-  /* ขึ้นหน้าใหม่ก่อนบล็อกวิเคราะห์ */
-  body.print-dash .dgrid.g2{ break-before:page; page-break-before:always; }
-
-  body.print-dash .dash-hero{ box-shadow:none !important; }
-  body.print-dash .dcard{ box-shadow:none !important; border:1px solid #d8dee9 !important; }
-}
-/* หัวกระดาษ: ซ่อนบนจอ แสดงเฉพาะตอนพิมพ์ */
-.dash-print-head{ display:none; align-items:center; gap:14px; padding:0 0 12px; margin-bottom:12px;
-  border-bottom:2.5px solid #16294d; }
-.dash-print-head .dph-logo{ width:96px; height:30px; background:var(--logo) center/contain no-repeat; flex-shrink:0; }
-.dash-print-head .dph-t{ flex:1; min-width:0; }
-.dash-print-head .dph-t small{ display:block; font-size:8.5px; font-weight:800; letter-spacing:1.6px; color:#8a94a8; }
-.dash-print-head .dph-t h1{ font-size:16px; font-weight:800; color:#16294d; margin:2px 0 2px; }
-.dash-print-head .dph-p{ font-size:10px; color:#64708a; }
-.dash-print-head .dph-m{ text-align:right; font-size:9px; color:#64708a; line-height:1.5; flex-shrink:0; }
-.dash-print-head .dph-m b{ display:block; font-size:11px; color:#16294d; }
-/* ปุ่มพิมพ์ในแถบรายงาน */
+/* หัวกระดาษในแดชบอร์ดสด: ซ่อนไว้ — รายงาน PDF สร้างหัวกระดาษของตัวเอง */
+.dash-print-head{ display:none; }
 .rb-print{ display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-family:inherit;
   font-size:12.5px; font-weight:700; padding:8px 14px; border-radius:9px;
   border:1px solid #cdd6e6; background:#fff; color:#16294d; transition:all .12s; }
@@ -2770,7 +2717,7 @@ setTimeout(function(){ if (!document.querySelector('.page')) paginate(); }, 2500
             <button onclick="repSetMonth()">เดือนนี้</button>
             <button onclick="repSetQuarter()">ไตรมาสนี้</button>
           </div>
-          <button class="rb-print" onclick="printDashboard()"><i class="ti ti-file-search"></i>ดูตัวอย่าง / พิมพ์</button>
+          <button class="rb-print" onclick="printDashboard()"><i class="ti ti-report-analytics"></i>รายงานแดชบอร์ด (PDF)</button>
           <button class="rb-go" onclick="openPeriodReport()"><i class="ti ti-file-type-pdf"></i>สร้างรายงาน PDF</button>
         </div>
 
@@ -2844,105 +2791,313 @@ setTimeout(function(){ if (!document.querySelector('.page')) paginate(); }, 2500
       updateLiveBadge();
     }
 
-    // ═══════════════════ ดูตัวอย่างแดชบอร์ดก่อนพิมพ์ / บันทึก PDF ═══════════════════
+    // ═══════════════ รายงานแดชบอร์ด A4 (จัดหน้าอัตโนมัติ ไม่ขาดท่อน) ═══════════════
     function printDashboard() {
-      const root = document.getElementById('dash-root');
-      if (!root || !root.innerHTML.trim()) { showToast('ยังไม่มีข้อมูลให้พิมพ์ รอโหลดสักครู่', true); return; }
+      repEnsureRange();
+      const f = repFrom, t = repTo;
+      if (f > t) { showToast('ช่วงวันที่ไม่ถูกต้อง', true); return; }
+      if (!DATA.length) { showToast('ยังไม่มีข้อมูลผู้สมัคร', true); return; }
 
-      // ดึง CSS + ฟอนต์ทั้งหมดของหน้าปัจจุบันไปใช้ในหน้าตัวอย่าง เพื่อให้หน้าตาเหมือนบนจอเป๊ะ
-      const links = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
-        .map(l => '<link rel="stylesheet" href="' + l.href + '">').join('\n');
-      const styles = Array.from(document.querySelectorAll('style'))
-        .map(s => '<style>' + s.innerHTML + '</style>').join('\n');
+      // ───── ข้อมูลเฉพาะช่วงที่เลือก ─────
+      const inP       = a => inRange(repAppDate(a), f, t);
+      const newOnes   = DATA.filter(inP);
+      const intInP    = DATA.filter(a => inRange(a.intDate, f, t));
+      const offerInP  = DATA.filter(a => inRange(a.offerSentAt, f, t));
+      const hiredInP  = DATA.filter(a => statusOf(a) === 'hired' &&
+                          inRange(a.respondedAt || a.offerStart || a.offerSentAt || repAppDate(a), f, t));
+      const closedInP = DATA.filter(a => ['rejected', 'cancelled'].includes(statusOf(a)) &&
+                          inRange(a.closedAt || repAppDate(a), f, t));
+      const screenInP = newOnes.filter(a => !!(a.hrNote || a.hrBy) || !!a.intDate || !!a.result || !!a.offerSentAt);
 
-      // ลบปุ่มที่กดไม่ได้ในหน้าตัวอย่างออก
-      const clone = root.cloneNode(true);
-      clone.querySelectorAll('.repbar, .dash-chips, .dcard .btn').forEach(el => el.remove());
+      const dayCount = Math.round((Date.parse(t) - Date.parse(f)) / 86400000) + 1;
+      const thD = d => thDate(d) || '-';
+      const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
 
-      const fname = 'แดชบอร์ดสรรหา_' + (repFrom || '') + '_ถึง_' + (repTo || '') + '.pdf';
+      // เวลาเฉลี่ยกว่าจะรับเข้า
+      const tthArr = hiredInP.map(a => dDays(repAppDate(a), a.respondedAt || a.offerStart || a.offerSentAt || a.closedAt)).filter(v => v != null);
+      const avgTth = tthArr.length ? Math.round(tthArr.reduce((s, v) => s + v, 0) / tthArr.length) : null;
 
-      const html = `<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">
-<title>ตัวอย่างรายงานแดชบอร์ด — MASARU HR</title>
-${links}
-${styles}
-<style>
-  /* ล้างโครง flex ของหน้าหลัก ให้เป็นหน้ากระดาษปกติ */
-  html,body{ display:block !important; height:auto !important; overflow:auto !important;
-    background:#e9edf3 !important; padding:0 !important; margin:0 !important; }
-  * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+      const logoVar = getComputedStyle(document.documentElement).getPropertyValue('--logo').trim();
+      const lm = logoVar.match(/url\(["']?(data:[^"')]+)["']?\)/);
+      const logoSrc = lm ? lm[1] : '';
+      const now = new Date().toLocaleString('th-TH', { dateStyle: 'long', timeStyle: 'short' });
 
-  .bar{ position:sticky; top:0; z-index:50; display:flex; align-items:center; gap:10px;
-    padding:11px 18px; background:#0e1c38; color:#fff; font-size:13px; font-weight:700;
-    font-family:'IBM Plex Sans Thai',sans-serif; box-shadow:0 3px 14px rgba(9,26,54,.3); }
-  .bar .sp{ margin-left:auto; display:flex; gap:8px; }
-  .bar button{ font-family:inherit; font-size:12.5px; font-weight:700; cursor:pointer;
-    padding:7px 14px; border-radius:8px; border:0; background:#2c67ad; color:#fff; }
-  .bar button.ghost{ background:rgba(255,255,255,.14); }
-  .bar button:hover{ filter:brightness(1.12); }
-  .bar button:disabled{ opacity:.55; cursor:default; }
-  .hint{ font-size:11.5px; font-weight:500; color:#b9c8dd; }
+      // ───── KPI ─────
+      const KPI = [
+        { l: 'ผู้สมัครใหม่',      v: newOnes.length,   s: `เฉลี่ย ${(newOnes.length / dayCount).toFixed(1)} คน/วัน`, c: '#2c67ad' },
+        { l: 'เข้าสัมภาษณ์',      v: intInP.length,    s: `${pct(intInP.length, newOnes.length)}% ของผู้สมัครใหม่`,  c: '#c9992a' },
+        { l: 'ส่ง Offer',        v: offerInP.length,  s: `${pct(offerInP.length, intInP.length)}% ของผู้สัมภาษณ์`,  c: '#7a4a12' },
+        { l: 'รับเข้าทำงาน',      v: hiredInP.length,  s: `${pct(hiredInP.length, newOnes.length)}% ของผู้สมัครใหม่`, c: '#17845f' },
+        { l: 'ไม่ผ่าน / ยกเลิก',  v: closedInP.length, s: `${pct(closedInP.length, newOnes.length)}% ของผู้สมัครใหม่`, c: '#9a2b48' },
+        { l: 'เวลาเฉลี่ยจนรับเข้า', v: avgTth == null ? '—' : avgTth, s: avgTth == null ? 'ยังไม่มีข้อมูล' : 'วัน นับจากวันสมัคร', c: '#6555c7' },
+      ];
 
-  .sheet{ width:794px; margin:22px auto 60px; padding:30px 26px; background:#fff;
-    box-shadow:0 14px 44px rgba(9,26,54,.2); border-radius:4px; }
-  .sheet .dash-print-head{ display:flex !important; }
-  .sheet .kpi-grid{ grid-template-columns:repeat(3,1fr) !important; }
-  .sheet .dgrid.g3{ grid-template-columns:1fr 1fr !important; }
-  .sheet .dgrid.g3 > :last-child{ grid-column:1 / -1 !important; }
-  .sheet .dgrid.g2{ grid-template-columns:1fr 1fr !important; }
-  .sheet .dcard{ box-shadow:none !important; border:1px solid #d8dee9 !important; }
-  .sheet .dash-hero{ box-shadow:none !important; }
+      // ───── Funnel ─────
+      const FN = [
+        { l: 'ผู้สมัครใหม่', v: newOnes.length,   c: '#2c67ad' },
+        { l: 'ผ่านคัดกรอง',  v: screenInP.length, c: '#1f7fb8' },
+        { l: 'เข้าสัมภาษณ์',  v: intInP.length,    c: '#c9992a' },
+        { l: 'ได้รับ Offer',  v: offerInP.length,  c: '#7a4a12' },
+        { l: 'รับเข้าทำงาน',  v: hiredInP.length,  c: '#17845f' },
+      ];
+      const fnMax = Math.max(...FN.map(x => x.v), 1);
+      const fnHtml = FN.map((x, i) => {
+        const prev = i ? FN[i - 1].v : null;
+        const drop = prev != null ? pct(x.v, prev) : null;
+        return `<div class="fnrow">
+          <div class="fnl">${esc(x.l)}</div>
+          <div class="fnbarwrap"><div class="fnbar" style="width:${Math.max(x.v / fnMax * 100, x.v ? 5 : 0)}%;background:${x.c}">${x.v ? x.v : ''}</div></div>
+          <div class="fnp">${drop == null ? '<span class="mut">—</span>' : (drop >= 50 ? '<b class="up">' : '<b class="dn">') + drop + '%</b>'}</div>
+        </div>`;
+      }).join('');
 
-  @media print{
-    @page{ size:A4 portrait; margin:9mm 8mm; }
-    html,body{ background:#fff !important; }
-    .bar{ display:none !important; }
-    .sheet{ width:auto; margin:0; padding:0; box-shadow:none; border-radius:0; }
-    .sheet .kpi, .sheet .dcard, .sheet .flowbar,
-    .sheet .dash-hero, .sheet .dsource{ break-inside:avoid !important; page-break-inside:avoid !important; }
-    .sheet .dgrid.g2{ break-before:page; page-break-before:always; }
-  }
-</style>
-</head><body>
-<div class="bar">📊 ตัวอย่างรายงานแดชบอร์ด
-  <span class="hint">ตรวจดูก่อน แล้วค่อยกดพิมพ์หรือบันทึก</span>
-  <span class="sp">
-    <button id="savebtn" onclick="dl()">💾 บันทึกเป็น PDF</button>
-    <button onclick="window.print()">🖨️ พิมพ์</button>
-    <button class="ghost" onclick="window.close()">✖ ปิด</button>
-  </span></div>
+      // ───── สัดส่วน (แท่งแนวนอน อ่านง่ายกว่าโดนัทบนกระดาษ) ─────
+      const groupBy = (arr, fn) => { const m = {}; arr.forEach(a => { const k = (fn(a) || '').trim() || 'ไม่ระบุ'; m[k] = (m[k] || 0) + 1; }); return m; };
+      const topItems = (m, n) => Object.entries(m).sort((x, y) => y[1] - x[1]).slice(0, n).map(([l, v]) => ({ l, v }));
+      const shareHtml = (items, total) => items.length ? items.map((x, i) => `
+        <div class="shrow"><div class="shl">${esc(x.l)}</div>
+          <div class="shbw"><div class="shb" style="width:${pct(x.v, total || 1)}%;background:${D_PAL[i % D_PAL.length]}"></div></div>
+          <div class="shv"><b>${x.v}</b><small>${pct(x.v, total || 1)}%</small></div></div>`).join('')
+        : '<div class="nodata">ไม่มีข้อมูลในช่วงนี้</div>';
 
-<div class="sheet" id="sheet">${clone.innerHTML}</div>
+      const srcItems    = topItems(groupBy(newOnes, a => a.src), 6);
+      const posItems    = topItems(groupBy(newOnes, a => a.pos), 6);
+      const reasonItems = topItems(groupBy(closedInP, a => a.closeReason || a.resultNote), 6);
 
+      // ───── ตารางสรุปตามตำแหน่ง ─────
+      const pkey = a => (a.pos || '').trim() || 'ไม่ระบุ';
+      const allPos = {};
+      [...newOnes, ...intInP, ...hiredInP].forEach(a => { allPos[pkey(a)] = 1; });
+      const posRows = Object.keys(allPos).map(k => {
+        const n = newOnes.filter(a => pkey(a) === k).length;
+        const iv = intInP.filter(a => pkey(a) === k).length;
+        const h = hiredInP.filter(a => pkey(a) === k).length;
+        return { k, n, iv, h };
+      }).sort((x, y) => (y.h - x.h) || (y.n - x.n))
+        .map(r => `<tr><td>${esc(r.k)}</td><td class="c">${r.n}</td><td class="c">${r.iv}</td>
+          <td class="c b">${r.h}</td><td class="c">${r.n ? pct(r.h, r.n) + '%' : '—'}</td></tr>`).join('')
+        || '<tr><td colspan="5" class="none">ไม่มีข้อมูลในช่วงนี้</td></tr>';
+
+      // ───── ตารางรายชื่อ ─────
+      const badge = a => { const m = stMeta(statusOf(a));
+        return `<span class="bg" style="color:${m.color};background:${m.bg}">${m.label}</span>`; };
+      const money2 = v => v ? Number(v).toLocaleString('th-TH') + ' บาท' : '-';
+      const rows = (arr, cols, span) => arr.length
+        ? arr.map((a, i) => `<tr><td class="c">${i + 1}</td><td><b>${esc(a.name)}</b></td><td>${esc(a.pos || '-')}</td>${cols.map(fn => `<td>${fn(a)}</td>`).join('')}</tr>`).join('')
+        : `<tr><td colspan="${span}" class="none">ไม่มีข้อมูลในช่วงนี้</td></tr>`;
+      const byD = k => (x, y) => String(x[k] || '').localeCompare(String(y[k] || ''));
+
+      const TB = (head, body) => `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+      const SEC = (no, title, sub, inner) => `<section class="sec">
+        <div class="sh"><span class="no">${no}</span><div><b>${esc(title)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</div></div>
+        ${inner}</section>`;
+
+      const fname = `แดชบอร์ดสรรหา_${f}_ถึง_${t}.pdf`;
+
+      const html = `<!DOCTYPE html><html lang="th"><head><meta charset="utf-8">
+<title>รายงานแดชบอร์ดการสรรหา ${f} – ${t}</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"><\/script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#e9edf3;font-family:'IBM Plex Sans Thai',sans-serif;color:#16233f;padding:64px 12px 50px}
+.bar{position:fixed;top:0;left:0;right:0;background:#0e1c38;color:#fff;padding:11px 18px;display:flex;
+ align-items:center;gap:12px;z-index:9;box-shadow:0 3px 14px rgba(0,0,0,.22)}
+.bar b{font-size:14px}.bar .sp{margin-left:auto;display:flex;gap:8px}
+.bar button{border:0;border-radius:9px;padding:9px 16px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer}
+#savebtn{background:#d42027;color:#fff}#prbtn{background:rgba(255,255,255,.16);color:#fff}
+.bar button:disabled{opacity:.6;cursor:wait}
+
+.page{width:794px;height:1123px;background:#fff;margin:0 auto 20px;overflow:hidden;position:relative;
+ box-shadow:0 10px 34px rgba(16,35,63,.15);display:flex;flex-direction:column}
+.parea{flex:1;padding:16px 30px 0;overflow:hidden}
+.pft{flex-shrink:0;padding:8px 30px 12px;border-top:1px solid #eef1f6;display:flex;justify-content:space-between;font-size:9px;color:#9aa4b5}
+.pft .pno{font-weight:700;color:#5e6b80}
+
+.hd{position:relative;overflow:hidden;padding:22px 30px;background:linear-gradient(125deg,#07142c,#12305e 62%,#1f4b80);
+ color:#fff;border-bottom:4px solid #d42027;flex-shrink:0}
+.hd::after{content:"";position:absolute;width:190px;height:190px;right:-56px;top:-96px;border:1px solid rgba(255,255,255,.13);border-radius:50%}
+.hd img{height:26px;display:block;margin-bottom:11px}
+.hd small{display:block;font-size:9px;letter-spacing:1.7px;color:#e6bd6b;font-weight:700}
+.hd h1{font-size:20px;margin-top:4px}
+.hd .pr{margin-top:7px;font-size:12px;color:#c3d1e4}
+.hd .meta{position:absolute;right:30px;top:24px;text-align:right;font-size:9.5px;color:#aebdd2;z-index:1}
+.hd .meta b{display:block;color:#fff;font-size:11px}
+.mini{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:11px 30px;
+ background:#0e1c38;color:#fff;border-bottom:3px solid #d42027;font-size:11px}
+.mini b{font-size:12.5px}.mini span{color:#aebdd2;font-size:10px}
+
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.kpi{border:1px solid #e2e7ef;border-top:3px solid var(--c);border-radius:11px;padding:11px 13px;background:#fbfcfe}
+.kpi .l{font-size:10px;color:#7a8398;font-weight:600}
+.kpi .v{font-size:26px;font-weight:800;color:#0e1c38;line-height:1.15;margin:3px 0 2px}
+.kpi .s{font-size:9.5px;color:#8a94a6}
+
+.sec{margin-bottom:16px}
+.sh{display:flex;align-items:center;gap:10px;margin-bottom:9px;padding-bottom:7px;border-bottom:1.5px solid #16294d}
+.sh .no{width:23px;height:23px;border-radius:7px;background:#16294d;color:#fff;font-size:10px;font-weight:700;
+ display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sh b{font-size:13.5px;color:#0e1c38}
+.sh small{display:block;font-size:10px;color:#8a94a6;font-weight:400;margin-top:1px}
+
+.fnrow{display:grid;grid-template-columns:96px 1fr 52px;align-items:center;gap:10px;margin-bottom:7px}
+.fnl{font-size:11px;font-weight:600;color:#43526b;text-align:right}
+.fnbarwrap{background:#f1f4f9;border-radius:7px;height:26px;overflow:hidden}
+.fnbar{height:100%;border-radius:7px;display:flex;align-items:center;justify-content:flex-end;
+ padding-right:9px;color:#fff;font-size:12px;font-weight:800;min-width:26px}
+.fnp{font-size:11px;text-align:right}.fnp .up{color:#17845f}.fnp .dn{color:#c1443f}.fnp .mut{color:#b6bdc9}
+.fnnote{font-size:9.5px;color:#8a94a6;margin-top:6px;text-align:right}
+
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.shrow{display:grid;grid-template-columns:1fr 92px 56px;align-items:center;gap:8px;margin-bottom:6px}
+.shl{font-size:10.5px;color:#43526b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.shbw{background:#f1f4f9;border-radius:5px;height:12px;overflow:hidden}
+.shb{height:100%;border-radius:5px;min-width:3px}
+.shv{text-align:right;font-size:10.5px}.shv b{color:#16294d}.shv small{color:#96a0b0;margin-left:4px}
+.nodata{font-size:11px;color:#9aa4b5;font-style:italic;padding:10px 0}
+
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{background:#eef2f7;color:#43526b;font-size:9.5px;font-weight:700;text-align:left;padding:7px 8px;border:1px solid #dde3ec}
+td{padding:6px 8px;border:1px solid #e6eaf1;vertical-align:top}
+tbody tr:nth-child(even) td{background:#fafbfd}
+td.c{text-align:center}td.b{font-weight:700;color:#16294d}
+td.none{text-align:center;color:#9aa4b5;padding:14px;font-style:italic}
+.bg{display:inline-block;font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap}
+.sign{display:grid;grid-template-columns:1fr 1fr;gap:34px;margin-top:20px}
+.sign div{text-align:center;font-size:11px;color:#43526b}
+.sign .ln{border-bottom:1px dotted #8a94a6;height:34px;margin-bottom:6px}
+#flow{position:absolute;left:-99999px;top:0;width:734px}
+@media print{
+  @page{size:A4;margin:0}
+  body{background:#fff;padding:0}.bar{display:none}
+  .page{margin:0;box-shadow:none;page-break-after:always}
+  .page:last-child{page-break-after:auto}
+}
+</style></head><body>
+<div class="bar"><b>📊 รายงานแดชบอร์ดการสรรหา</b>
+  <span style="font-size:12px;color:#b9c8dd">${thD(f)} – ${thD(t)} (${dayCount} วัน) · <span id="pgcount">กำลังจัดหน้า...</span></span>
+  <span class="sp"><button id="prbtn" onclick="window.print()">🖨️ พิมพ์</button>
+  <button id="savebtn" onclick="dl()">💾 บันทึกเป็น PDF</button></span></div>
+
+<div id="pages"></div>
+
+<div id="flow">
+  <div class="kpis">${KPI.map(k => `<div class="kpi" style="--c:${k.c}"><div class="l">${k.l}</div><div class="v">${k.v}</div><div class="s">${esc(k.s)}</div></div>`).join('')}</div>
+
+  ${SEC('01', 'เส้นทางผู้สมัคร (Funnel)', 'ตัวเลขขวาสุด = สัดส่วนที่ผ่านมาจากด่านก่อนหน้า',
+    fnHtml + `<div class="fnnote">อัตราการรับเข้าโดยรวม ${pct(hiredInP.length, newOnes.length)}% ของผู้สมัครใหม่ในช่วงนี้</div>`)}
+
+  <div class="two">
+    ${SEC('02', 'ช่องทางที่มาของผู้สมัคร', `จาก ${newOnes.length} คน`, shareHtml(srcItems, newOnes.length))}
+    ${SEC('03', 'ตำแหน่งที่มีผู้สมัครมากที่สุด', `จาก ${newOnes.length} คน`, shareHtml(posItems, newOnes.length))}
+  </div>
+
+  ${SEC('04', 'สรุปตามตำแหน่งงาน', 'เรียงตามจำนวนที่รับเข้าได้',
+    TB('<th>ตำแหน่ง</th><th class="c" style="text-align:center;width:74px">สมัครใหม่</th><th style="text-align:center;width:74px">สัมภาษณ์</th><th style="text-align:center;width:66px">รับเข้า</th><th style="text-align:center;width:80px">อัตรารับเข้า</th>', posRows))}
+
+  ${SEC('05', 'เหตุผลที่ไม่ผ่าน / ยกเลิก', `จาก ${closedInP.length} คนที่ปิดเคสในช่วงนี้`, shareHtml(reasonItems, closedInP.length))}
+
+  ${SEC('06', `รับเข้าทำงานในช่วงนี้ (${hiredInP.length} คน)`, 'ผู้ที่ตอบรับข้อเสนอแล้ว',
+    TB('<th style="width:26px;text-align:center">#</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th style="width:78px">วันเริ่มงาน</th><th style="width:88px">เงินเดือน</th><th style="width:82px">ประเภทจ้าง</th><th style="width:76px">ช่องทาง</th>',
+      rows([...hiredInP].sort(byD('offerStart')), [a => thD(a.offerStart), a => money2(a.offerSalary), a => esc(a.offerType || '-'), a => esc(a.src || '-')], 7)))}
+
+  ${SEC('07', `ผู้สมัครใหม่ในช่วงนี้ (${newOnes.length} คน)`, 'เรียงตามวันที่สมัคร',
+    TB('<th style="width:26px;text-align:center">#</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th style="width:74px">วันที่สมัคร</th><th style="width:84px">ช่องทาง</th><th style="width:86px">เบอร์โทร</th><th style="width:86px">สถานะปัจจุบัน</th>',
+      rows([...newOnes].sort(byD('date')), [a => thD(repAppDate(a)), a => esc(a.src || '-'), a => esc(a.phone || '-'), a => badge(a)], 7)))}
+
+  ${SEC('08', `ไม่ผ่าน / ยกเลิก ในช่วงนี้ (${closedInP.length} คน)`, 'พร้อมเหตุผลปิดเคส',
+    TB('<th style="width:26px;text-align:center">#</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th style="width:78px">วันที่ปิดเคส</th><th style="width:84px">สถานะ</th><th>เหตุผล</th>',
+      rows([...closedInP].sort(byD('closedAt')), [a => thD(a.closedAt || repAppDate(a)), a => badge(a), a => esc(a.closeReason || a.resultNote || '-')], 6)))}
+
+  <div class="sign">
+    <div><div class="ln"></div>ผู้จัดทำ (ฝ่ายบุคคล)</div>
+    <div><div class="ln"></div>ผู้รับทราบ (ผู้บริหาร)</div>
+  </div>
+</div>
+
 <script>
+var HEAD_HTML = ${JSON.stringify(`<div class="hd">${logoSrc ? `<img src="${logoSrc}" alt="">` : ''}<small>RECRUITMENT DASHBOARD REPORT</small><h1>รายงานแดชบอร์ดการสรรหาพนักงาน</h1><div class="pr">ช่วงวันที่ ${thD(f)} ถึง ${thD(t)} · รวม ${dayCount} วัน</div><div class="meta"><b>MASARU HR</b>ออกรายงาน ${now}<br>เอกสารภายใน (ความลับ)</div></div>`)};
+var MINI_HTML = ${JSON.stringify(`<div class="mini"><b>รายงานแดชบอร์ดการสรรหาพนักงาน</b><span>${thD(f)} – ${thD(t)} · MASARU HR</span></div>`)};
+
+/* ───── จัดหน้า A4: บล็อกไม่ขาดกลาง / ตารางยาวขึ้นหน้าใหม่พร้อมหัวตาราง ───── */
+function newPage(big){
+  var pg = document.createElement('div'); pg.className = 'page';
+  pg.innerHTML = (big ? HEAD_HTML : MINI_HTML) +
+    '<div class="parea"></div><div class="pft"><span>MASARU HR — เหนือกว่า ทุกวัน</span><span class="pno"></span></div>';
+  document.getElementById('pages').appendChild(pg);
+  return pg;
+}
+function overflow(pg){ var a = pg.querySelector('.parea'); return a.scrollHeight > a.clientHeight; }
+
+function paginate(){
+  var flow = document.getElementById('flow');
+  var pages = document.getElementById('pages');
+  pages.innerHTML = '';
+  var pg = newPage(true), area = pg.querySelector('.parea');
+
+  function pushBlock(node){
+    area.appendChild(node);
+    if (overflow(pg)) { area.removeChild(node); pg = newPage(false); area = pg.querySelector('.parea'); area.appendChild(node); }
+  }
+
+  [].slice.call(flow.children).forEach(function(blk){
+    var tbl = blk.tagName === 'SECTION' ? blk.querySelector('table') : null;
+    var bodyRows = tbl ? [].slice.call(tbl.querySelectorAll('tbody > tr')) : [];
+    if (!tbl || bodyRows.length <= 2) { pushBlock(blk.cloneNode(true)); return; }
+
+    var shell = blk.cloneNode(true);
+    var tb = shell.querySelector('table tbody'); tb.innerHTML = '';
+    var titleEl = shell.querySelector('.sh b');
+    var baseTitle = titleEl ? titleEl.textContent : '';
+    area.appendChild(shell);
+    if (overflow(pg)) { area.removeChild(shell); pg = newPage(false); area = pg.querySelector('.parea'); area.appendChild(shell); }
+
+    var curBody = tb, part = 1;
+    bodyRows.forEach(function(tr){
+      var c = tr.cloneNode(true);
+      curBody.appendChild(c);
+      if (overflow(pg)) {
+        curBody.removeChild(c);
+        part++;
+        pg = newPage(false); area = pg.querySelector('.parea');
+        var cur = blk.cloneNode(true);
+        curBody = cur.querySelector('table tbody'); curBody.innerHTML = '';
+        var b2 = cur.querySelector('.sh b'); if (b2) b2.textContent = baseTitle + ' (ต่อ ' + part + ')';
+        area.appendChild(cur);
+        curBody.appendChild(c);
+      }
+    });
+  });
+
+  var all = [].slice.call(document.querySelectorAll('.page'));
+  all.forEach(function(p, i){ p.querySelector('.pno').textContent = 'หน้า ' + (i + 1) + ' / ' + all.length; });
+  var pc = document.getElementById('pgcount');
+  if (pc) pc.textContent = 'รวม ' + all.length + ' หน้า';
+}
+
 async function dl(){
-  var b=document.getElementById('savebtn');
-  b.disabled=true; b.textContent='กำลังสร้าง PDF...';
+  var b = document.getElementById('savebtn'); b.disabled = true; b.textContent = 'กำลังสร้าง PDF...';
   try{
-    if(typeof html2canvas==='undefined' || !window.jspdf) throw new Error('lib');
-    var sheet=document.getElementById('sheet');
-    var cv=await html2canvas(sheet,{scale:2,backgroundColor:'#ffffff',useCORS:true});
-    var jsPDF=window.jspdf.jsPDF, pdf=new jsPDF('p','mm','a4');
-    var M=8, PW=210-M*2, PH=297-M*2;
-    var pxPerMm=cv.width/PW;               // สเกลจาก px ของ canvas -> mm บนกระดาษ
-    var sliceH=Math.floor(PH*pxPerMm);     // ความสูง 1 หน้า (px)
-    var pages=Math.max(1, Math.ceil(cv.height/sliceH));
-    for(var i=0;i<pages;i++){
-      var h=Math.min(sliceH, cv.height-i*sliceH);
-      var tmp=document.createElement('canvas');
-      tmp.width=cv.width; tmp.height=h;
-      tmp.getContext('2d').drawImage(cv,0,i*sliceH,cv.width,h,0,0,cv.width,h);
-      if(i>0) pdf.addPage();
-      pdf.addImage(tmp.toDataURL('image/jpeg',0.95),'JPEG',M,M,PW,h/pxPerMm);
+    if (typeof html2canvas === 'undefined' || !window.jspdf) throw new Error('lib');
+    var jsPDF = window.jspdf.jsPDF;
+    var pdf = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'portrait' });
+    var pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
+    var pages = [].slice.call(document.querySelectorAll('.page'));
+    for (var i = 0; i < pages.length; i++){
+      b.textContent = 'กำลังสร้าง PDF... ' + (i + 1) + '/' + pages.length;
+      var cv = await html2canvas(pages[i], { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+      if (i > 0) pdf.addPage();
+      pdf.addImage(cv.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pw, ph);
     }
     pdf.save(${JSON.stringify(fname)});
-    b.disabled=false; b.textContent='💾 บันทึกเป็น PDF';
-  }catch(e){
-    b.disabled=false; b.textContent='💾 บันทึกเป็น PDF';
-    alert('สร้างไฟล์ PDF ไม่สำเร็จ ใช้ปุ่ม 🖨️ พิมพ์ แล้วเลือก "Save as PDF" แทนได้');
-  }
+    b.disabled = false; b.textContent = '💾 บันทึกเป็น PDF';
+  }catch(e){ window.print(); b.disabled = false; b.textContent = '💾 บันทึกเป็น PDF'; }
 }
+
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(function(){ setTimeout(paginate, 80); });
+else window.addEventListener('load', function(){ setTimeout(paginate, 200); });
+setTimeout(function(){ if (!document.querySelector('.page')) paginate(); }, 2500);
 <\/script>
 </body></html>`;
 
