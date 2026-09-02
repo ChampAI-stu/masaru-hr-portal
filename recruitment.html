@@ -921,6 +921,26 @@
     function todayTh() { return new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }); }
     function money(v) { const d = String(v == null ? '' : v).replace(/[^\d]/g, ''); return d ? Number(d).toLocaleString('en-US') : ''; }
     function fmtMoney(el) { const d = el.value.replace(/[^\d]/g, ''); el.value = d ? Number(d).toLocaleString('en-US') : ''; }
+    // ── แปลงวันที่ทุกรูปแบบให้เป็น ISO (YYYY-MM-DD) เพื่อใช้เปรียบเทียบช่วงเวลา ──
+    // ข้อมูลเก่าบางฟิลด์ถูกบันทึกเป็นข้อความไทย เช่น "2 ก.ย. 69" (จาก todayTh())
+    // ถ้าเอาไปเทียบกับ "2026-08-01" ตรง ๆ จะได้ผลผิดทั้งหมด
+    const TH_MON_MAP = { 'ม.ค.': 1, 'ก.พ.': 2, 'มี.ค.': 3, 'เม.ย.': 4, 'พ.ค.': 5, 'มิ.ย.': 6,
+                         'ก.ค.': 7, 'ส.ค.': 8, 'ก.ย.': 9, 'ต.ค.': 10, 'พ.ย.': 11, 'ธ.ค.': 12,
+                         'มกราคม': 1, 'กุมภาพันธ์': 2, 'มีนาคม': 3, 'เมษายน': 4, 'พฤษภาคม': 5, 'มิถุนายน': 6,
+                         'กรกฎาคม': 7, 'สิงหาคม': 8, 'กันยายน': 9, 'ตุลาคม': 10, 'พฤศจิกายน': 11, 'ธันวาคม': 12 };
+    function toISO(v) {
+      if (!v) return '';
+      const s = String(v).trim();
+      if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);          // ISO อยู่แล้ว
+      const m = s.match(/^(\d{1,2})\s+(\S+)\s+(\d{2,4})$/);             // "2 ก.ย. 69" / "2 กันยายน 2569"
+      if (!m) return '';
+      const mo = TH_MON_MAP[m[2]];
+      if (!mo) return '';
+      let y = Number(m[3]);
+      if (y < 100) y += 2500;                                            // 69 -> 2569
+      if (y > 2400) y -= 543;                                            // พ.ศ. -> ค.ศ.
+      return y + '-' + String(mo).padStart(2, '0') + '-' + String(Number(m[1])).padStart(2, '0');
+    }
     function isoOnly(d) { return /^\d{4}-\d{2}-\d{2}$/.test(d || '') ? d : ''; }
 
     function showToast(msg, err = false) {
@@ -2231,8 +2251,8 @@
     }
     function repOnDate(which, v) { if (which === 'f') repFrom = v; else repTo = v; renderRep(); }
     // วันที่ใช้จัดกลุ่ม "ผู้สมัครเข้ามาช่วงไหน"
-    const repAppDate = a => a.date || a.createdAt || '';
-    const inRange = (d, f, t) => !!d && d >= f && d <= t;
+    const repAppDate = a => toISO(a.date) || a.createdAt || '';
+    const inRange = (d, f, t) => { const x = toISO(d); return !!x && x >= f && x <= t; };
 
     // ═══════════════════ รายงานสรุปตามช่วงเวลา (แบ่งหน้า A4 อัตโนมัติ) ═══════════════════
     function openPeriodReport() {
@@ -2497,6 +2517,7 @@ setTimeout(function(){ if (!document.querySelector('.page')) paginate(); }, 2500
     const D_PAL = ['#2c67ad', '#17845f', '#c9992a', '#c1443f', '#6555c7', '#0f8b9e', '#9a6b3a', '#7a8899'];
     const dNum = v => (v || 0).toLocaleString('th-TH');
     function dDays(a, b) {
+      a = toISO(a); b = toISO(b);
       if (!a || !b) return null;
       const x = Date.parse(a), y = Date.parse(b);
       if (isNaN(x) || isNaN(y)) return null;
@@ -2569,7 +2590,7 @@ setTimeout(function(){ if (!document.querySelector('.page')) paginate(); }, 2500
       const offerSent = DATA.filter(a => !!a.offerSentAt).length;
 
       // Time to Hire = วันที่สมัคร -> วันตอบรับ (หรือวันเริ่มงาน)
-      const dStart = a => a.date || a.createdAt || '';
+      const dStart = a => toISO(a.date) || a.createdAt || '';
       const dEnd = a => a.respondedAt || a.offerSentAt || a.offerStart || a.closedAt || '';
       const tth = DATA.filter(a => statusOf(a) === 'hired')
         .map(a => dDays(dStart(a), dEnd(a))).filter(v => v != null);
@@ -2810,7 +2831,7 @@ setTimeout(function(){ if (!document.querySelector('.page')) paginate(); }, 2500
       const screenInP = newOnes.filter(a => !!(a.hrNote || a.hrBy) || !!a.intDate || !!a.result || !!a.offerSentAt);
 
       const dayCount = Math.round((Date.parse(t) - Date.parse(f)) / 86400000) + 1;
-      const thD = d => thDate(d) || '-';
+      const thD = d => thDate(toISO(d) || d) || '-';
       const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
 
       // เวลาเฉลี่ยกว่าจะรับเข้า
@@ -2942,7 +2963,7 @@ setTimeout(function(){ if (!document.querySelector('.page')) paginate(); }, 2500
       const rows = (arr, cols, span) => arr.length
         ? arr.map((a, i) => `<tr><td class="c">${i + 1}</td><td><b>${esc(a.name)}</b></td><td>${esc(a.pos || '-')}</td>${cols.map(fn => `<td>${fn(a)}</td>`).join('')}</tr>`).join('')
         : `<tr><td colspan="${span}" class="none">ไม่มีข้อมูลในช่วงนี้</td></tr>`;
-      const byD = k => (x, y) => String(x[k] || '').localeCompare(String(y[k] || ''));
+      const byD = k => (x, y) => (toISO(x[k]) || String(x[k] || '')).localeCompare(toISO(y[k]) || String(y[k] || ''));
 
       const TB = (head, body) => `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
       const SEC = (no, title, sub, inner) => `<section class="sec">
