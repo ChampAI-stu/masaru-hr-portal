@@ -1647,6 +1647,27 @@ function _dupName(raw){
 function _dupKey(rec){
   return _dupName(rec.name)+"|"+rec.type+"|"+(rec.ref||rec.due||"");
 }
+/* ดึงรายการล่าสุดจากฐานข้อมูลก่อนเช็คซ้ำ
+   สาเหตุที่ยังซ้ำแม้มีระบบกันซ้ำแล้ว: หน้าเว็บถือข้อมูลเก่าในเครื่อง
+   (เปิดค้างไว้ / อีกเครื่องเพิ่มไปแล้ว / เพิ่งกลับมาจากโหมดออฟไลน์) */
+var _lastRefresh = 0;
+async function refreshRecords(force){
+  if(!_sb) return false;
+  if(!force && Date.now()-_lastRefresh < 5000) return true;   // กันยิงถี่เกิน
+  try{
+    var r = await _sb.from("hr_deadlines").select("*");
+    if(r.error || !r.data) return false;
+    state.records = r.data.map(rowToRec);
+    _lastRefresh = Date.now();
+    return true;
+  }catch(e){ console.warn("refreshRecords", e); return false; }
+}
+/* เช็คซ้ำแบบเชื่อถือได้ — รีเฟรชก่อนเสมอ */
+async function findDupRecordsFresh(rec, excludeId){
+  await refreshRecords(true);
+  return findDupRecords(rec, excludeId);
+}
+
 /* คืนรายการที่ซ้ำกับ rec (ไม่นับตัวเอง) */
 function findDupRecords(rec, excludeId){
   var k=_dupKey(rec);
@@ -1695,7 +1716,7 @@ async function fixDupRecords(){
 }
 window.fixDupRecords=fixDupRecords;
 
-function saveRec(){
+async function saveRec(){
   const id=_q("f_id").value || ("r"+Date.now());
   const type=_q("f_type").value;
   const name=_q("f_name").value.trim();
@@ -1709,7 +1730,7 @@ function saveRec(){
     rec.due=_q("f_due").value;
     if(!rec.due){ alert("กรุณาเลือกวันครบกำหนด"); return; }
   }
-  const dups=findDupRecords(rec, id);
+  const dups=await findDupRecordsFresh(rec, id);
   if(dups.length){
     const d0=dups[0];
     if(!confirm("⚠️ มีรายการนี้อยู่แล้ว\n\n"+d0.name+"  ("+typeName(d0.type)+")\nวันอ้างอิง "+thDate(d0.ref||d0.due)
@@ -2042,7 +2063,7 @@ async function exportExcel(){
   var a=document.createElement("a"); a.href=url; a.download="MASARU_Deadline_"+stamp+".xlsx";
   document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
 }
-function importRows(rows){
+async function importRows(rows){
   // find header row: contains "ชื่อ" and "ประเภท"
   let hi=-1;
   for(let i=0;i<Math.min(rows.length,6);i++){
@@ -2052,7 +2073,8 @@ function importRows(rows){
   if(hi<0){ alert("ไม่พบหัวตาราง (ต้องมีคอลัมน์ 'ชื่อ' และ 'ประเภท') — ใช้ไฟล์แม่แบบนะครับ"); return; }
   const data=rows.slice(hi+1);
   let added=0, skipped=0;
-  const existKeys=new Set(state.records.map(r=>r.name+"|"+r.type+"|"+(r.ref||r.due||"")));
+  await refreshRecords(true);                                   // เทียบกับข้อมูลจริงล่าสุด
+  const existKeys=new Set(state.records.map(r=>_dupKey(r)));    // ใช้คีย์เดียวกับระบบกันซ้ำ (ตัดชื่อเล่น/ช่องว่าง)
   data.forEach(row=>{
     const name=String(row[0]||"").trim();
     const type=mapType(row[1]);
@@ -2065,7 +2087,7 @@ function importRows(rows){
       rec.ref=dstr;
       if(type==="maternity") rec.threshold=Number(row[3])||45;
     }else{ rec.due=dstr; }
-    const key=name+"|"+type+"|"+dstr;
+    const key=_dupKey(rec);
     if(existKeys.has(key)){ skipped++; return; }      // dedup
     existKeys.add(key);
     state.records.push(rec); added++;
@@ -2295,7 +2317,7 @@ function extCalcDue(){
   return n;
 }
 /* รายการอัตโนมัติยังไม่มีใน hr_deadlines — แปลงเป็นรายการจริงก่อนต่ออายุ */
-function ensureRealRecord(rid){
+async function ensureRealRecord(rid){
   var rec=(state.records||[]).find(function(x){ return String(x.id)===String(rid); });
   if(rec) return rec;
   var eid=autoEid(rid);
@@ -2304,7 +2326,7 @@ function ensureRealRecord(rid){
   if(!e || !e.start_date) return null;
   rec = { id:"r"+Date.now(), type:"probation", name:(e.full_name||"").trim(),
           dept:e.group_name||"", note:"", ref:String(e.start_date).slice(0,10) };
-  var already=findDupRecords(rec, null);
+  var already=await findDupRecordsFresh(rec, null);
   if(already.length) return already[0];              // มีรายการจริงอยู่แล้ว ใช้ตัวเดิม
   state.records.push(rec);
   /* ย้ายสถานะ "ผ่าน" ของงวดเดิม (auto) มาที่ id ใหม่ */
@@ -2326,8 +2348,8 @@ function ensureRealRecord(rid){
   guard(function(){ return sbUpsertRecord(rec); });
   return rec;
 }
-window.openExtModal=function(rid){
-  var rec = ensureRealRecord(rid);
+window.openExtModal=async function(rid){
+  var rec = await ensureRealRecord(rid);
   if(!rec){ alert("ไม่พบข้อมูลพนักงาน หรือยังไม่มีวันเริ่มงานในระบบ"); return; }
   _extRid = rec.id;
   rid = rec.id;
