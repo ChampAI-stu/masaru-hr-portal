@@ -154,6 +154,10 @@
     }
     .fchip:hover { background: var(--line-soft); }
     .fchip.on { background: var(--green-soft); color: var(--green-dark); border-color: var(--green-line); }
+    .fchip-ns { display: inline-flex; align-items: center; gap: 4px; color: #9A3412; }
+    .fchip-ns i { font-size: 12px; }
+    .fchip-ns.on { background: #FFEDD5; color: #9A3412; border-color: #FBD4A8; }
+    .fc-n { font-size: 11px; opacity: .75; margin-left: 1px; }
     .fchip-int { display: inline-flex; align-items: center; gap: 4px; color: #9a6a12; }
     .fchip-int i { font-size: 12px; }
     .fchip-int.on { background: #fdf3d8; color: #7a5410; border-color: #ecd9a6; }
@@ -760,6 +764,7 @@
           <div class="fchip" data-f="cancelled" onclick="setFilter('cancelled')">ยกเลิก</div>
           <div class="fchip fchip-int" data-f="interested" onclick="setFilter('interested')"><i class="ti ti-star-filled"></i>สนใจ</div>
           <div class="fchip fchip-bk" data-f="backup" onclick="setFilter('backup')"><i class="ti ti-bookmark-filled"></i>สำรอง</div>
+          <div class="fchip fchip-ns" data-f="noshow" onclick="setFilter('noshow')"><i class="ti ti-calendar-x"></i>ไม่เข้าสัมภาษณ์ <b class="fc-n" id="nc-noshow">0</b></div>
         </div>
         <div id="alist"></div>
       </div>
@@ -1161,14 +1166,20 @@
       let list = DATA.filter(a => a.name.toLowerCase().includes(q) || a.pos.toLowerCase().includes(q));
       if (filter === 'interested') list = list.filter(a => a.interestedBy);
       else if (filter === 'backup') list = list.filter(a => a.isBackup);
+      else if (filter === 'noshow') list = list.filter(a => isNoShow(a));
       else if (filter !== 'all') list = list.filter(a => statusOf(a) === filter);
       document.getElementById('nc-list').textContent = DATA.length;
+      const nsEl = document.getElementById('nc-noshow');
+      if (nsEl) nsEl.textContent = DATA.filter(a => isNoShow(a)).length;
 
       const el = document.getElementById('alist');
       if (!list.length) {
-        const ic = filter === 'interested' ? 'ti-star-off' : (filter === 'backup' ? 'ti-bookmark-off' : 'ti-user-off');
+        const ic = filter === 'interested' ? 'ti-star-off'
+                 : filter === 'backup' ? 'ti-bookmark-off'
+                 : filter === 'noshow' ? 'ti-calendar-check' : 'ti-user-off';
         const tx = filter === 'interested' ? 'ยังไม่มีคนถูกทำเครื่องหมายสนใจ'
-                 : (filter === 'backup' ? 'ยังไม่มีผู้สมัครสำรอง' : 'ไม่มีผู้สมัคร');
+                 : filter === 'backup' ? 'ยังไม่มีผู้สมัครสำรอง'
+                 : filter === 'noshow' ? 'ยังไม่มีผู้สมัครที่ไม่เข้าสัมภาษณ์ 👍' : 'ไม่มีผู้สมัคร';
         el.innerHTML = `<div class="empty" style="padding:40px 20px;font-size:13px"><i class="ti ${ic}" style="font-size:34px"></i>${tx}</div>`; return;
       }
       el.innerHTML = list.map(a => {
