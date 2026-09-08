@@ -173,6 +173,7 @@
       font-size: 13px; font-weight: 700; flex-shrink: 0;
     }
     .ai-body { flex: 1; min-width: 0; }
+    .stag.tag-ns { background:#FFEDD5; color:#9A3412; }
     .ai-name { font-size: 13.5px; font-weight: 600; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .ai-pos { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .stag {
@@ -304,6 +305,8 @@
     .btn-primary { background: #d62030; color: #fff; border-color: #d62030; }
     .btn-primary:hover { background: #b01827; }
     .btn-danger { background: #fff; color: #9a2b48; border-color: #f2c9d5; }
+    .btn-warn { background: #fff; color: #9A3412; border-color: #FBD4A8; }
+    .btn-warn:hover { background: #FFF3E6; border-color: #F0A868; }
     .btn-danger:hover { background: #fdf0f3; }
     .btn-ghost { flex: 0 0 auto; }
 
@@ -1117,6 +1120,12 @@
 
     function statusOf(a) { return a.status || 'new'; }
 
+    // ── ผู้สมัครไม่มาตามนัดสัมภาษณ์ (no-show) ──
+    // เก็บเป็นเหตุผลปิดเคส ไม่ต้องเพิ่มคอลัมน์ในฐานข้อมูล
+    const NOSHOW_REASON = 'ไม่เข้าสัมภาษณ์ (No-show)';
+    function isNoShow(a) { return (a.closeReason || '').indexOf('ไม่เข้าสัมภาษณ์') === 0; }
+    const NOSHOW_TAG = '<span class="stag tag-ns"><i class="ti ti-calendar-x"></i>ไม่เข้าสัมภาษณ์</span>';
+
     // ── แหล่งความจริงเดียวของสถานะ pass/fail (ใช้ทั้งการ์ด รายงาน และแดชบอร์ด) ──
     // แยก 2 เรื่องที่เคยปนกัน:
     //   interviewResult = ผลสัมภาษณ์เท่านั้น (pass/fail/ยังไม่มีผล)
@@ -1134,7 +1143,8 @@
       const S = statusOf(a), reason = (a.closeReason || '').trim();
       if (S === 'hired')   return { code: 'hired', label: 'รับเข้าทำงาน',
                                     sub: 'ผู้สมัครตอบรับ Offer' + (a.respondedAt ? ' · ' + a.respondedAt : '') };
-      if (S === 'cancelled') return { code: 'cancelled', label: 'ยกเลิก',
+      if (S === 'cancelled') return { code: 'cancelled',
+                                    label: isNoShow(a) ? 'ไม่เข้าสัมภาษณ์' : 'ยกเลิก',
                                     sub: reason + (a.closedAt ? ' · เมื่อ ' + a.closedAt : '') };
       if (S === 'rejected') {
         // ป้ายต้องสอดคล้องกับผลสัมภาษณ์จริง ไม่เหมาเรียก "ไม่ผ่าน" ทุกกรณี
@@ -1170,6 +1180,7 @@
             <div class="ai-pos">${esc(a.pos)}</div>
             <span class="stag" style="background:${st.bg};color:${st.color}"><i class="ti ${st.icon}"></i>${st.label}</span>
             ${a.isBackup ? `<span class="stag tag-bk"><i class="ti ti-bookmark-filled"></i>สำรอง</span>` : ''}
+            ${isNoShow(a) ? NOSHOW_TAG : ''}
           </div>
           ${a.interestedBy ? `<span class="int-star" title="${roleLabel(a.interestedBy)}สนใจ"><i class="ti ti-star-filled"></i></span>` : ''}
         </div>`;
@@ -1185,7 +1196,7 @@
         return `<div class="banner banner-err"><i class="ti ti-circle-x"></i><div><b>${esc(_o.label)}</b>${_o.sub ? ' — ' + esc(_o.sub) : ''}</div></div>`;
       }
       if (st === 'cancelled') {
-        return `<div class="banner banner-cancel"><i class="ti ti-user-x"></i><div><b>ยกเลิก</b>${a.closeReason ? ' — ' + esc(a.closeReason) : ''}${a.closedAt ? ` · เมื่อ ${esc(a.closedAt)}` : ''}${a.prevStatus ? ` · สถานะก่อนยกเลิก: <b>${stMeta(a.prevStatus).label}</b>` : ''}</div></div>`;
+        return `<div class="banner banner-cancel"><i class="ti ${isNoShow(a) ? 'ti-calendar-x' : 'ti-user-x'}"></i><div><b>${isNoShow(a) ? 'ไม่เข้าสัมภาษณ์' : 'ยกเลิก'}</b>${a.closeReason ? ' — ' + esc(a.closeReason) : ''}${a.closedAt ? ` · เมื่อ ${esc(a.closedAt)}` : ''}${a.prevStatus ? ` · สถานะก่อนยกเลิก: <b>${stMeta(a.prevStatus).label}</b>` : ''}</div></div>`;
       }
       const curIdx = FLOW.indexOf(st);
       return `<div class="stepper">${FLOW.map((s, i) => {
@@ -1271,7 +1282,7 @@
           <div class="dh-left">
             <div class="dh-av" style="${avStyle(a).bg}">${avStyle(a).inner}</div>
             <div style="min-width:0">
-              <div class="dh-name" id="dh-name"><span id="dh-name-txt">${esc(a.name)}</span><span class="stag" style="background:${stMeta(st).bg};color:${stMeta(st).color}"><i class="ti ${stMeta(st).icon}"></i>${stMeta(st).label}</span>${a.isBackup ? `<span class="stag tag-bk"><i class="ti ti-bookmark-filled"></i>สำรอง</span>` : ''}${isExec ? '' : `<button class="name-edit-btn" onclick="editName('${a.id}')" title="แก้ไขชื่อ"><i class="ti ti-pencil"></i></button>`}</div>
+              <div class="dh-name" id="dh-name"><span id="dh-name-txt">${esc(a.name)}</span><span class="stag" style="background:${stMeta(st).bg};color:${stMeta(st).color}"><i class="ti ${stMeta(st).icon}"></i>${stMeta(st).label}</span>${a.isBackup ? `<span class="stag tag-bk"><i class="ti ti-bookmark-filled"></i>สำรอง</span>` : ''}${isNoShow(a) ? NOSHOW_TAG : ''}${isExec ? '' : `<button class="name-edit-btn" onclick="editName('${a.id}')" title="แก้ไขชื่อ"><i class="ti ti-pencil"></i></button>`}</div>
               <div class="dh-meta">${esc(a.pos)} · ${esc(a.src || '—')}</div>
             </div>
           </div>
@@ -1328,6 +1339,7 @@
           <div class="field"><label>เงินเดือนที่ตกลงกับผู้สมัคร (บาท)</label><input class="inp" id="f-agreedsal" data-af="agreedSalary" inputmode="numeric" placeholder="เช่น 25,000" value="${money(a.agreedSalary)}" oninput="fmtMoney(this)"></div>
           <div class="btn-row">
             ${stepBackBtn(a)}
+            <button class="btn btn-warn" onclick="actNoShow('${a.id}')"><i class="ti ti-calendar-x"></i>ไม่เข้าสัมภาษณ์</button>
             <button class="btn btn-danger" onclick="actResult('${a.id}','fail')"><i class="ti ti-x"></i>ไม่ผ่าน</button>
             <button class="btn btn-primary" onclick="actResult('${a.id}','pass')"><i class="ti ti-check"></i>ผ่าน → เตรียม Offer</button>
           </div>
@@ -1568,6 +1580,26 @@
       if (note) fields.hrNote = note;
       if (await dbUpdate(id, fields)) { showToast('บันทึกว่าไม่ผ่านแล้ว'); await refresh(); }
     }
+    // ผู้สมัครไม่มาตามนัด → ปิดเคสทันที พร้อมติดแท็กไว้
+    async function actNoShow(id) {
+      const a = getA(id); if (!a) return;
+      const st = statusOf(a);
+      let note = prompt('บันทึกเพิ่มเติม (ไม่ใส่ก็ได้) เช่น "โทรแล้วไม่รับ 3 ครั้ง"', '');
+      if (note === null) return;
+      note = (note || '').trim();
+      const reason = NOSHOW_REASON + (note ? ' — ' + note : '');
+      if (!await askConfirm(
+            `ปิดเคส <b>${esc(a.name)}</b> เป็น "ไม่เข้าสัมภาษณ์"?` +
+            `<br><span style="color:var(--muted);font-size:13px">` +
+            (a.intDate ? `นัดไว้: ${esc(thDate(a.intDate) || a.intDate)}<br>` : '') +
+            `ข้อมูลทั้งหมดถูกเก็บไว้ กด "ย้อนกลับ" คืนสถานะเดิม (${stMeta(st).label}) ได้ภายหลัง</span>`,
+            { title: 'ไม่เข้าสัมภาษณ์', okText: 'ปิดเคส', danger: true })) return;
+      const fields = { status: 'cancelled', closeReason: reason, closedAt: todayTh(), prevStatus: st,
+                       result: '', resultNote: a.resultNote || '' };   // ไม่มีผลสัมภาษณ์ เพราะไม่ได้สัมภาษณ์
+      if (await dbUpdate(id, fields)) { showToast('ปิดเคส: ไม่เข้าสัมภาษณ์'); await refresh(); }
+    }
+    window.actNoShow = actNoShow;
+
     async function doWithdraw(id) {
       const a = getA(id); if (!a) return;
       const st = statusOf(a);
