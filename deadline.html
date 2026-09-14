@@ -478,6 +478,31 @@ body.locked{overflow:hidden}
   header.top .date{font-size:.92rem;color:#cdd8ee}
   .page-title{font-size:23px;color:var(--green-dark);font-weight:700;margin-bottom:4px;letter-spacing:-.3px}
   .page-sub{color:var(--muted);margin-bottom:18px;font-size:14px}
+  .rep-bar{align-items:flex-end}
+  .rep-bar .fld{display:flex;flex-direction:column;gap:3px}
+  .rep-bar .fld label{font-size:11.5px;color:var(--muted);font-weight:600}
+  .rep-bar .fld input{border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-family:inherit;font-size:13px}
+  .rp-kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:16px}
+  @media(max-width:900px){.rp-kpis{grid-template-columns:repeat(2,1fr)}}
+  .rp-kpi{border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:#fff}
+  .rp-kpi .t{font-size:11.5px;color:var(--muted)}
+  .rp-kpi .v{font-size:25px;font-weight:800;line-height:1.25}
+  .rp-kpi .v small{font-size:12px;font-weight:600;margin-left:4px;color:var(--muted)}
+  .rp-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:900px){.rp-grid{grid-template-columns:1fr}}
+  .rp-card{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:#fff;margin-bottom:12px}
+  .rp-card h3{font-size:14.5px;margin:0 0 10px}
+  .rp-badge{display:inline-block;background:#eef2f8;color:#48566e;border-radius:20px;padding:1px 9px;font-size:11.5px;margin-left:6px}
+  .rp-badge.bad{background:#FDE4E4;color:#9B1C1C}
+  .rp-lg{display:flex;gap:15px;font-size:11.5px;color:var(--muted);margin-top:8px}
+  .rp-lg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px}
+  .rp-tb{width:100%;border-collapse:collapse;font-size:13px}
+  .rp-tb th{background:#f2f5fa;text-align:left;padding:7px 9px;border-bottom:1px solid var(--line);font-size:12px;color:#48566e}
+  .rp-tb td{padding:6px 9px;border-bottom:1px solid #eef1f6}
+  .rp-tb .c{text-align:center}
+  .rp-tb .bad{color:#9B1C1C}
+  .rp-none,.rp-ok{font-size:13px;color:var(--muted);padding:10px 0}
+  .rp-ok{color:#166534}
   .tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:20px;flex-wrap:wrap}
   .tabs .tab{background:none;border:none;padding:11px 16px;font-size:14px;font-weight:600;color:var(--muted);
     border-bottom:2.5px solid transparent;margin-bottom:-1px;display:flex;align-items:center;gap:7px;
@@ -562,6 +587,7 @@ body.locked{overflow:hidden}
   <div class="tabs" id="mainTabs">
     <button class="tab active" data-view="alert">🔔 รายการเตือน</button>
     <button class="tab" data-view="form">📝 แบบประเมินผลการทดลองงาน</button>
+    <button class="tab" data-view="report">📊 รายงาน / Dashboard</button>
   </div>
 
   <div id="alertView">
@@ -605,6 +631,24 @@ body.locked{overflow:hidden}
   </div>
   </div><!-- /alertView -->
 </div>
+
+  <!-- ================= รายงาน / Dashboard ================= -->
+  <div id="reportView" class="hide wrap">
+    <div class="toolbar rep-bar">
+      <div class="fld"><label>ตั้งแต่</label><input type="date" id="rpFrom"></div>
+      <div class="fld"><label>ถึง</label><input type="date" id="rpTo"></div>
+      <div class="focus-btns">
+        <button class="chip focus" data-rp="m0">เดือนนี้</button>
+        <button class="chip focus" data-rp="m1">เดือนที่แล้ว</button>
+        <button class="chip focus" data-rp="q">ไตรมาสนี้</button>
+        <button class="chip focus" data-rp="y">ทั้งปี</button>
+      </div>
+      <select id="rpDept" class="dead-dept"><option value="all">ทุกแผนก</option></select>
+      <div class="spacer"></div>
+      <button class="btn" id="rpPdf">📄 ดูตัวอย่าง / บันทึก PDF</button>
+    </div>
+    <div id="rpBody"></div>
+  </div>
 
   <!-- ================= แบบประเมินผลการทดลองงาน ================= -->
   <div id="formView" class="hide wrap">
@@ -3076,18 +3120,329 @@ $F('fmPdf').addEventListener('click', async function(){
 
 
 
-/* ---------- สลับมุมมอง: รายการเตือน / แบบประเมิน ---------- */
-function showFormView(on){
-  var a=_q('alertView'), f=_q('formView');
-  if(!a||!f) return;
-  if(on){ a.classList.add('hide'); f.classList.remove('hide'); }
-  else  { f.classList.add('hide'); a.classList.remove('hide'); }
-  window.scrollTo({top:0,behavior:'smooth'});
+
+/* ==================================================================
+   📊 รายงาน / Dashboard — ระบบประเมินทดลองงาน
+   สรุปจาก milestones() ชุดเดียวกับหน้ารายการเตือน ตัวเลขจึงตรงกันเสมอ
+   ================================================================== */
+var RP = { from:'', to:'', dept:'all' };
+
+function rpISO(d){ var p=function(n){return (n<10?'0':'')+n;}; return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+function rpSetRange(k){
+  var n=new Date(), y=n.getFullYear(), m=n.getMonth(), f, t;
+  if(k==='m0'){ f=new Date(y,m,1); t=new Date(y,m+1,0); }
+  else if(k==='m1'){ f=new Date(y,m-1,1); t=new Date(y,m,0); }
+  else if(k==='q'){ var q=Math.floor(m/3)*3; f=new Date(y,q,1); t=new Date(y,q+3,0); }
+  else { f=new Date(y,0,1); t=new Date(y,11,31); }
+  _q('rpFrom').value=rpISO(f); _q('rpTo').value=rpISO(t);
+  renderReport();
 }
+
+/* เก็บเฉพาะงานทดลองงาน (30/60/90/ต่ออายุ) ในช่วงที่เลือก */
+function rpData(){
+  var f=_q('rpFrom').value, t=_q('rpTo').value, dept=_q('rpDept').value||'all';
+  RP={from:f,to:t,dept:dept};
+  var all=milestones().filter(function(m){ return m.type==='probation'; });
+  var inRange=all.filter(function(m){
+    var d=rpISO(m.realDate instanceof Date ? m.realDate : parseD(m.realDate));
+    if(f && d<f) return false;
+    if(t && d>t) return false;
+    if(dept!=='all' && (m.dept||'')!==dept) return false;
+    return true;
+  });
+  return { all:all, rows:inRange };
+}
+
+function rpRound(label, n){ return { label:label, n:n }; }
+
+function rpStats(rows){
+  var done=rows.filter(function(m){ return m.done; });
+  var pending=rows.filter(function(m){ return !m.done; });
+  var overdue=pending.filter(function(m){ return m.days<0; });
+  var people={}; rows.forEach(function(m){ people[m.rid]=1; });
+  var onTime = rows.length ? Math.round(done.length*100/rows.length) : 0;
+  return { total:rows.length, done:done.length, pending:pending.length,
+           overdue:overdue.length, people:Object.keys(people).length, rate:onTime };
+}
+
+/* แยกตามรอบประเมิน */
+function rpByRound(rows){
+  var order=['ประเมินทดลองงาน 30 วัน','ประเมินทดลองงาน 60 วัน','ประเมินทดลองงาน 90 วัน','ต่ออายุทดลองงาน'];
+  var by={};
+  rows.forEach(function(m){
+    var k = m.label.indexOf('ต่ออายุ')===0 ? 'ต่ออายุทดลองงาน' : m.label;
+    by[k]=by[k]||{label:k,total:0,done:0,overdue:0};
+    by[k].total++;
+    if(m.done) by[k].done++; else if(m.days<0) by[k].overdue++;
+  });
+  return order.filter(function(k){ return by[k]; }).map(function(k){ return by[k]; })
+    .concat(Object.keys(by).filter(function(k){ return order.indexOf(k)<0; }).map(function(k){ return by[k]; }));
+}
+
+/* แยกตามแผนก */
+function rpByDept(rows){
+  var by={};
+  rows.forEach(function(m){
+    var k=m.dept||'(ไม่ระบุแผนก)';
+    by[k]=by[k]||{dept:k,total:0,done:0,overdue:0,people:{}};
+    by[k].total++; by[k].people[m.rid]=1;
+    if(m.done) by[k].done++; else if(m.days<0) by[k].overdue++;
+  });
+  return Object.keys(by).map(function(k){
+    var o=by[k]; o.pcount=Object.keys(o.people).length;
+    o.rate = o.total ? Math.round(o.done*100/o.total) : 0;
+    return o;
+  }).sort(function(a,b){ return b.total-a.total; });
+}
+
+/* กราฟแท่งแนวนอนแบบ SVG (ใช้ได้ทั้งบนจอและใน PDF) */
+function rpBars(items, opt){
+  opt=opt||{};
+  var max=Math.max.apply(null, items.map(function(i){ return i.total||0; }).concat([1]));
+  var rowH=30, pad=4, w=620, labelW=opt.labelW||190;
+  var h=items.length*rowH+pad*2;
+  var s='<svg viewBox="0 0 '+w+' '+h+'" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg">';
+  items.forEach(function(it,i){
+    var y=pad+i*rowH, barW=w-labelW-70;
+    var dw=Math.round((it.done||0)/max*barW), ow=Math.round((it.overdue||0)/max*barW);
+    var rw=Math.round(((it.total||0)-(it.done||0)-(it.overdue||0))/max*barW);
+    s+='<text x="0" y="'+(y+18)+'" font-size="12.5" fill="#334">'+esc(String(it.label||it.dept).slice(0,26))+'</text>';
+    var x=labelW;
+    if(dw>0){ s+='<rect x="'+x+'" y="'+(y+6)+'" width="'+dw+'" height="16" fill="#2E9E63" rx="3"/>'; x+=dw; }
+    if(rw>0){ s+='<rect x="'+x+'" y="'+(y+6)+'" width="'+rw+'" height="16" fill="#C9D3E2" rx="3"/>'; x+=rw; }
+    if(ow>0){ s+='<rect x="'+x+'" y="'+(y+6)+'" width="'+ow+'" height="16" fill="#D64545" rx="3"/>'; x+=ow; }
+    s+='<text x="'+(x+8)+'" y="'+(y+19)+'" font-size="12" font-weight="700" fill="#16294d">'+(it.total||0)+'</text>';
+  });
+  return s+'</svg>';
+}
+function rpLegend(){
+  return '<div class="rp-lg">'
+    + '<span><i style="background:#2E9E63"></i>เสร็จแล้ว</span>'
+    + '<span><i style="background:#C9D3E2"></i>รอดำเนินการ</span>'
+    + '<span><i style="background:#D64545"></i>เลยกำหนด</span></div>';
+}
+
+function rpDeptOptions(){
+  var sel=_q('rpDept'); if(!sel) return;
+  var cur=sel.value||'all';
+  var set={};
+  state.records.forEach(function(r){ if(r.type==='probation' && r.dept) set[r.dept]=1; });
+  sel.innerHTML='<option value="all">ทุกแผนก</option>'
+    + Object.keys(set).sort().map(function(k){ return '<option value="'+escAttr(k)+'">'+esc(k)+'</option>'; }).join('');
+  sel.value = set[cur]||cur==='all' ? cur : 'all';
+}
+
+/* ---------- วาดหน้าจอ ---------- */
+function renderReport(){
+  if(!_q('rpFrom').value){ var n=new Date(); _q('rpFrom').value=rpISO(new Date(n.getFullYear(),n.getMonth(),1)); }
+  if(!_q('rpTo').value){ var n2=new Date(); _q('rpTo').value=rpISO(new Date(n2.getFullYear(),n2.getMonth()+1,0)); }
+  rpDeptOptions();
+
+  var D=rpData(), rows=D.rows, S=rpStats(rows);
+  var rounds=rpByRound(rows), depts=rpByDept(rows);
+  var overdue=rows.filter(function(m){ return !m.done && m.days<0; })
+                  .sort(function(a,b){ return a.days-b.days; });
+  var upcoming=D.all.filter(function(m){ return !m.done && m.days>=0 && m.days<=14; })
+                    .sort(function(a,b){ return a.days-b.days; });
+
+  var kpi=[
+    {t:'พนักงานทดลองงาน', v:S.people, u:'คน', c:'#16294d'},
+    {t:'งานประเมินทั้งหมด', v:S.total, u:'รายการ', c:'#2E75B6'},
+    {t:'ดำเนินการแล้ว', v:S.done, u:'รายการ', c:'#2E9E63'},
+    {t:'รอดำเนินการ', v:S.pending, u:'รายการ', c:'#8A6D1F'},
+    {t:'เลยกำหนด', v:S.overdue, u:'รายการ', c:'#D64545'},
+    {t:'อัตราดำเนินการ', v:S.rate, u:'%', c:'#6B3FA0'}
+  ];
+
+  _q('rpBody').innerHTML =
+      '<div class="rp-kpis">'+kpi.map(function(k){
+          return '<div class="rp-kpi"><div class="t">'+k.t+'</div>'
+            +'<div class="v" style="color:'+k.c+'">'+k.v+'<small>'+k.u+'</small></div></div>';
+        }).join('')+'</div>'
+
+    + '<div class="rp-grid">'
+    + '<div class="rp-card"><h3>แยกตามรอบประเมิน</h3>'
+      + (rounds.length ? rpBars(rounds)+rpLegend() : '<div class="rp-none">ไม่มีข้อมูลในช่วงที่เลือก</div>')+'</div>'
+    + '<div class="rp-card"><h3>แยกตามแผนก</h3>'
+      + (depts.length ? rpBars(depts)+rpLegend() : '<div class="rp-none">ไม่มีข้อมูลในช่วงที่เลือก</div>')+'</div>'
+    + '</div>'
+
+    + '<div class="rp-card"><h3>สรุปรายแผนก</h3>'
+    + (depts.length ? '<table class="rp-tb"><thead><tr><th>แผนก</th><th class="c">พนักงาน</th><th class="c">งานประเมิน</th>'
+      + '<th class="c">เสร็จ</th><th class="c">เลยกำหนด</th><th class="c">อัตราดำเนินการ</th></tr></thead><tbody>'
+      + depts.map(function(o){
+          return '<tr><td>'+esc(o.dept)+'</td><td class="c">'+o.pcount+'</td><td class="c">'+o.total+'</td>'
+            +'<td class="c">'+o.done+'</td><td class="c'+(o.overdue?' bad':'')+'">'+o.overdue+'</td>'
+            +'<td class="c"><b>'+o.rate+'%</b></td></tr>';
+        }).join('')+'</tbody></table>' : '<div class="rp-none">—</div>')+'</div>'
+
+    + '<div class="rp-card"><h3>รายการที่เลยกำหนด <span class="rp-badge bad">'+overdue.length+'</span></h3>'
+    + (overdue.length ? '<table class="rp-tb"><thead><tr><th>ชื่อ</th><th>แผนก</th><th>รายการ</th>'
+      + '<th class="c">กำหนดจริง</th><th class="c">ต้องส่งภายใน</th><th class="c">เลยมา</th></tr></thead><tbody>'
+      + overdue.map(function(m){
+          return '<tr><td>'+esc(m.name)+'</td><td>'+esc(m.dept||'-')+'</td><td>'+esc(m.label)+'</td>'
+            +'<td class="c">'+thDate(m.realDate)+'</td><td class="c">'+thDate(m.date)+'</td>'
+            +'<td class="c bad"><b>'+Math.abs(m.days)+' วัน</b></td></tr>';
+        }).join('')+'</tbody></table>' : '<div class="rp-ok">✅ ไม่มีรายการเลยกำหนด</div>')+'</div>'
+
+    + '<div class="rp-card"><h3>ครบกำหนดใน 14 วันข้างหน้า <span class="rp-badge">'+upcoming.length+'</span></h3>'
+    + (upcoming.length ? '<table class="rp-tb"><thead><tr><th>ชื่อ</th><th>แผนก</th><th>รายการ</th>'
+      + '<th class="c">ต้องส่งภายใน</th><th class="c">เหลือ</th></tr></thead><tbody>'
+      + upcoming.map(function(m){
+          return '<tr><td>'+esc(m.name)+'</td><td>'+esc(m.dept||'-')+'</td><td>'+esc(m.label)+'</td>'
+            +'<td class="c">'+thDate(m.date)+'</td><td class="c">'+daysText(m.days)+'</td></tr>';
+        }).join('')+'</tbody></table>' : '<div class="rp-none">—</div>')+'</div>';
+}
+
+/* ---------- ตัวอย่าง / บันทึก PDF (A4 จัดหน้าไม่ให้ขาดท่อน) ---------- */
+function rpOpenPdf(){
+  var body=_q('rpBody');
+  if(!body || !body.innerHTML.trim()){ alert('ยังไม่มีข้อมูลรายงาน'); return; }
+  var f=_q('rpFrom').value, t=_q('rpTo').value, dept=_q('rpDept').value||'all';
+  var deptTxt = dept==='all' ? 'ทุกแผนก' : dept;
+  var now=new Date().toLocaleString('th-TH',{dateStyle:'medium',timeStyle:'short'});
+  var head='<div class="rhead"><div class="rh-l"><div class="rh-brand">MASARU</div>'
+    +'<div class="rh-t">รายงานการประเมินผลการทดลองงาน</div>'
+    +'<div class="rh-s">ช่วงข้อมูล '+esc(thDate(f)||'-')+' ถึง '+esc(thDate(t)||'-')+' · '+esc(deptTxt)+'</div></div>'
+    +'<div class="rh-r">ออกรายงาน '+esc(now)+'<br>เอกสารภายใน (ความลับ)</div></div>';
+  var mini='<div class="rmini"><b>รายงานการประเมินผลการทดลองงาน</b><span>'
+    +esc(thDate(f)||'-')+' - '+esc(thDate(t)||'-')+' · MASARU HR</span></div>';
+
+  var blocks=[].slice.call(body.children).map(function(el){ return el.outerHTML; }).join('');
+  var fname='รายงานทดลองงาน_'+(f||'')+'_ถึง_'+(t||'')+'.pdf';
+
+  var css=[
+    "*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}",
+    "body{margin:0;background:#e9edf3;font-family:'IBM Plex Sans Thai',sans-serif;color:#16294d}",
+    ".bar{position:sticky;top:0;z-index:9;display:flex;gap:10px;align-items:center;padding:11px 18px;background:#0e1c38;color:#fff;font-size:13px;font-weight:700}",
+    ".bar .sp{margin-left:auto;display:flex;gap:8px}",
+    ".bar button{font-family:inherit;font-size:12.5px;font-weight:700;padding:7px 14px;border:0;border-radius:8px;background:#2c67ad;color:#fff;cursor:pointer}",
+    ".bar button.ghost{background:rgba(255,255,255,.15)}",
+    ".bar button:disabled{opacity:.55;cursor:default}",
+    ".page{width:794px;height:1123px;background:#fff;margin:0 auto 18px;overflow:hidden;position:relative;box-shadow:0 8px 26px rgba(9,26,54,.16);padding:30px 34px 46px}",
+    ".parea{height:960px;overflow:hidden}",
+    ".pft{position:absolute;left:34px;right:34px;bottom:16px;display:flex;justify-content:space-between;font-size:10.5px;color:#8a94a8;border-top:1px solid #e3e8f0;padding-top:7px}",
+    ".rhead{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2.5px solid #16294d;padding-bottom:11px;margin-bottom:16px}",
+    ".rh-brand{font-size:12px;font-weight:800;letter-spacing:2px;color:#d62030}",
+    ".rh-t{font-size:18px;font-weight:800;margin-top:3px}",
+    ".rh-s{font-size:11.5px;color:#64708a;margin-top:2px}",
+    ".rh-r{font-size:10px;color:#64708a;text-align:right;line-height:1.6}",
+    ".rmini{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid #dbe2ec;padding-bottom:7px;margin-bottom:13px;font-size:11.5px;color:#64708a}",
+    ".rmini b{font-size:13px;color:#16294d}",
+    ".rp-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:13px}",
+    ".rp-kpi{border:1px solid #dbe2ec;border-radius:9px;padding:10px 12px;background:#fbfcfe}",
+    ".rp-kpi .t{font-size:11px;color:#64708a}",
+    ".rp-kpi .v{font-size:21px;font-weight:800;line-height:1.25}",
+    ".rp-kpi .v small{font-size:11px;font-weight:600;margin-left:4px;color:#8a94a8}",
+    ".rp-grid{display:grid;grid-template-columns:1fr;gap:11px}",
+    ".rp-card{border:1px solid #dbe2ec;border-radius:10px;padding:13px 15px;margin-bottom:11px;background:#fff}",
+    ".rp-card h3{font-size:13.5px;margin:0 0 9px;color:#16294d}",
+    ".rp-badge{display:inline-block;background:#eef2f8;color:#48566e;border-radius:20px;padding:1px 9px;font-size:11px;margin-left:6px}",
+    ".rp-badge.bad{background:#FDE4E4;color:#9B1C1C}",
+    ".rp-lg{display:flex;gap:14px;font-size:11px;color:#64708a;margin-top:7px}",
+    ".rp-lg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px}",
+    ".rp-tb{width:100%;border-collapse:collapse;font-size:11.5px}",
+    ".rp-tb th{background:#f2f5fa;text-align:left;padding:6px 8px;border-bottom:1px solid #dbe2ec;font-size:11px;color:#48566e}",
+    ".rp-tb td{padding:5px 8px;border-bottom:1px solid #eef1f6}",
+    ".rp-tb .c{text-align:center}",
+    ".rp-tb .bad{color:#9B1C1C}",
+    ".rp-none,.rp-ok{font-size:12px;color:#8a94a8;padding:8px 0}",
+    ".rp-ok{color:#166534}",
+    "@media print{@page{size:A4;margin:0}body{background:#fff}.bar{display:none}.page{box-shadow:none;margin:0}}"
+  ].join('\n');
+
+  var js = [
+    "var HEAD_HTML=" + JSON.stringify(head) + ";",
+    "var MINI_HTML=" + JSON.stringify(mini) + ";",
+    "function newPage(big){var pg=document.createElement('div');pg.className='page';",
+    " pg.innerHTML=(big?HEAD_HTML:MINI_HTML)+'<div class=\"parea\"></div><div class=\"pft\"><span>MASARU HR — เหนือกว่า ทุกวัน</span><span class=\"pno\"></span></div>';",
+    " document.getElementById('pages').appendChild(pg);return pg;}",
+    "function overflow(pg){var a=pg.querySelector('.parea');return a.scrollHeight>a.clientHeight+1;}",
+    "function shrinkToFit(pg,area,node){var w=document.createElement('div');w.style.transformOrigin='top left';w.appendChild(node);area.appendChild(w);",
+    " var s=1;while(overflow(pg)&&s>0.5){s-=0.04;w.style.transform='scale('+s.toFixed(2)+')';w.style.width=(100/s).toFixed(2)+'%';}}",
+    "function paginate(){var flow=document.getElementById('flow'),pages=document.getElementById('pages');pages.innerHTML='';",
+    " var pg=newPage(true),area=pg.querySelector('.parea'),MIN=2;",
+    " function fresh(){pg=newPage(false);area=pg.querySelector('.parea');}",
+    " function empty(){return area.children.length===0;}",
+    " function placeTable(node,rows){var tEl=node.querySelector('h3'),base=tEl?tEl.innerHTML:'';",
+    "  var shell=node.cloneNode(true),tb=shell.querySelector('tbody');tb.innerHTML='';",
+    "  area.appendChild(shell);if(overflow(pg)){area.removeChild(shell);fresh();area.appendChild(shell);}",
+    "  var cur=tb,part=1,n=0,moved=false;",
+    "  for(var i=0;i<rows.length;i++){var c=rows[i].cloneNode(true);cur.appendChild(c);n++;",
+    "   if(!overflow(pg))continue;cur.removeChild(c);n--;",
+    "   if(n<MIN&&!moved&&area.children.length>1){var host=cur;while(host&&!(host.classList&&host.classList.contains('rp-card')))host=host.parentNode;",
+    "    if(host&&host.parentNode===area){moved=true;area.removeChild(host);fresh();area.appendChild(host);cur=host.querySelector('tbody');cur.appendChild(c);n++;",
+    "     if(!overflow(pg))continue;cur.removeChild(c);n--;}}",
+    "   part++;fresh();var cont=node.cloneNode(true);cur=cont.querySelector('tbody');cur.innerHTML='';",
+    "   var h=cont.querySelector('h3');if(h)h.innerHTML=base+' (ต่อ '+part+')';",
+    "   area.appendChild(cont);cur.appendChild(c);n=1;",
+    "   if(overflow(pg)){area.removeChild(cont);shrinkToFit(pg,area,cont);}}}",
+    " function place(node){area.appendChild(node);if(!overflow(pg))return;area.removeChild(node);",
+    "  if(!empty()){fresh();area.appendChild(node);if(!overflow(pg))return;area.removeChild(node);}",
+    "  if(node.classList&&(node.classList.contains('rp-grid')||node.classList.contains('rp-kpis'))){",
+    "   var k=[].slice.call(node.children);for(var i=0;i<k.length;i++)place(k[i].cloneNode(true));return;}",
+    "  var tb=node.querySelector?node.querySelector('table'):null;",
+    "  var rows=tb?[].slice.call(tb.querySelectorAll('tbody > tr')):[];",
+    "  if(tb&&rows.length>1){placeTable(node,rows);return;}",
+    "  shrinkToFit(pg,area,node);}",
+    " [].slice.call(flow.children).forEach(function(b){place(b.cloneNode(true));});",
+    " [].slice.call(pages.querySelectorAll('.page')).forEach(function(p){var a=p.querySelector('.parea');if(a&&a.children.length===0)p.parentNode.removeChild(p);});",
+    " var all=[].slice.call(document.querySelectorAll('.page'));",
+    " all.forEach(function(p,i){p.querySelector('.pno').textContent='หน้า '+(i+1)+' / '+all.length;});",
+    " document.getElementById('pgc').textContent='รวม '+all.length+' หน้า';",
+    " var bad=all.filter(function(p){return overflow(p);}).length;if(bad)console.warn('ล้น '+bad+' หน้า');}",
+    "async function dl(){var b=document.getElementById('sv');b.disabled=true;b.textContent='กำลังสร้าง PDF...';",
+    " try{var pgs=[].slice.call(document.querySelectorAll('.page'));var jsPDF=window.jspdf.jsPDF,pdf=new jsPDF('p','mm','a4');",
+    "  for(var i=0;i<pgs.length;i++){var cv=await html2canvas(pgs[i],{scale:2,backgroundColor:'#ffffff'});",
+    "   if(i>0)pdf.addPage();pdf.addImage(cv.toDataURL('image/jpeg',0.95),'JPEG',0,0,210,297);}",
+    "  pdf.save(" + JSON.stringify(fname) + ");b.disabled=false;b.textContent='💾 บันทึกเป็น PDF';}",
+    " catch(e){b.disabled=false;b.textContent='💾 บันทึกเป็น PDF';alert('สร้าง PDF ไม่สำเร็จ ใช้ปุ่มพิมพ์แล้วเลือก Save as PDF แทนได้');}}",
+    "window.addEventListener('load',function(){setTimeout(paginate,250);});"
+  ].join('\n');
+
+  var html='<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8">'
+    +'<title>รายงานการประเมินผลการทดลองงาน</title>'
+    +'<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700;800&display=swap" rel="stylesheet">'
+    +'<style>'+css+'</style></head><body>'
+    +'<div class="bar">📊 ตัวอย่างรายงาน <span id="pgc" style="font-weight:500;opacity:.8"></span>'
+    +'<span class="sp"><button id="sv" onclick="dl()">💾 บันทึกเป็น PDF</button>'
+    +'<button onclick="window.print()">🖨️ พิมพ์</button>'
+    +'<button class="ghost" onclick="window.close()">✖ ปิด</button></span></div>'
+    +'<div id="flow" style="position:absolute;left:-99999px;top:0;width:726px">'+blocks+'</div>'
+    +'<div id="pages" style="padding:18px 0 50px"></div>'
+    +'<scr'+'ipt src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></scr'+'ipt>'
+    +'<scr'+'ipt src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></scr'+'ipt>'
+    +'<scr'+'ipt>'+js+'</scr'+'ipt></body></html>';
+
+  var w=window.open('','_blank');
+  if(!w){ alert('เบราว์เซอร์บล็อกป็อปอัป กรุณาอนุญาต'); return; }
+  w.document.write(html); w.document.close();
+}
+
+/* ปุ่มและตัวกรองของแท็บรายงาน */
+(function(){
+  var p=_q('rpPdf'); if(p) p.onclick=rpOpenPdf;
+  ['rpFrom','rpTo','rpDept'].forEach(function(id){
+    var el=_q(id); if(el) el.addEventListener('change', renderReport);
+  });
+  var bar=document.querySelector('.rep-bar .focus-btns');
+  if(bar) bar.querySelectorAll('[data-rp]').forEach(function(b){
+    b.onclick=function(){
+      bar.querySelectorAll('[data-rp]').forEach(function(x){ x.classList.remove('active'); });
+      b.classList.add('active'); rpSetRange(b.dataset.rp);
+    };
+  });
+})();
+
+/* ---------- สลับมุมมอง: รายการเตือน / แบบประเมิน ---------- */
+function showFormView(on){ setTab(on ? 'form' : 'alert'); }
 function setTab(v){
   var tabs=_q('mainTabs');
   if(tabs) tabs.querySelectorAll('.tab').forEach(function(t){ t.classList.toggle('active', t.dataset.view===v); });
-  showFormView(v==='form');
+  var map={ alert:_q('alertView'), form:_q('formView'), report:_q('reportView') };
+  Object.keys(map).forEach(function(k){ if(map[k]) map[k].classList.toggle('hide', k!==v); });
+  if(v==='report' && typeof renderReport==='function') renderReport();
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 (function(){
   var tabs=_q('mainTabs');
