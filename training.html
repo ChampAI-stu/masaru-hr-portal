@@ -465,6 +465,13 @@
         <div class="fld"><label>จำนวนชั่วโมง</label><input type="number" id="cmHours" min="0" step="0.5"></div>
         <div class="fld" style="grid-column:1/-1"><label>ระยะเวลา (เดือนที่จัดอบรม)</label><div class="mchips" id="cmMonths"></div></div>
         <div class="fld" style="grid-column:1/-1"><label>รายละเอียด / วัตถุประสงค์หลักสูตร</label><textarea id="cmDetail" placeholder="เนื้อหาที่อบรม สิ่งที่ผู้เรียนจะได้รับ ฯลฯ"></textarea></div>
+        <div class="fld" style="grid-column:1/-1"><label>ลิงก์บทเรียน / วิดีโอ <span class="sub">(YouTube, Google Drive, เอกสาร — ผู้เข้าอบรมจะเห็นตอนสแกน QR)</span></label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="cmLink" type="url" placeholder="https://youtu.be/..." style="flex:1">
+            <button type="button" id="cmLinkOpen" class="btn sm" title="เปิดลิงก์ในแท็บใหม่"><i class="ti ti-external-link"></i> เปิด</button>
+          </div>
+          <div id="cmLinkWarn" class="hint" style="display:none;color:#B45309;margin-top:5px"></div>
+        </div>
         <div class="fld" style="grid-column:1/-1"><label>หมายเหตุ</label><input id="cmNote"></div>
       </div>
 
@@ -1043,6 +1050,9 @@ function renderCourses(){
         + '<div><i class="ti ti-users"></i> ผู้เข้าร่วมอบรม: '+esc(c.audience||'-')+'</div>'
         + '<div><i class="ti ti-presentation"></i> รูปแบบ: '+esc(c.train_format||'-')+'</div>'
         + '<div><i class="ti ti-cash"></i> งบ: '+fmt(c.budget)+' บาท'+(c.hours? ' · '+fmt(c.hours)+' ชม.':'')+'</div>'
+        + (c.link_url ? '<div><a href="'+esc(c.link_url)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#2E75B6;font-weight:600;text-decoration:none">'
+            + '<i class="ti ti-'+(isYouTube(c.link_url)?'brand-youtube':'link')+'"></i> '
+            + (isYouTube(c.link_url)?'ดูวิดีโอบทเรียน':'เปิดลิงก์บทเรียน') + '</a></div>' : '')
       + '</div>'
       + '<div class="mchips">'+chips+'</div>'
       + '<div class="cc-foot"><span><i class="ti ti-user-check"></i> เข้าร่วม '+n+' คน</span><span style="color:#2E75B6;font-weight:600">ดูรายละเอียด →</span></div>'
@@ -1146,6 +1156,7 @@ function openCourse(id){
   fillFormatList(); $('cmFormat').value=c.train_format||''; $('cmPlanType').value=planTypeOf(c);
   $('cmTrainer').value=c.trainer||''; $('cmBudget').value=(c.budget==null?'':c.budget); $('cmHours').value=(c.hours==null?'':c.hours);
   $('cmDetail').value=c.detail||''; $('cmNote').value=c.note||''; $('cmYear').value=c.year;
+  $('cmLink').value=c.link_url||''; checkLink();
   $('cmMonths').innerHTML = MONTH_TH.map(function(m,mi){
     return '<span class="mchip'+(c.months.indexOf(mi+1)>=0?' on':'')+'" data-m="'+(mi+1)+'" style="cursor:pointer;padding:5px 10px;font-size:12px">'+m+'</span>';
   }).join('');
@@ -1316,6 +1327,32 @@ $('courseOverlay').addEventListener('click', function(ev){ if(ev.target===$('cou
 $('cmBulkBar').querySelectorAll('button[data-bulk]').forEach(function(b){
   b.addEventListener('click', function(){ bulkSetResult(b.dataset.bulk); });
 });
+/* ---------- ลิงก์บทเรียน ---------- */
+function normLink(v){
+  var s=(v||'').trim();
+  if(!s) return null;
+  if(!/^https?:\/\//i.test(s)) s='https://'+s;     // พิมพ์ youtu.be/xxx มาก็ใช้ได้
+  return s;
+}
+function isYouTube(u){ return /(?:youtube\.com|youtu\.be)/i.test(u||''); }
+function checkLink(){
+  var raw=$('cmLink').value.trim(), w=$('cmLinkWarn');
+  if(!raw){ w.style.display='none'; return; }
+  var u=normLink(raw);
+  try{
+    new URL(u);
+    if(isYouTube(u)){ w.style.display='block'; w.style.color='#166534';
+      w.textContent='✓ ลิงก์ YouTube — ผู้เข้าอบรมจะเห็นปุ่ม "ดูวิดีโอบทเรียน" ตอนสแกน QR'; }
+    else { w.style.display='block'; w.style.color='#64708a';
+      w.textContent='✓ ผู้เข้าอบรมจะเห็นปุ่ม "เปิดเอกสาร/ลิงก์บทเรียน" ตอนสแกน QR'; }
+  }catch(e){ w.style.display='block'; w.style.color='#B45309'; w.textContent='⚠️ รูปแบบลิงก์ไม่ถูกต้อง'; }
+}
+$('cmLink').addEventListener('input', checkLink);
+$('cmLinkOpen').addEventListener('click', function(){
+  var u=normLink($('cmLink').value);
+  if(!u){ toast('ยังไม่ได้ใส่ลิงก์'); return; }
+  window.open(u,'_blank','noopener');
+});
 $('cmDelete').addEventListener('click', function(){ if(curCourseId) deleteCourse(curCourseId); });
 $('cmSave').addEventListener('click', async function(){
   if(!curCourseId) return;
@@ -1325,6 +1362,7 @@ $('cmSave').addEventListener('click', async function(){
     name:$('cmName').value.trim(), category:$('cmCategory').value.trim(), audience:$('cmAudience').value.trim(),
     trainer:$('cmTrainer').value.trim(), budget:($('cmBudget').value===''?null:+$('cmBudget').value),
     hours:($('cmHours').value===''?null:+$('cmHours').value), detail:$('cmDetail').value, note:$('cmNote').value.trim(),
+    link_url:normLink($('cmLink').value),
     year:+$('cmYear').value, months:months,
     train_format:$('cmFormat').value.trim(), plan_type:$('cmPlanType').value
   };
@@ -1650,11 +1688,32 @@ function ciRender(){
     + '<datalist id="ciDeptList"><option value="HR"><option value="บัญชี"><option value="จัดซื้อ"><option value="คลังสินค้า"><option value="CS"><option value="After-sale"><option value="Marketing"><option value="ขายส่ง"><option value="Live/ไลฟ์สด"><option value="Graphic"><option value="IT"></datalist>'
     + '<button id="ciBtn" style="width:100%;background:#16294d;color:#fff;border:none;border-radius:10px;padding:13px;font-weight:700;font-size:15px;font-family:inherit;cursor:pointer">ลงทะเบียน</button>'
     + '<div id="ciErr" style="display:none;background:#fdecea;color:#c0392b;border-radius:8px;padding:9px 12px;font-size:13px;margin-top:12px"></div>'
-    + '</div></div>';
+    + '</div>'
+    + '<div id="ciLinkBox" style="display:none;margin-top:14px"></div>'
+    + '</div>';
   ciLoad();
   document.getElementById('ciBtn').addEventListener('click', ciSubmit);
 }
 function ciErrShow(msg){ var el=document.getElementById('ciErr'); el.textContent=msg; el.style.display='block'; }
+
+/* ลิงก์บทเรียนของหลักสูตร (ถ้า HR ใส่ไว้) — กดดูได้ทั้งก่อนและหลังลงทะเบียน */
+var CI_LINK = '';
+function ciIsYT(u){ return /(?:youtube\.com|youtu\.be)/i.test(u||''); }
+function ciRenderLink(){
+  var box = document.getElementById('ciLinkBox');
+  if(!box) return;
+  if(!CI_LINK){ box.style.display='none'; return; }
+  var yt = ciIsYT(CI_LINK);
+  box.style.display='block';
+  box.innerHTML =
+      '<a href="'+CI_LINK.replace(/"/g,'&quot;')+'" target="_blank" rel="noopener" '
+    + 'style="display:flex;align-items:center;justify-content:center;gap:9px;text-decoration:none;'
+    + 'background:'+(yt?'#d62030':'#16294d')+';color:#fff;border-radius:12px;padding:15px;'
+    + 'font-weight:700;font-size:15.5px;box-shadow:0 6px 18px rgba(16,41,77,.18)">'
+    + (yt?'▶':'📄') + ' ' + (yt?'ดูวิดีโอบทเรียน':'เปิดเอกสาร / ลิงก์บทเรียน') + '</a>'
+    + '<div style="text-align:center;color:#64708a;font-size:12.5px;margin-top:8px">'
+    + 'เปิดดูได้เลย — ลงทะเบียนด้านบนให้เรียบร้อยด้วยนะครับ</div>';
+}
 async function ciLoad(){
   try{
     var r = await sb.rpc('training_checkin_info', { p_course: CHECKIN_ID });
@@ -1664,6 +1723,8 @@ async function ciLoad(){
     document.getElementById('ciTitle').textContent = d.name || '';
     document.getElementById('ciMeta').textContent =
       (d.trainer ? 'วิทยากร: '+d.trainer+' · ' : '') + (d.hours ? d.hours+' ชม. · ' : '') + 'ปี '+(d.year||'');
+    CI_LINK = d.link_url || '';
+    ciRenderLink();
   }catch(e){ document.getElementById('ciTitle').textContent='โหลดข้อมูลไม่สำเร็จ'; ciErrShow(errText(e)); }
 }
 async function ciSubmit(){
@@ -1689,7 +1750,10 @@ async function ciSubmit(){
       + '<h3 style="color:#1c7a4f;font-size:19px;margin:10px 0 6px">ลงทะเบียนสำเร็จ</h3>'
       + '<div style="color:#64708a;font-size:14px">'+ (d.name||nm) +'<br>หลักสูตร: '+ (d.course||'') +'<br>วันที่ '+ (d.date||'') +'</div>'
       + (d.matched ? '<div style="color:#1c7a4f;font-size:12.5px;margin-top:8px">✓ จับคู่กับทะเบียนพนักงานแล้ว</div>' : '<div style="color:#8a5a12;font-size:12.5px;margin-top:8px">⚠️ ไม่พบรหัส/ชื่อในทะเบียนพนักงาน — บันทึกไว้แล้ว HR จะตรวจสอบภายหลัง</div>')
-      + '<div style="color:#97a1b5;font-size:12.5px;margin-top:14px">ปิดหน้านี้ได้เลย — ข้อมูลถูกบันทึกเข้าประวัติการอบรมแล้ว</div></div>';
+      + '<div style="color:#97a1b5;font-size:12.5px;margin-top:14px">'
+      + (CI_LINK ? 'ข้อมูลถูกบันทึกแล้ว — กดปุ่มด้านล่างเพื่อเริ่มเรียนได้เลย'
+                 : 'ปิดหน้านี้ได้เลย — ข้อมูลถูกบันทึกเข้าประวัติการอบรมแล้ว') + '</div></div>';
+    ciRenderLink();
   }catch(e){ btn.disabled=false; btn.textContent='ลงทะเบียน'; ciErrShow('บันทึกไม่สำเร็จ: '+errText(e)); }
 }
 
