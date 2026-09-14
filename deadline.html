@@ -494,6 +494,9 @@ body.locked{overflow:hidden}
   .rp-card h3{font-size:14.5px;margin:0 0 10px}
   .rp-badge{display:inline-block;background:#eef2f8;color:#48566e;border-radius:20px;padding:1px 9px;font-size:11.5px;margin-left:6px}
   .rp-badge.bad{background:#FDE4E4;color:#9B1C1C}
+  .rp-badge.ok{background:#DCFCE7;color:#166534}
+  .rp-note{font-size:12px;color:var(--muted);background:#f7f9fc;border:1px solid var(--line);border-radius:9px;padding:9px 12px;margin-bottom:14px;line-height:1.7}
+  .rp-tb tfoot td{border-top:2px solid #cfd8e6;background:#f7f9fc;padding:7px 9px}
   .rp-lg{display:flex;gap:15px;font-size:11.5px;color:var(--muted);margin-top:8px}
   .rp-lg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px}
   .rp-tb{width:100%;border-collapse:collapse;font-size:13px}
@@ -3179,20 +3182,26 @@ function rpByRound(rows){
     .concat(Object.keys(by).filter(function(k){ return order.indexOf(k)<0; }).map(function(k){ return by[k]; }));
 }
 
-/* แยกตามแผนก */
+/* แยกตามแผนก — รวมชื่อที่พิมพ์ต่างกัน (Telesale/telesale) เป็นแผนกเดียว */
+function rpDeptKey(s){ return String(s==null?'':s).trim().toLowerCase().replace(/\s+/g,' '); }
 function rpByDept(rows){
   var by={};
   rows.forEach(function(m){
-    var k=m.dept||'(ไม่ระบุแผนก)';
-    by[k]=by[k]||{dept:k,total:0,done:0,overdue:0,people:{}};
+    var raw=(m.dept||'').trim() || '(ไม่ระบุแผนก)';
+    var k=rpDeptKey(raw);
+    by[k]=by[k]||{dept:raw,names:{},total:0,done:0,overdue:0,people:{}};
+    by[k].names[raw]=(by[k].names[raw]||0)+1;
     by[k].total++; by[k].people[m.rid]=1;
     if(m.done) by[k].done++; else if(m.days<0) by[k].overdue++;
   });
   return Object.keys(by).map(function(k){
-    var o=by[k]; o.pcount=Object.keys(o.people).length;
-    o.rate = o.total ? Math.round(o.done*100/o.total) : 0;
+    var o=by[k];
+    // ใช้ชื่อสะกดที่พบบ่อยสุดเป็นชื่อแสดงผล
+    o.dept=Object.keys(o.names).sort(function(a,b){ return o.names[b]-o.names[a]; })[0];
+    o.pcount=Object.keys(o.people).length;
+    o.rate=o.total?Math.round(o.done*100/o.total):0;
     return o;
-  }).sort(function(a,b){ return b.total-a.total; });
+  }).sort(function(a,b){ return b.overdue-a.overdue || b.total-a.total; });
 }
 
 /* กราฟแท่งแนวนอนแบบ SVG (ใช้ได้ทั้งบนจอและใน PDF) */
@@ -3233,6 +3242,8 @@ function rpDeptOptions(){
 }
 
 /* ---------- วาดหน้าจอ ---------- */
+function rpMeta(id){ return (state.doneMeta && state.doneMeta[id]) || {}; }
+
 function renderReport(){
   if(!_q('rpFrom').value){ var n=new Date(); _q('rpFrom').value=rpISO(new Date(n.getFullYear(),n.getMonth(),1)); }
   if(!_q('rpTo').value){ var n2=new Date(); _q('rpTo').value=rpISO(new Date(n2.getFullYear(),n2.getMonth()+1,0)); }
@@ -3240,19 +3251,49 @@ function renderReport(){
 
   var D=rpData(), rows=D.rows, S=rpStats(rows);
   var rounds=rpByRound(rows), depts=rpByDept(rows);
-  var overdue=rows.filter(function(m){ return !m.done && m.days<0; })
-                  .sort(function(a,b){ return a.days-b.days; });
-  var upcoming=D.all.filter(function(m){ return !m.done && m.days>=0 && m.days<=14; })
-                    .sort(function(a,b){ return a.days-b.days; });
+
+  /* ทุกตารางกรองด้วยช่วงวันที่+แผนกเดียวกันทั้งหมด ตัวเลขจึงบวกกลับได้ตรง KPI */
+  var overdue = rows.filter(function(m){ return !m.done && m.days<0; }).sort(function(a,b){ return a.days-b.days; });
+  var waiting = rows.filter(function(m){ return !m.done && m.days>=0; }).sort(function(a,b){ return a.days-b.days; });
+  var finished= rows.filter(function(m){ return m.done; }).sort(function(a,b){ return a.realDate-b.realDate; });
 
   var kpi=[
-    {t:'พนักงานทดลองงาน', v:S.people, u:'คน', c:'#16294d'},
+    {t:'พนักงานที่มีงานประเมินในช่วงนี้', v:S.people, u:'คน', c:'#16294d'},
     {t:'งานประเมินทั้งหมด', v:S.total, u:'รายการ', c:'#2E75B6'},
     {t:'ดำเนินการแล้ว', v:S.done, u:'รายการ', c:'#2E9E63'},
-    {t:'รอดำเนินการ', v:S.pending, u:'รายการ', c:'#8A6D1F'},
-    {t:'เลยกำหนด', v:S.overdue, u:'รายการ', c:'#D64545'},
+    {t:'ยังไม่ถึงกำหนด', v:waiting.length, u:'รายการ', c:'#8A6D1F'},
+    {t:'เลยกำหนด', v:overdue.length, u:'รายการ', c:'#D64545'},
     {t:'อัตราดำเนินการ', v:S.rate, u:'%', c:'#6B3FA0'}
   ];
+
+  function tbl(list, kind){
+    if(!list.length) return kind==='overdue'
+      ? '<div class="rp-ok">✅ ไม่มีรายการเลยกำหนดในช่วงนี้</div>'
+      : '<div class="rp-none">— ไม่มีรายการ —</div>';
+    var head, body;
+    if(kind==='overdue'){
+      head='<tr><th>ชื่อ</th><th>แผนก</th><th>รายการ</th><th class="c">กำหนดจริง</th><th class="c">ต้องส่งภายใน</th><th class="c">เลยมา</th></tr>';
+      body=list.map(function(m){
+        return '<tr><td>'+esc(m.name)+'</td><td>'+esc(m.dept||'-')+'</td><td>'+esc(m.label)+'</td>'
+          +'<td class="c">'+thDate(m.realDate)+'</td><td class="c">'+thDate(m.date)+'</td>'
+          +'<td class="c bad"><b>'+Math.abs(m.days)+' วัน</b></td></tr>'; }).join('');
+    } else if(kind==='waiting'){
+      head='<tr><th>ชื่อ</th><th>แผนก</th><th>รายการ</th><th class="c">กำหนดจริง</th><th class="c">ต้องส่งภายใน</th><th class="c">เหลือ</th></tr>';
+      body=list.map(function(m){
+        return '<tr><td>'+esc(m.name)+'</td><td>'+esc(m.dept||'-')+'</td><td>'+esc(m.label)+'</td>'
+          +'<td class="c">'+thDate(m.realDate)+'</td><td class="c">'+thDate(m.date)+'</td>'
+          +'<td class="c">'+daysText(m.days)+'</td></tr>'; }).join('');
+    } else {
+      head='<tr><th>ชื่อ</th><th>แผนก</th><th>รายการ</th><th class="c">กำหนดจริง</th><th class="c">วันที่ส่ง</th><th class="c">วันที่ประเมิน</th></tr>';
+      body=list.map(function(m){
+        var k=rpMeta(m.id);
+        return '<tr><td>'+esc(m.name)+'</td><td>'+esc(m.dept||'-')+'</td><td>'+esc(m.label)+'</td>'
+          +'<td class="c">'+thDate(m.realDate)+'</td>'
+          +'<td class="c">'+(k.sent_date?thDate(k.sent_date):'-')+'</td>'
+          +'<td class="c">'+(k.eval_date?thDate(k.eval_date):'-')+'</td></tr>'; }).join('');
+    }
+    return '<table class="rp-tb"><thead>'+head+'</thead><tbody>'+body+'</tbody></table>';
+  }
 
   _q('rpBody').innerHTML =
       '<div class="rp-kpis">'+kpi.map(function(k){
@@ -3260,11 +3301,16 @@ function renderReport(){
             +'<div class="v" style="color:'+k.c+'">'+k.v+'<small>'+k.u+'</small></div></div>';
         }).join('')+'</div>'
 
+    + '<div class="rp-note">นับเฉพาะงานที่ <b>กำหนดจริง</b> อยู่ในช่วง '+esc(thDate(RP.from)||'-')+' – '+esc(thDate(RP.to)||'-')
+      + (RP.dept!=='all' ? ' · เฉพาะแผนก '+esc(RP.dept) : '')
+      + ' · <b>ต้องส่งภายใน</b> = กำหนดจริง − '+SUBMIT_BUFFER+' วัน'
+      + ' · ยอดรวม '+S.total+' = เสร็จ '+S.done+' + ยังไม่ถึงกำหนด '+waiting.length+' + เลยกำหนด '+overdue.length+'</div>'
+
     + '<div class="rp-grid">'
     + '<div class="rp-card"><h3>แยกตามรอบประเมิน</h3>'
-      + (rounds.length ? rpBars(rounds)+rpLegend() : '<div class="rp-none">ไม่มีข้อมูลในช่วงที่เลือก</div>')+'</div>'
+      + (rounds.length ? rpBars(rounds)+rpLegend() : '<div class="rp-none">— ไม่มีข้อมูล —</div>')+'</div>'
     + '<div class="rp-card"><h3>แยกตามแผนก</h3>'
-      + (depts.length ? rpBars(depts)+rpLegend() : '<div class="rp-none">ไม่มีข้อมูลในช่วงที่เลือก</div>')+'</div>'
+      + (depts.length ? rpBars(depts)+rpLegend() : '<div class="rp-none">— ไม่มีข้อมูล —</div>')+'</div>'
     + '</div>'
 
     + '<div class="rp-card"><h3>สรุปรายแผนก</h3>'
@@ -3274,24 +3320,14 @@ function renderReport(){
           return '<tr><td>'+esc(o.dept)+'</td><td class="c">'+o.pcount+'</td><td class="c">'+o.total+'</td>'
             +'<td class="c">'+o.done+'</td><td class="c'+(o.overdue?' bad':'')+'">'+o.overdue+'</td>'
             +'<td class="c"><b>'+o.rate+'%</b></td></tr>';
-        }).join('')+'</tbody></table>' : '<div class="rp-none">—</div>')+'</div>'
+        }).join('')
+      + '</tbody><tfoot><tr><td><b>รวม</b></td><td class="c"><b>'+S.people+'</b></td><td class="c"><b>'+S.total+'</b></td>'
+      + '<td class="c"><b>'+S.done+'</b></td><td class="c bad"><b>'+overdue.length+'</b></td>'
+      + '<td class="c"><b>'+S.rate+'%</b></td></tr></tfoot></table>' : '<div class="rp-none">—</div>')+'</div>'
 
-    + '<div class="rp-card"><h3>รายการที่เลยกำหนด <span class="rp-badge bad">'+overdue.length+'</span></h3>'
-    + (overdue.length ? '<table class="rp-tb"><thead><tr><th>ชื่อ</th><th>แผนก</th><th>รายการ</th>'
-      + '<th class="c">กำหนดจริง</th><th class="c">ต้องส่งภายใน</th><th class="c">เลยมา</th></tr></thead><tbody>'
-      + overdue.map(function(m){
-          return '<tr><td>'+esc(m.name)+'</td><td>'+esc(m.dept||'-')+'</td><td>'+esc(m.label)+'</td>'
-            +'<td class="c">'+thDate(m.realDate)+'</td><td class="c">'+thDate(m.date)+'</td>'
-            +'<td class="c bad"><b>'+Math.abs(m.days)+' วัน</b></td></tr>';
-        }).join('')+'</tbody></table>' : '<div class="rp-ok">✅ ไม่มีรายการเลยกำหนด</div>')+'</div>'
-
-    + '<div class="rp-card"><h3>ครบกำหนดใน 14 วันข้างหน้า <span class="rp-badge">'+upcoming.length+'</span></h3>'
-    + (upcoming.length ? '<table class="rp-tb"><thead><tr><th>ชื่อ</th><th>แผนก</th><th>รายการ</th>'
-      + '<th class="c">ต้องส่งภายใน</th><th class="c">เหลือ</th></tr></thead><tbody>'
-      + upcoming.map(function(m){
-          return '<tr><td>'+esc(m.name)+'</td><td>'+esc(m.dept||'-')+'</td><td>'+esc(m.label)+'</td>'
-            +'<td class="c">'+thDate(m.date)+'</td><td class="c">'+daysText(m.days)+'</td></tr>';
-        }).join('')+'</tbody></table>' : '<div class="rp-none">—</div>')+'</div>';
+    + '<div class="rp-card"><h3>รายการที่เลยกำหนด <span class="rp-badge bad">'+overdue.length+'</span></h3>'+tbl(overdue,'overdue')+'</div>'
+    + '<div class="rp-card"><h3>ยังไม่ถึงกำหนด <span class="rp-badge">'+waiting.length+'</span></h3>'+tbl(waiting,'waiting')+'</div>'
+    + '<div class="rp-card"><h3>ดำเนินการแล้ว <span class="rp-badge ok">'+finished.length+'</span></h3>'+tbl(finished,'done')+'</div>';
 }
 
 /* ---------- ตัวอย่าง / บันทึก PDF (A4 จัดหน้าไม่ให้ขาดท่อน) ---------- */
@@ -3308,7 +3344,12 @@ function rpOpenPdf(){
   var mini='<div class="rmini"><b>รายงานการประเมินผลการทดลองงาน</b><span>'
     +esc(thDate(f)||'-')+' - '+esc(thDate(t)||'-')+' · MASARU HR</span></div>';
 
-  var blocks=[].slice.call(body.children).map(function(el){ return el.outerHTML; }).join('');
+  var blocks=[].slice.call(body.children).map(function(el){
+    // การ์ดในกริดต้องแยกกันไหลอิสระ ไม่งั้นถูกยกทั้งก้อนไปหน้าใหม่จนหน้าแรกโล่ง
+    if(el.classList.contains('rp-grid'))
+      return [].slice.call(el.children).map(function(c){ return c.outerHTML; }).join('');
+    return el.outerHTML;
+  }).join('');
   var fname='รายงานทดลองงาน_'+(f||'')+'_ถึง_'+(t||'')+'.pdf';
 
   var css=[
@@ -3346,6 +3387,9 @@ function rpOpenPdf(){
     ".rp-tb td{padding:5px 8px;border-bottom:1px solid #eef1f6}",
     ".rp-tb .c{text-align:center}",
     ".rp-tb .bad{color:#9B1C1C}",
+    ".rp-badge.ok{background:#DCFCE7;color:#166534}",
+    ".rp-note{font-size:10.5px;color:#64708a;background:#f7f9fc;border:1px solid #e4e9f1;border-radius:7px;padding:7px 10px;margin-bottom:11px;line-height:1.6}",
+    ".rp-tb tfoot td{border-top:2px solid #cfd8e6;padding:6px 8px;background:#f7f9fc}",
     ".rp-none,.rp-ok{font-size:12px;color:#8a94a8;padding:8px 0}",
     ".rp-ok{color:#166534}",
     "@media print{@page{size:A4;margin:0}body{background:#fff}.bar{display:none}.page{box-shadow:none;margin:0}}"
