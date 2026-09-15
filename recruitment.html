@@ -2373,6 +2373,7 @@
        ไม่ดึงจากทะเบียนพนักงาน เพื่อให้ตัวเลขสะท้อนคุณภาพการสรรหาโดยตรง     */
     let RESIGN = [];            // [{name, pos, src, start, resign, days, tenure, type, reason}]
     let RESIGN_LOADED = false;
+    let REG_LOADED = false, REG_CACHE = [];   // แคชทะเบียนพนักงาน
     let resignMonths = 12;      // ช่วงย้อนหลังที่ดู (เดือน)
 
     function monthKey(iso) { return (iso || '').slice(0, 7); }
@@ -2405,20 +2406,66 @@
     }
 
     // นับเฉพาะผู้ที่จ้างผ่านระบบรับสมัครนี้ (status = resigned) ไม่ดึงจากทะเบียนพนักงานแล้ว
-    async function loadResign() {
-      RESIGN = DATA.filter(a => statusOf(a) === 'resigned' && (a.resignDate || a.closedAt))
+    // รวมผู้ลาออกจาก 2 แหล่ง: ระบบรับสมัครนี้ + ทะเบียนพนักงาน
+    // ชื่อซ้ำกันให้ยึดข้อมูลจากระบบรับสมัคร (มีตำแหน่ง/ช่องทาง/เหตุผลครบกว่า)
+    function _nkey(s) { return String(s || '').replace(/\s+/g, '').toLowerCase(); }
+
+    async function loadResign(force) {
+      const fromRecruit = DATA.filter(a => statusOf(a) === 'resigned' && (a.resignDate || a.closedAt))
         .map(a => {
           const start = String(a.offerStart || '').slice(0, 10);
           const resign = String(a.resignDate || a.closedAt).slice(0, 10);
           return {
-            id: a.id, name: a.name || '-', nick: '',
+            id: a.id, name: a.name || '-', dept: '(ไม่ระบุแผนก)',
             pos: a.pos || '-', src: a.src || '-',
             type: a.resignType || 'ไม่ระบุ', reason: a.resignReason || '',
-            start, resign,
+            from: 'recruit', start, resign,
             days: tenureDays({ offerStart: start, resignDate: resign }),
             tenure: tenureMonths(start, resign)
           };
         });
+
+      let fromRegistry = [];
+      if (!REG_LOADED || force) {
+        try {
+          const r = await _sb.from('daiki_employees')
+            .select('full_name,nickname,group_name,position,start_date,resign_date,is_active')
+            .eq('is_active', false)
+            .order('resign_date', { ascending: false })
+            .limit(5000);
+          if (r.error) throw r.error;
+          REG_CACHE = (r.data || []).filter(e => e.resign_date).map(e => {
+            const start = String(e.start_date || '').slice(0, 10);
+            const resign = String(e.resign_date).slice(0, 10);
+            return {
+              id: 'reg:' + (e.full_name || ''), name: e.full_name || '-', nick: e.nickname || '',
+              dept: (e.group_name || '').trim() || '(ไม่ระบุแผนก)',
+              pos: e.position || '-', src: '-', type: 'ไม่ระบุ', reason: '',
+              from: 'registry', start, resign,
+              days: (start && resign) ? tenureDays({ offerStart: start, resignDate: resign }) : null,
+              tenure: tenureMonths(start, resign)
+            };
+          });
+          REG_LOADED = true;
+        } catch (err) {
+          console.warn('loadResign (registry)', err);
+          REG_CACHE = [];
+        }
+      }
+      fromRegistry = REG_CACHE;
+
+      // รวม + ตัดชื่อซ้ำ (ระบบรับสมัครชนะ)
+      const seen = {};
+      RESIGN = [];
+      fromRecruit.forEach(r => { seen[_nkey(r.name)] = true; RESIGN.push(r); });
+      fromRegistry.forEach(r => {
+        if (seen[_nkey(r.name)]) return;
+        // ทะเบียนพนักงานมีชื่อเต็ม ส่วนระบบสรรหาบางคนเก็บชื่อเล่นไว้ในวงเล็บ — เทียบอีกชั้น
+        const hit = fromRecruit.some(x => _nkey(x.name).indexOf(_nkey(r.name)) >= 0
+                                       || _nkey(r.name).indexOf(_nkey(x.name)) >= 0);
+        if (hit) return;
+        RESIGN.push(r);
+      });
       RESIGN_LOADED = true;
       return RESIGN;
     }
@@ -2477,19 +2524,19 @@
             <div class="rs-k"><div class="t">ตำแหน่งที่ลาออกมากสุด</div><div class="v sm">${esc(deptTop[0] ? deptTop[0].dept : '-')}<small>${deptTop[0] ? deptTop[0].n + ' คน' : ''}</small></div></div>
            </div>`
         + `<div class="rs-tblwrap"><table class="rs-tbl">
-            <thead><tr><th style="width:20%">ชื่อ-นามสกุล</th><th class="col-pos" style="width:14%">ตำแหน่งที่จ้าง</th>
-              <th class="col-src" style="width:9%">ช่องทางที่มา</th>
-              <th class="c" style="width:10%">วันเริ่มงาน</th><th class="c" style="width:10%">วันลาออก</th>
-              <th class="c" style="width:8%">อายุงาน</th><th class="col-pos" style="width:13%">ประเภท</th>
-              <th style="width:16%">เหตุผล</th></tr></thead><tbody>`
+            <thead><tr><th style="width:23%">ชื่อ-นามสกุล</th><th class="col-src" style="width:14%">แผนก</th>
+              <th class="col-pos" style="width:15%">ตำแหน่ง</th>
+              <th class="c" style="width:11%">วันเริ่มงาน</th><th class="c" style="width:11%">วันลาออก</th>
+              <th class="c" style="width:9%">อายุงาน</th><th style="width:17%">ที่มา / เหตุผล</th></tr></thead><tbody>`
         + list.map(r => `<tr>
-            <td class="nm">${esc(r.name)}</td>
-            <td class="col-pos">${esc(r.pos)}</td><td class="col-src">${esc(r.src)}</td>
+            <td class="nm">${esc(r.name)}${r.nick ? ` <span class="rs-nick">(${esc(r.nick)})</span>` : ''}</td>
+            <td class="col-src">${esc(r.dept)}</td><td class="col-pos">${esc(r.pos)}</td>
             <td class="c">${esc(thDate(r.start) || '-')}</td>
             <td class="c">${esc(thDate(r.resign) || '-')}</td>
             <td class="c${r.days !== null && r.days <= 90 ? ' bad' : ''}">${esc(r.days === null ? '-' : (r.days < 31 ? r.days + ' วัน' : tenureTextM(r.tenure)))}</td>
-            <td class="col-pos">${esc(r.type)}</td>
-            <td class="nm">${esc(r.reason || '-')}</td>
+            <td class="nm">${r.from === 'recruit'
+              ? `<span class="hs prob">ระบบรับสมัคร</span>${r.type && r.type !== 'ไม่ระบุ' ? ' ' + esc(r.type) : ''}${r.reason ? ' — ' + esc(r.reason) : ''}`
+              : '<span class="hs none">ทะเบียนพนักงาน</span>'}</td>
           </tr>`).join('')
         + '</tbody></table></div>';
     }
@@ -3472,9 +3519,9 @@ setTimeout(function(){ if (!document.querySelector('.page')) paginate(); }, 2500
       list.forEach(r => { const k = monthKey(r.resign); if (k in byMonth) byMonth[k]++; });
       const maxM = Math.max(1, ...keys.map(k => byMonth[k]));
 
-      // ตำแหน่งที่ลาออกบ่อย (ระบบรับสมัครไม่มีข้อมูลแผนก จึงใช้ตำแหน่งที่จ้างแทน)
+      // แผนกที่ลาออกบ่อย (รวมทั้งทะเบียนพนักงานและระบบรับสมัคร)
       const byDept = {};
-      list.forEach(r => { byDept[r.pos] = (byDept[r.pos] || 0) + 1; });
+      list.forEach(r => { byDept[r.dept] = (byDept[r.dept] || 0) + 1; });
       const depts = Object.keys(byDept).map(k => ({ k, n: byDept[k] })).sort((a, b) => b.n - a.n).slice(0, 8);
       const maxD = Math.max(1, ...depts.map(x => x.n));
 
@@ -3528,15 +3575,15 @@ setTimeout(function(){ if (!document.querySelector('.page')) paginate(); }, 2500
         <div class="dcard"><div class="dc-h"><b>จำนวนผู้ลาออกรายเดือน</b></div>
           <div class="rd-cols">${barsM}</div></div>
         <div class="dgrid g2">
-          <div class="dcard"><div class="dc-h"><b>ตำแหน่งที่มีผู้ลาออกมากที่สุด</b></div>${rowsD}</div>
+          <div class="dcard"><div class="dc-h"><b>แผนกที่มีผู้ลาออกมากที่สุด</b></div>${rowsD}</div>
           <div class="dcard"><div class="dc-h"><b>อายุงาน ณ วันลาออก</b></div>${rowsB}
             <div class="dsrc-note">ลาออกก่อน 3 เดือน มักสะท้อนปัญหาการคัดเลือกหรือการปฐมนิเทศ</div></div>
         </div>
         <div class="dcard"><div class="dc-h"><b>ประเภทการพ้นสภาพ</b></div>${rowsT}</div>
-        <div class="dsource"><b><i class="ti ti-database"></i> ที่มาของข้อมูล</b> — ระบบรับสมัครงานนี้เท่านั้น
-          (ผู้สมัครที่ถูกจ้างแล้วกดปุ่ม “บันทึกลาออก” · สถานะ <code>resigned</code>)
-          <div class="dsrc-note">ไม่ได้ดึงจากทะเบียนพนักงาน จึงไม่รวมพนักงานที่เข้าทำงานก่อนใช้ระบบนี้ — ตัวเลขจึงสะท้อน “คุณภาพการสรรหา” โดยตรง
-            · อายุงาน = วันเริ่มงาน → วันลาออก</div>
+        <div class="dsource"><b><i class="ti ti-database"></i> ที่มาของข้อมูล</b> — รวม 2 แหล่ง:
+          ตาราง <code>daiki_employees</code> (ทะเบียนพนักงาน) และผู้สมัครในระบบนี้ที่กดปุ่ม “บันทึกลาออก”
+          <div class="dsrc-note">ชื่อที่ซ้ำกันทั้งสองแหล่งจะนับครั้งเดียว โดยยึดข้อมูลจากระบบรับสมัคร (มีตำแหน่ง/เหตุผลครบกว่า)
+            · อายุงาน = วันเริ่มงาน → วันลาออก · คนที่ไม่ได้ระบุวันเริ่มงานจะอยู่ในกลุ่ม “ไม่ระบุ”</div>
         </div>`;
     }
 
