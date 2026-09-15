@@ -357,14 +357,16 @@
     .rs-note { margin-left:auto; font-size:12px; }
     .rs-kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:11px; margin-bottom:16px; }
     @media(max-width:900px){ .rs-kpis{grid-template-columns:repeat(2,1fr)} }
-    .rs-k { border:1px solid #e3e8f0; border-radius:11px; padding:12px 14px; background:#fff; }
+    .rs-k { border:1px solid #e3e8f0; border-radius:11px; padding:12px 14px; background:#fff;
+      box-shadow:0 1px 3px rgba(22,41,77,.06); }
     .rs-k .t { font-size:11.5px; color:var(--muted); }
     .rs-k .v { font-size:26px; font-weight:800; color:#16294d; line-height:1.25; }
     .rs-k .v.sm { font-size:16px; }
     .rs-k .v.bad { color:#D64545; }
     .rs-k .v small { font-size:12px; font-weight:600; margin-left:5px; color:var(--muted); }
     /* พื้นหลังต้องอยู่ที่ "ตาราง" ไม่ใช่กล่องที่เลื่อน — ไม่งั้นตอนเลื่อนขวาจะเห็นพื้นหลังหน้าเว็บโผล่ */
-    .rs-tblwrap { border:1px solid #e3e8f0; border-radius:11px; overflow:hidden; background:#fff; }
+    .rs-tblwrap { border:1px solid #e3e8f0; border-radius:11px; overflow:hidden; background:#fff;
+      box-shadow:0 1px 3px rgba(22,41,77,.06); }
     .rs-tbl { table-layout:fixed; }
     .rs-tbl tbody tr { background:#fff; }
     .rs-tbl td, .rs-tbl th { overflow:hidden; text-overflow:ellipsis; }
@@ -380,7 +382,7 @@
     .hs.prob { background:#e2eff8; color:#1f5f8c; }
     .hs.soon { background:#faedcf; color:#7a4a12; }
     .hs.none { background:#eceef0; color:#556066; }
-    .rs-foot { margin-top:12px; font-size:12.5px; color:var(--muted); background:#f7f9fc;
+    .rs-foot { margin-top:12px; font-size:12.5px; color:var(--muted); background:#fff;
       border:1px solid #e3e8f0; border-radius:9px; padding:9px 12px; line-height:1.7; }
     .rs-foot b { color:var(--ink); }
     .rs-tbl { width:100%; border-collapse:collapse; font-size:13px; }
@@ -779,6 +781,13 @@
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
     background: #ffffff !important;
+  }
+  /* แท็บ "รับเข้าแล้ว" / "คนลาออก" — ไม่ต้องมีการ์ดขาวซ้อนอีกชั้น
+     เพราะข้างในมีการ์ด KPI กับตารางที่เป็นพื้นขาวอยู่แล้ว ซ้อนกันแล้วดูมั่ว */
+  #pg-hired .rep-wrap, #pg-resign .rep-wrap {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
   }
   /* บังคับให้หน้าที่เลื่อนได้เป็น layer ของตัวเอง กันเศษภาพค้าง */
   #pg-int, #pg-start, #pg-rep, #pg-hired, #pg-resign {
