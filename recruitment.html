@@ -2269,9 +2269,9 @@
 
 
     /* ================= แท็บคนลาออก =================
-       ดึงจากทะเบียนพนักงาน (daiki_employees) ตารางเดียวกับระบบบันทึกเวลา
-       ใช้วางแผนสรรหาทดแทน + ดูอัตราการลาออกในแดชบอร์ด                      */
-    let RESIGN = [];            // [{name, dept, position, start, resign, tenure}]
+       นับเฉพาะผู้ที่ "จ้างผ่านระบบรับสมัครนี้" แล้วลาออก (status = resigned)
+       ไม่ดึงจากทะเบียนพนักงาน เพื่อให้ตัวเลขสะท้อนคุณภาพการสรรหาโดยตรง     */
+    let RESIGN = [];            // [{name, pos, src, start, resign, days, tenure, type, reason}]
     let RESIGN_LOADED = false;
     let resignMonths = 12;      // ช่วงย้อนหลังที่ดู (เดือน)
 
@@ -2288,7 +2288,8 @@
       if (isNaN(a) || isNaN(b)) return null;
       return Math.max(0, Math.round((b - a) / 86400000 / 30.44));
     }
-    function tenureText(m) {
+    // รับ "จำนวนเดือน" (คนละตัวกับ tenureText(applicant) ที่รับ object)
+    function tenureTextM(m) {
       if (m === null) return '-';
       if (m < 12) return m + ' เดือน';
       const y = Math.floor(m / 12), r = m % 12;
@@ -2303,30 +2304,22 @@
       return 'เกิน 2 ปี';
     }
 
-    async function loadResign(force) {
-      if (RESIGN_LOADED && !force) return RESIGN;
-      try {
-        const r = await _sb.from('daiki_employees')
-          .select('full_name,nickname,group_name,position,start_date,resign_date,is_active')
-          .eq('is_active', false)
-          .order('resign_date', { ascending: false })
-          .limit(5000);
-        if (r.error) throw r.error;
-        RESIGN = (r.data || []).filter(e => e.resign_date).map(e => {
-          const start = String(e.start_date || '').slice(0, 10);
-          const resign = String(e.resign_date).slice(0, 10);
+    // นับเฉพาะผู้ที่จ้างผ่านระบบรับสมัครนี้ (status = resigned) ไม่ดึงจากทะเบียนพนักงานแล้ว
+    async function loadResign() {
+      RESIGN = DATA.filter(a => statusOf(a) === 'resigned' && (a.resignDate || a.closedAt))
+        .map(a => {
+          const start = String(a.offerStart || '').slice(0, 10);
+          const resign = String(a.resignDate || a.closedAt).slice(0, 10);
           return {
-            name: e.full_name || '-', nick: e.nickname || '',
-            dept: (e.group_name || '').trim() || '(ไม่ระบุแผนก)',
-            position: e.position || '-',
-            start, resign, tenure: tenureMonths(start, resign)
+            id: a.id, name: a.name || '-', nick: '',
+            pos: a.pos || '-', src: a.src || '-',
+            type: a.resignType || 'ไม่ระบุ', reason: a.resignReason || '',
+            start, resign,
+            days: tenureDays({ offerStart: start, resignDate: resign }),
+            tenure: tenureMonths(start, resign)
           };
         });
-        RESIGN_LOADED = true;
-      } catch (e) {
-        console.warn('loadResign', e);
-        RESIGN = [];
-      }
+      RESIGN_LOADED = true;
       return RESIGN;
     }
 
@@ -2348,8 +2341,8 @@
       const nc = document.getElementById('nc-resign'); if (nc) nc.textContent = list.length;
 
       if (!RESIGN.length) {
-        el.innerHTML = '<div class="empty"><i class="ti ti-user-off"></i>ไม่พบข้อมูลพนักงานลาออก<br>'
-          + '<span style="font-size:13px;color:var(--muted)">ตรวจสอบสิทธิ์การอ่านตาราง daiki_employees</span></div>';
+        el.innerHTML = '<div class="empty"><i class="ti ti-user-off"></i>ยังไม่มีผู้ลาออกในระบบรับสมัคร<br>'
+          + '<span style="font-size:13px;color:var(--muted)">เมื่อผู้ที่รับเข้าทำงานลาออก ให้เปิดการ์ดผู้สมัครแล้วกดปุ่ม “บันทึกลาออก”</span></div>';
         return;
       }
 
@@ -2359,33 +2352,41 @@
       const avg = months.length ? (list.length / months.length).toFixed(1) : '0';
 
       const byDept = {};
-      list.forEach(r => { byDept[r.dept] = (byDept[r.dept] || 0) + 1; });
+      list.forEach(r => { byDept[r.pos] = (byDept[r.pos] || 0) + 1; });
       const deptTop = Object.keys(byDept).map(k => ({ dept: k, n: byDept[k] }))
         .sort((a, b) => b.n - a.n);
 
-      const early = list.filter(r => r.tenure !== null && r.tenure < 3).length;
+      const early = list.filter(r => r.days !== null && r.days <= 90).length;
+      // อัตราคงอยู่: เทียบกับคนที่รับเข้าผ่านระบบนี้ในช่วงเดียวกัน
+      const from2 = resignCutoff(resignMonths);
+      const hiredSame = DATA.filter(a => statusOf(a) === 'hired' && a.offerStart && a.offerStart >= from2).length;
+      const base = hiredSame + list.length;
+      const retention = base ? Math.round(hiredSame * 100 / base) : 0;
 
       const chips = [3, 6, 12, 24].map(m =>
         `<button class="rs-chip${resignMonths === m ? ' on' : ''}" onclick="setResignRange(${m})">${m} เดือน</button>`).join('');
 
       el.innerHTML =
           `<div class="rs-bar">ช่วงข้อมูล: ${chips}
-            <span class="rs-note">ย้อนหลัง ${resignMonths} เดือน · ข้อมูลจากทะเบียนพนักงาน</span></div>`
+            <span class="rs-note">ย้อนหลัง ${resignMonths} เดือน · นับเฉพาะผู้ที่จ้างผ่านระบบรับสมัครนี้</span></div>`
         + `<div class="rs-kpis">
             <div class="rs-k"><div class="t">ลาออกทั้งหมด</div><div class="v">${list.length}<small>คน</small></div></div>
             <div class="rs-k"><div class="t">เฉลี่ยต่อเดือน</div><div class="v">${avg}<small>คน</small></div></div>
-            <div class="rs-k"><div class="t">ลาออกก่อน 3 เดือน</div><div class="v ${early ? 'bad' : ''}">${early}<small>คน</small></div></div>
-            <div class="rs-k"><div class="t">แผนกที่ลาออกมากสุด</div><div class="v sm">${esc(deptTop[0] ? deptTop[0].dept : '-')}<small>${deptTop[0] ? deptTop[0].n + ' คน' : ''}</small></div></div>
+            <div class="rs-k"><div class="t">ลาออกภายใน 90 วัน</div><div class="v ${early ? 'bad' : ''}">${early}<small>คน</small></div></div>
+            <div class="rs-k"><div class="t">อัตราคงอยู่</div><div class="v ${retention >= 80 ? '' : 'bad'}">${retention}<small>%</small></div></div>
+            <div class="rs-k"><div class="t">ตำแหน่งที่ลาออกมากสุด</div><div class="v sm">${esc(deptTop[0] ? deptTop[0].dept : '-')}<small>${deptTop[0] ? deptTop[0].n + ' คน' : ''}</small></div></div>
            </div>`
         + `<div class="rs-tblwrap"><table class="rs-tbl">
-            <thead><tr><th>ชื่อ-นามสกุล</th><th>แผนก</th><th>ตำแหน่ง</th>
-              <th class="c">วันเริ่มงาน</th><th class="c">วันลาออก</th><th class="c">อายุงาน</th></tr></thead><tbody>`
+            <thead><tr><th>ชื่อ-นามสกุล</th><th>ตำแหน่งที่จ้าง</th><th>ช่องทางที่มา</th>
+              <th class="c">วันเริ่มงาน</th><th class="c">วันลาออก</th><th class="c">อายุงาน</th>
+              <th>ประเภท / เหตุผล</th></tr></thead><tbody>`
         + list.map(r => `<tr>
-            <td>${esc(r.name)}${r.nick ? ` <span class="rs-nick">(${esc(r.nick)})</span>` : ''}</td>
-            <td>${esc(r.dept)}</td><td>${esc(r.position)}</td>
+            <td>${esc(r.name)}</td>
+            <td>${esc(r.pos)}</td><td>${esc(r.src)}</td>
             <td class="c">${esc(thDate(r.start) || '-')}</td>
             <td class="c">${esc(thDate(r.resign) || '-')}</td>
-            <td class="c${r.tenure !== null && r.tenure < 3 ? ' bad' : ''}">${esc(tenureText(r.tenure))}</td>
+            <td class="c${r.days !== null && r.days <= 90 ? ' bad' : ''}">${esc(r.days === null ? '-' : (r.days < 31 ? r.days + ' วัน' : tenureTextM(r.tenure)))}</td>
+            <td>${esc(r.type)}${r.reason ? ' — ' + esc(r.reason) : ''}</td>
           </tr>`).join('')
         + '</tbody></table></div>';
     }
@@ -3280,11 +3281,21 @@ setTimeout(function(){ if (!document.querySelector('.page')) paginate(); }, 2500
       list.forEach(r => { const k = monthKey(r.resign); if (k in byMonth) byMonth[k]++; });
       const maxM = Math.max(1, ...keys.map(k => byMonth[k]));
 
-      // แผนก
+      // ตำแหน่งที่ลาออกบ่อย (ระบบรับสมัครไม่มีข้อมูลแผนก จึงใช้ตำแหน่งที่จ้างแทน)
       const byDept = {};
-      list.forEach(r => { byDept[r.dept] = (byDept[r.dept] || 0) + 1; });
+      list.forEach(r => { byDept[r.pos] = (byDept[r.pos] || 0) + 1; });
       const depts = Object.keys(byDept).map(k => ({ k, n: byDept[k] })).sort((a, b) => b.n - a.n).slice(0, 8);
       const maxD = Math.max(1, ...depts.map(x => x.n));
+
+      // ประเภทการพ้นสภาพ
+      const byType = {};
+      list.forEach(r => { byType[r.type] = (byType[r.type] || 0) + 1; });
+      const types = Object.keys(byType).map(k => ({ k, n: byType[k] })).sort((a, b) => b.n - a.n);
+      const maxT = Math.max(1, ...types.map(x => x.n));
+      const rowsT = types.map(x =>
+        `<div class="rd-row"><span class="rd-l">${esc(x.k)}</span>
+           <span class="rd-t"><i style="width:${Math.round((x.n / maxT) * 100)}%"></i></span>
+           <b>${x.n}</b></div>`).join('');
 
       // อายุงานตอนลาออก
       const bands = ['ต่ำกว่า 3 เดือน', '3–6 เดือน', '6–12 เดือน', '1–2 ปี', 'เกิน 2 ปี', 'ไม่ระบุ'];
@@ -3319,20 +3330,22 @@ setTimeout(function(){ if (!document.querySelector('.page')) paginate(); }, 2500
           <div class="kpi" style="--k:#64708a"><div class="k-l">ลาออกทั้งหมด</div><div class="k-v">${list.length}<small>คน</small></div></div>
           <div class="kpi" style="--k:#2E75B6"><div class="k-l">เฉลี่ยต่อเดือน</div><div class="k-v">${(list.length / M).toFixed(1)}<small>คน</small></div></div>
           <div class="kpi" style="--k:#D64545"><div class="k-l">ลาออกก่อน 3 เดือน</div><div class="k-v">${early}<small>คน</small></div></div>
-          <div class="kpi" style="--k:#6B3FA0"><div class="k-l">อายุงานเฉลี่ย</div><div class="k-v">${avgT === null ? '-' : tenureText(avgT)}</div></div>
+          <div class="kpi" style="--k:#6B3FA0"><div class="k-l">อายุงานเฉลี่ย</div><div class="k-v">${avgT === null ? '-' : tenureTextM(avgT)}</div></div>
           <div class="kpi" style="--k:#2E9E63"><div class="k-l">รับเข้าทำงานช่วงเดียวกัน</div><div class="k-v">${hired12}<small>คน</small></div></div>
           <div class="kpi" style="--k:#8A6D1F"><div class="k-l">รับเข้า − ลาออก</div><div class="k-v">${hired12 - list.length >= 0 ? '+' : ''}${hired12 - list.length}<small>คน</small></div></div>
         </div>
         <div class="dcard"><div class="dc-h"><b>จำนวนผู้ลาออกรายเดือน</b></div>
           <div class="rd-cols">${barsM}</div></div>
         <div class="dgrid g2">
-          <div class="dcard"><div class="dc-h"><b>แผนกที่มีผู้ลาออกมากที่สุด</b></div>${rowsD}</div>
+          <div class="dcard"><div class="dc-h"><b>ตำแหน่งที่มีผู้ลาออกมากที่สุด</b></div>${rowsD}</div>
           <div class="dcard"><div class="dc-h"><b>อายุงาน ณ วันลาออก</b></div>${rowsB}
             <div class="dsrc-note">ลาออกก่อน 3 เดือน มักสะท้อนปัญหาการคัดเลือกหรือการปฐมนิเทศ</div></div>
         </div>
-        <div class="dsource"><b><i class="ti ti-database"></i> ที่มาของข้อมูล</b> — ตาราง <code>daiki_employees</code> (ทะเบียนพนักงาน)
-          เฉพาะผู้ที่สถานะ “ลาออกแล้ว” และมีวันลาออกระบุไว้
-          <div class="dsrc-note">อายุงาน = วันเริ่มงาน → วันลาออก · คนที่ไม่ได้ระบุวันเริ่มงานจะนับอยู่ในกลุ่ม “ไม่ระบุ”</div>
+        <div class="dcard"><div class="dc-h"><b>ประเภทการพ้นสภาพ</b></div>${rowsT}</div>
+        <div class="dsource"><b><i class="ti ti-database"></i> ที่มาของข้อมูล</b> — ระบบรับสมัครงานนี้เท่านั้น
+          (ผู้สมัครที่ถูกจ้างแล้วกดปุ่ม “บันทึกลาออก” · สถานะ <code>resigned</code>)
+          <div class="dsrc-note">ไม่ได้ดึงจากทะเบียนพนักงาน จึงไม่รวมพนักงานที่เข้าทำงานก่อนใช้ระบบนี้ — ตัวเลขจึงสะท้อน “คุณภาพการสรรหา” โดยตรง
+            · อายุงาน = วันเริ่มงาน → วันลาออก</div>
         </div>`;
     }
 
