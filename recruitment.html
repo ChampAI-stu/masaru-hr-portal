@@ -117,8 +117,11 @@
     #main { flex: 1; display: flex; overflow: hidden; }
     .pg { display: none; flex: 1; overflow: hidden; }
     /* หน้าที่เป็นคอลัมน์เดียว ให้เลื่อนดูได้เมื่อเนื้อหายาว */
-    #pg-int, #pg-start, #pg-rep { overflow-y: auto; overflow-x: hidden; }
-    #pg-int .rep-wrap, #pg-start .rep-wrap, #pg-rep .rep-wrap { padding-bottom: 60px; }
+    #pg-int, #pg-start, #pg-rep, #pg-hired, #pg-resign { overflow-y: auto; overflow-x: hidden; }
+    #pg-int .rep-wrap, #pg-start .rep-wrap, #pg-rep .rep-wrap,
+    #pg-hired .rep-wrap, #pg-resign .rep-wrap { padding-bottom: 60px; }
+    /* หน้าตารางกว้าง ให้ใช้พื้นที่เต็มจอกว่าหน้าอื่น */
+    #pg-hired .rep-wrap, #pg-resign .rep-wrap { max-width: 1240px; }
     .pg.on { display: flex; }
 
     /* ── Candidate list column ───────────────────────── */
@@ -360,7 +363,8 @@
     .rs-k .v.sm { font-size:16px; }
     .rs-k .v.bad { color:#D64545; }
     .rs-k .v small { font-size:12px; font-weight:600; margin-left:5px; color:var(--muted); }
-    .rs-tblwrap { border:1px solid #e3e8f0; border-radius:11px; overflow:hidden; background:#fff; }
+    .rs-tblwrap { border:1px solid #e3e8f0; border-radius:11px; overflow-x:auto; background:#fff; }
+    .rs-tblwrap .rs-tbl { min-width:760px; }
     .rs-k .v.prob { color:#1f5f8c; } .rs-k .v.soon { color:#7a4a12; }
     .rs-tbl td.prob { color:#1f5f8c; font-weight:700; }
     .hs { display:inline-block; font-size:11.5px; font-weight:700; padding:2px 9px; border-radius:20px; }
@@ -554,6 +558,8 @@
       .flow-row { grid-template-columns: 1fr; }
       .flow-other { grid-template-columns: 1fr; }
       #pg-rep .rep-wrap { padding: 16px 12px 60px; }
+      #pg-hired .rep-wrap, #pg-resign .rep-wrap { padding: 16px 12px 60px; }
+      .rs-kpis { grid-template-columns: 1fr 1fr; }
     }
     .stat-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 20px; }
     .stat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); }
