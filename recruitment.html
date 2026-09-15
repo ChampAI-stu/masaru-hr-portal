@@ -361,6 +361,16 @@
     .rs-k .v.bad { color:#D64545; }
     .rs-k .v small { font-size:12px; font-weight:600; margin-left:5px; color:var(--muted); }
     .rs-tblwrap { border:1px solid #e3e8f0; border-radius:11px; overflow:hidden; background:#fff; }
+    .rs-k .v.prob { color:#1f5f8c; } .rs-k .v.soon { color:#7a4a12; }
+    .rs-tbl td.prob { color:#1f5f8c; font-weight:700; }
+    .hs { display:inline-block; font-size:11.5px; font-weight:700; padding:2px 9px; border-radius:20px; }
+    .hs.ok { background:#e3f5ec; color:#12674a; }
+    .hs.prob { background:#e2eff8; color:#1f5f8c; }
+    .hs.soon { background:#faedcf; color:#7a4a12; }
+    .hs.none { background:#eceef0; color:#556066; }
+    .rs-foot { margin-top:12px; font-size:12.5px; color:var(--muted); background:#f7f9fc;
+      border:1px solid #e3e8f0; border-radius:9px; padding:9px 12px; line-height:1.7; }
+    .rs-foot b { color:var(--ink); }
     .rs-tbl { width:100%; border-collapse:collapse; font-size:13px; }
     .rs-tbl th { background:#f2f5fa; text-align:left; padding:9px 11px; font-size:12px; color:#48566e; border-bottom:1px solid #e3e8f0; }
     .rs-tbl td { padding:8px 11px; border-bottom:1px solid #eef1f6; }
@@ -786,6 +796,7 @@
       <div class="ni on" data-p="list"><i class="ti ti-user-search"></i>ผู้สมัคร<span class="ni-count" id="nc-list">0</span></div>
       <div class="ni" data-p="int"><i class="ti ti-calendar-week"></i>สัมภาษณ์<span class="ni-count" id="nc-int">0</span></div>
       <div class="ni" data-p="start"><i class="ti ti-briefcase"></i>วันเริ่มงาน<span class="ni-count" id="nc-start">0</span></div>
+      <div class="ni" data-p="hired"><i class="ti ti-user-check"></i>รับเข้าแล้ว<span class="ni-count" id="nc-hired">0</span></div>
       <div class="ni" data-p="resign"><i class="ti ti-user-off"></i>คนลาออก<span class="ni-count" id="nc-resign">0</span></div>
       <div class="ni" data-p="rep"><i class="ti ti-chart-histogram"></i>รายงาน</div>
       <a href="index.html" title="กลับหน้าหลัก" style="display:flex;align-items:center;gap:11px;padding:10px 13px;margin-top:8px;font-size:13.5px;font-weight:600;color:var(--green-dark);text-decoration:none;border-radius:9px;border-top:1px solid var(--line);background:var(--green-soft)"><i class="ti ti-arrow-left" style="font-size:18px"></i>กลับหน้าหลัก</a>
@@ -847,6 +858,14 @@
       <div class="rep-wrap">
         <div class="rep-title">ตารางวันเริ่มงาน</div>
         <div id="start-body"></div>
+      </div>
+    </div>
+
+    <!-- Hired -->
+    <div class="pg" id="pg-hired">
+      <div class="rep-wrap">
+        <div class="rep-title">พนักงานที่รับเข้าทำงานแล้ว</div>
+        <div id="hired-body"></div>
       </div>
     </div>
 
@@ -1184,12 +1203,13 @@
       if (p === 'rep') renderRep();
       if (p === 'int') renderInterviews();
       if (p === 'start') renderStartDates();
+      if (p === 'hired') renderHired();
       if (p === 'resign') renderResign();
     }
     document.querySelectorAll('.ni').forEach(n => n.addEventListener('click', () => navTo(n.dataset.p)));
 
     // ═══════════════════ RENDER ═══════════════════
-    function renderAll() { renderList(); renderInterviews(); renderStartDates(); renderRep(); }
+    function renderAll() { renderList(); renderInterviews(); renderStartDates(); renderHired(); renderRep(); }
 
     function setFilter(f) {
       filter = f;
@@ -2413,6 +2433,93 @@
           </tr>`).join('')
         + '</tbody></table></div>';
     }
+    /* ================= แท็บ "รับเข้าแล้ว" =================
+       รายชื่อผู้ที่จ้างผ่านระบบนี้และยังทำงานอยู่ (status = hired)
+       ใช้ติดตามช่วงทดลองงาน + ดูว่าคนที่รับเข้ามาอยู่กันได้นานแค่ไหน        */
+    let hiredSort = 'new';       // 'new' = เข้าใหม่ก่อน | 'old' = อยู่นานก่อน
+
+    function hiredDays(a) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(a.offerStart || '')) return null;
+      const s = new Date(a.offerStart + 'T00:00:00'), n = new Date(); n.setHours(0, 0, 0, 0);
+      return Math.round((n - s) / 86400000);
+    }
+    function hiredDaysText(v) {
+      if (v === null) return '-';
+      if (v < 0) return 'อีก ' + Math.abs(v) + ' วัน';
+      if (v === 0) return 'วันนี้';
+      if (v < 31) return v + ' วัน';
+      if (v < 365) return Math.round(v / 30.44) + ' เดือน';
+      const y = Math.floor(v / 365), m = Math.round((v % 365) / 30.44);
+      return y + ' ปี' + (m ? ' ' + m + ' เดือน' : '');
+    }
+    function openFromHired(id) { navTo('list'); selectA(id); }
+    window.openFromHired = openFromHired;
+    function setHiredSort(s) { hiredSort = s; renderHired(); }
+    window.setHiredSort = setHiredSort;
+
+    function renderHired() {
+      const el = document.getElementById('hired-body');
+      if (!el) return;
+      const list = DATA.filter(a => statusOf(a) === 'hired');
+      const nc = document.getElementById('nc-hired'); if (nc) nc.textContent = list.length;
+
+      if (!list.length) {
+        el.innerHTML = '<div class="empty"><i class="ti ti-user-check"></i>ยังไม่มีผู้ที่รับเข้าทำงาน<br>'
+          + '<span style="font-size:13px;color:var(--muted)">ผู้สมัครที่ตอบรับ Offer แล้วจะมาแสดงที่นี่</span></div>';
+        return;
+      }
+
+      const rows = list.map(a => ({ a, d: hiredDays(a) }));
+      const notYet = rows.filter(r => r.d !== null && r.d < 0).length;
+      const inProb = rows.filter(r => r.d !== null && r.d >= 0 && r.d <= 90).length;
+      const passed = rows.filter(r => r.d !== null && r.d > 90).length;
+      const withD = rows.filter(r => r.d !== null && r.d >= 0);
+      const avg = withD.length ? Math.round(withD.reduce((s, r) => s + r.d, 0) / withD.length) : null;
+
+      // อัตราคงอยู่ เทียบกับคนที่ลาออกไปแล้ว (นับเฉพาะระบบนี้)
+      const gone = DATA.filter(a => statusOf(a) === 'resigned').length;
+      const retention = (list.length + gone) ? Math.round(list.length * 100 / (list.length + gone)) : 0;
+
+      rows.sort((x, y) => {
+        const xv = x.d === null ? -1e9 : x.d, yv = y.d === null ? -1e9 : y.d;
+        return hiredSort === 'new' ? xv - yv : yv - xv;
+      });
+
+      const chips = [['new', 'เข้าใหม่ก่อน'], ['old', 'อยู่นานก่อน']].map(c =>
+        `<button class="rs-chip${hiredSort === c[0] ? ' on' : ''}" onclick="setHiredSort('${c[0]}')">${c[1]}</button>`).join('');
+
+      el.innerHTML =
+          `<div class="rs-bar">เรียงลำดับ: ${chips}
+            <span class="rs-note">นับเฉพาะผู้ที่จ้างผ่านระบบรับสมัครนี้ · ทดลองงาน = ทำงานไม่เกิน 90 วัน</span></div>`
+        + `<div class="rs-kpis">
+            <div class="rs-k"><div class="t">ทำงานอยู่ทั้งหมด</div><div class="v">${list.length}<small>คน</small></div></div>
+            <div class="rs-k"><div class="t">อยู่ในช่วงทดลองงาน</div><div class="v prob">${inProb}<small>คน</small></div></div>
+            <div class="rs-k"><div class="t">ยังไม่ถึงวันเริ่มงาน</div><div class="v soon">${notYet}<small>คน</small></div></div>
+            <div class="rs-k"><div class="t">อัตราคงอยู่</div><div class="v ${retention >= 80 ? '' : 'bad'}">${retention}<small>%</small></div></div>
+           </div>`
+        + `<div class="rs-tblwrap"><table class="rs-tbl">
+            <thead><tr><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th>ช่องทางที่มา</th>
+              <th class="c">วันเริ่มงาน</th><th class="c">ทำงานมาแล้ว</th><th class="c">สถานะ</th>
+              <th class="c">เงินเดือน</th></tr></thead><tbody>`
+        + rows.map(({ a, d }) => {
+            const tag = d === null ? '<span class="hs none">ไม่ระบุวันเริ่มงาน</span>'
+                      : d < 0     ? '<span class="hs soon">ยังไม่เริ่มงาน</span>'
+                      : d <= 90   ? '<span class="hs prob">ทดลองงาน</span>'
+                      :             '<span class="hs ok">ผ่านทดลองงาน</span>';
+            return `<tr onclick="openFromHired('${a.id}')" style="cursor:pointer">
+              <td>${esc(a.name)}</td>
+              <td>${esc(a.pos || '-')}</td><td>${esc(a.src || '-')}</td>
+              <td class="c">${esc(thDate(a.offerStart) || '-')}</td>
+              <td class="c${d !== null && d >= 0 && d <= 90 ? ' prob' : ''}">${esc(hiredDaysText(d))}</td>
+              <td class="c">${tag}</td>
+              <td class="c">${a.offerSalary ? esc(String(a.offerSalary)) : '-'}</td>
+            </tr>`;
+          }).join('')
+        + '</tbody></table></div>'
+        + `<div class="rs-foot">ผ่านทดลองงานแล้ว <b>${passed}</b> คน · อายุงานเฉลี่ยของคนที่ยังอยู่ <b>${avg === null ? '-' : hiredDaysText(avg)}</b>
+            · ลาออกไปแล้ว <b>${gone}</b> คน (ดูรายละเอียดที่แท็บ “คนลาออก”)</div>`;
+    }
+
     function setResignRange(m) { resignMonths = m; renderResign(); }
     window.setResignRange = setResignRange;
 
