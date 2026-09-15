@@ -364,9 +364,15 @@
     .rs-k .v.bad { color:#D64545; }
     .rs-k .v small { font-size:12px; font-weight:600; margin-left:5px; color:var(--muted); }
     /* พื้นหลังต้องอยู่ที่ "ตาราง" ไม่ใช่กล่องที่เลื่อน — ไม่งั้นตอนเลื่อนขวาจะเห็นพื้นหลังหน้าเว็บโผล่ */
-    .rs-tblwrap { border:1px solid #e3e8f0; border-radius:11px; overflow-x:auto; background:#fff; }
-    .rs-tblwrap .rs-tbl { min-width:760px; background:#fff; }
+    .rs-tblwrap { border:1px solid #e3e8f0; border-radius:11px; overflow:hidden; background:#fff; }
+    .rs-tbl { table-layout:fixed; }
     .rs-tbl tbody tr { background:#fff; }
+    .rs-tbl td, .rs-tbl th { overflow:hidden; text-overflow:ellipsis; }
+    .rs-tbl td.nm { white-space:normal; word-break:break-word; }
+    /* คอลัมน์รองซ่อนเมื่อจอแคบ แทนการดันตารางให้ล้น */
+    @media (max-width:1180px){ .rs-tbl .col-sal { display:none; } }
+    @media (max-width:1040px){ .rs-tbl .col-src { display:none; } }
+    @media (max-width:880px){ .rs-tbl .col-pos { display:none; } }
     .rs-k .v.prob { color:#1f5f8c; } .rs-k .v.soon { color:#7a4a12; }
     .rs-tbl td.prob { color:#1f5f8c; font-weight:700; }
     .hs { display:inline-block; font-size:11.5px; font-weight:700; padding:2px 9px; border-radius:20px; }
@@ -2432,16 +2438,17 @@
             <div class="rs-k"><div class="t">ตำแหน่งที่ลาออกมากสุด</div><div class="v sm">${esc(deptTop[0] ? deptTop[0].dept : '-')}<small>${deptTop[0] ? deptTop[0].n + ' คน' : ''}</small></div></div>
            </div>`
         + `<div class="rs-tblwrap"><table class="rs-tbl">
-            <thead><tr><th>ชื่อ-นามสกุล</th><th>ตำแหน่งที่จ้าง</th><th>ช่องทางที่มา</th>
-              <th class="c">วันเริ่มงาน</th><th class="c">วันลาออก</th><th class="c">อายุงาน</th>
-              <th>ประเภท / เหตุผล</th></tr></thead><tbody>`
+            <thead><tr><th style="width:22%">ชื่อ-นามสกุล</th><th class="col-pos" style="width:15%">ตำแหน่งที่จ้าง</th>
+              <th class="col-src" style="width:11%">ช่องทางที่มา</th>
+              <th class="c" style="width:12%">วันเริ่มงาน</th><th class="c" style="width:12%">วันลาออก</th>
+              <th class="c" style="width:10%">อายุงาน</th><th style="width:18%">ประเภท / เหตุผล</th></tr></thead><tbody>`
         + list.map(r => `<tr>
-            <td>${esc(r.name)}</td>
-            <td>${esc(r.pos)}</td><td>${esc(r.src)}</td>
+            <td class="nm">${esc(r.name)}</td>
+            <td class="col-pos">${esc(r.pos)}</td><td class="col-src">${esc(r.src)}</td>
             <td class="c">${esc(thDate(r.start) || '-')}</td>
             <td class="c">${esc(thDate(r.resign) || '-')}</td>
             <td class="c${r.days !== null && r.days <= 90 ? ' bad' : ''}">${esc(r.days === null ? '-' : (r.days < 31 ? r.days + ' วัน' : tenureTextM(r.tenure)))}</td>
-            <td>${esc(r.type)}${r.reason ? ' — ' + esc(r.reason) : ''}</td>
+            <td class="nm">${esc(r.type)}${r.reason ? ' — ' + esc(r.reason) : ''}</td>
           </tr>`).join('')
         + '</tbody></table></div>';
     }
@@ -2510,21 +2517,22 @@
             <div class="rs-k"><div class="t">อัตราคงอยู่</div><div class="v ${retention >= 80 ? '' : 'bad'}">${retention}<small>%</small></div></div>
            </div>`
         + `<div class="rs-tblwrap"><table class="rs-tbl">
-            <thead><tr><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th>ช่องทางที่มา</th>
-              <th class="c">วันเริ่มงาน</th><th class="c">ทำงานมาแล้ว</th><th class="c">สถานะ</th>
-              <th class="c">เงินเดือน</th></tr></thead><tbody>`
+            <thead><tr><th style="width:26%">ชื่อ-นามสกุล</th><th class="col-pos" style="width:17%">ตำแหน่ง</th>
+              <th class="col-src" style="width:13%">ช่องทางที่มา</th>
+              <th class="c" style="width:13%">วันเริ่มงาน</th><th class="c" style="width:12%">ทำงานมาแล้ว</th>
+              <th class="c" style="width:11%">สถานะ</th><th class="c col-sal" style="width:11%">เงินเดือน</th></tr></thead><tbody>`
         + rows.map(({ a, d }) => {
             const tag = d === null ? '<span class="hs none">ไม่ระบุวันเริ่มงาน</span>'
                       : d < 0     ? '<span class="hs soon">ยังไม่เริ่มงาน</span>'
                       : d <= 90   ? '<span class="hs prob">ทดลองงาน</span>'
                       :             '<span class="hs ok">ผ่านทดลองงาน</span>';
             return `<tr onclick="openFromHired('${a.id}')" style="cursor:pointer">
-              <td>${esc(a.name)}</td>
-              <td>${esc(a.pos || '-')}</td><td>${esc(a.src || '-')}</td>
+              <td class="nm">${esc(a.name)}</td>
+              <td class="col-pos">${esc(a.pos || '-')}</td><td class="col-src">${esc(a.src || '-')}</td>
               <td class="c">${esc(thDate(a.offerStart) || '-')}</td>
               <td class="c${d !== null && d >= 0 && d <= 90 ? ' prob' : ''}">${esc(hiredDaysText(d))}</td>
               <td class="c">${tag}</td>
-              <td class="c">${a.offerSalary ? esc(String(a.offerSalary)) : '-'}</td>
+              <td class="c col-sal">${a.offerSalary ? esc(String(a.offerSalary)) : '-'}</td>
             </tr>`;
           }).join('')
         + '</tbody></table></div>'
