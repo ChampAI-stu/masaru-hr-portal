@@ -311,6 +311,42 @@
     .btn-primary { background: #d62030; color: #fff; border-color: #d62030; }
     .btn-primary:hover { background: #b01827; }
     .btn-danger { background: #fff; color: #9a2b48; border-color: #f2c9d5; }
+    .dash-hr { display:flex; align-items:center; gap:12px; margin:26px 0 14px; }
+    .dash-hr span { font-size:15px; font-weight:800; color:#16294d; display:inline-flex; align-items:center; gap:7px; }
+    .dash-hr:after { content:''; flex:1; height:2px; background:linear-gradient(90deg,#d8e0ea,transparent); }
+    .rd-cols { display:flex; align-items:flex-end; gap:6px; height:170px; padding-top:8px; }
+    .rd-col { flex:1; display:flex; flex-direction:column; align-items:center; height:100%; }
+    .rd-col .rd-v { font-size:11.5px; font-weight:700; color:#48566e; height:16px; }
+    .rd-col .rd-b { width:100%; max-width:42px; background:linear-gradient(180deg,#5B8FC7,#2E75B6);
+      border-radius:5px 5px 0 0; min-height:2px; margin-top:auto; }
+    .rd-col .rd-x { font-size:10.5px; color:#8a94a8; margin-top:6px; white-space:nowrap; }
+    .rd-row { display:flex; align-items:center; gap:10px; padding:5px 0; font-size:13px; }
+    .rd-row .rd-l { width:132px; flex-shrink:0; color:#48566e; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .rd-row .rd-t { flex:1; height:15px; background:#eef2f8; border-radius:4px; overflow:hidden; }
+    .rd-row .rd-t i { display:block; height:100%; background:#2E75B6; border-radius:4px; }
+    .rd-row .rd-t i.warn { background:#D64545; }
+    .rd-row b { width:32px; text-align:right; color:#16294d; }
+    .rs-bar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:14px; font-size:13px; color:var(--muted); }
+    .rs-chip { font-family:inherit; font-size:12.5px; font-weight:600; padding:5px 13px; border-radius:20px;
+      border:1px solid #d5dbe6; background:#fff; color:#48566e; cursor:pointer; }
+    .rs-chip.on { background:#16294d; color:#fff; border-color:#16294d; }
+    .rs-note { margin-left:auto; font-size:12px; }
+    .rs-kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:11px; margin-bottom:16px; }
+    @media(max-width:900px){ .rs-kpis{grid-template-columns:repeat(2,1fr)} }
+    .rs-k { border:1px solid #e3e8f0; border-radius:11px; padding:12px 14px; background:#fff; }
+    .rs-k .t { font-size:11.5px; color:var(--muted); }
+    .rs-k .v { font-size:26px; font-weight:800; color:#16294d; line-height:1.25; }
+    .rs-k .v.sm { font-size:16px; }
+    .rs-k .v.bad { color:#D64545; }
+    .rs-k .v small { font-size:12px; font-weight:600; margin-left:5px; color:var(--muted); }
+    .rs-tblwrap { border:1px solid #e3e8f0; border-radius:11px; overflow:hidden; background:#fff; }
+    .rs-tbl { width:100%; border-collapse:collapse; font-size:13px; }
+    .rs-tbl th { background:#f2f5fa; text-align:left; padding:9px 11px; font-size:12px; color:#48566e; border-bottom:1px solid #e3e8f0; }
+    .rs-tbl td { padding:8px 11px; border-bottom:1px solid #eef1f6; }
+    .rs-tbl tr:last-child td { border-bottom:0; }
+    .rs-tbl .c { text-align:center; }
+    .rs-tbl .bad { color:#D64545; font-weight:700; }
+    .rs-nick { color:var(--muted); font-size:12px; }
     .btn-warn { background: #fff; color: #9A3412; border-color: #FBD4A8; }
     .btn-warn:hover { background: #FFF3E6; border-color: #F0A868; }
     .btn-danger:hover { background: #fdf0f3; }
@@ -729,6 +765,7 @@
       <div class="ni on" data-p="list"><i class="ti ti-user-search"></i>ผู้สมัคร<span class="ni-count" id="nc-list">0</span></div>
       <div class="ni" data-p="int"><i class="ti ti-calendar-week"></i>สัมภาษณ์<span class="ni-count" id="nc-int">0</span></div>
       <div class="ni" data-p="start"><i class="ti ti-briefcase"></i>วันเริ่มงาน<span class="ni-count" id="nc-start">0</span></div>
+      <div class="ni" data-p="resign"><i class="ti ti-user-off"></i>คนลาออก<span class="ni-count" id="nc-resign">0</span></div>
       <div class="ni" data-p="rep"><i class="ti ti-chart-histogram"></i>รายงาน</div>
       <a href="index.html" title="กลับหน้าหลัก" style="display:flex;align-items:center;gap:11px;padding:10px 13px;margin-top:8px;font-size:13.5px;font-weight:600;color:var(--green-dark);text-decoration:none;border-radius:9px;border-top:1px solid var(--line);background:var(--green-soft)"><i class="ti ti-arrow-left" style="font-size:18px"></i>กลับหน้าหลัก</a>
     </nav>
@@ -788,6 +825,14 @@
       <div class="rep-wrap">
         <div class="rep-title">ตารางวันเริ่มงาน</div>
         <div id="start-body"></div>
+      </div>
+    </div>
+
+    <!-- Resignations -->
+    <div class="pg" id="pg-resign">
+      <div class="rep-wrap">
+        <div class="rep-title">พนักงานที่ลาออก</div>
+        <div id="resign-body"></div>
       </div>
     </div>
 
@@ -1113,6 +1158,7 @@
       if (p === 'rep') renderRep();
       if (p === 'int') renderInterviews();
       if (p === 'start') renderStartDates();
+      if (p === 'resign') renderResign();
     }
     document.querySelectorAll('.ni').forEach(n => n.addEventListener('click', () => navTo(n.dataset.p)));
 
@@ -2104,6 +2150,131 @@
       showToast('คืนรายการที่ซ่อนไว้ทั้งหมดแล้ว ✓');
     }
 
+
+    /* ================= แท็บคนลาออก =================
+       ดึงจากทะเบียนพนักงาน (daiki_employees) ตารางเดียวกับระบบบันทึกเวลา
+       ใช้วางแผนสรรหาทดแทน + ดูอัตราการลาออกในแดชบอร์ด                      */
+    let RESIGN = [];            // [{name, dept, position, start, resign, tenure}]
+    let RESIGN_LOADED = false;
+    let resignMonths = 12;      // ช่วงย้อนหลังที่ดู (เดือน)
+
+    function monthKey(iso) { return (iso || '').slice(0, 7); }
+    function monthLabel(k) {
+      const TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+      const p = (k || '').split('-');
+      if (p.length < 2) return k || '-';
+      return TH[Number(p[1]) - 1] + ' ' + String(Number(p[0]) + 543).slice(-2);
+    }
+    function tenureMonths(start, end) {
+      if (!start || !end) return null;
+      const a = new Date(start), b = new Date(end);
+      if (isNaN(a) || isNaN(b)) return null;
+      return Math.max(0, Math.round((b - a) / 86400000 / 30.44));
+    }
+    function tenureText(m) {
+      if (m === null) return '-';
+      if (m < 12) return m + ' เดือน';
+      const y = Math.floor(m / 12), r = m % 12;
+      return y + ' ปี' + (r ? ' ' + r + ' เดือน' : '');
+    }
+    function tenureBand(m) {
+      if (m === null) return 'ไม่ระบุ';
+      if (m < 3) return 'ต่ำกว่า 3 เดือน';
+      if (m < 6) return '3–6 เดือน';
+      if (m < 12) return '6–12 เดือน';
+      if (m < 24) return '1–2 ปี';
+      return 'เกิน 2 ปี';
+    }
+
+    async function loadResign(force) {
+      if (RESIGN_LOADED && !force) return RESIGN;
+      try {
+        const r = await _sb.from('daiki_employees')
+          .select('full_name,nickname,group_name,position,start_date,resign_date,is_active')
+          .eq('is_active', false)
+          .order('resign_date', { ascending: false })
+          .limit(5000);
+        if (r.error) throw r.error;
+        RESIGN = (r.data || []).filter(e => e.resign_date).map(e => {
+          const start = String(e.start_date || '').slice(0, 10);
+          const resign = String(e.resign_date).slice(0, 10);
+          return {
+            name: e.full_name || '-', nick: e.nickname || '',
+            dept: (e.group_name || '').trim() || '(ไม่ระบุแผนก)',
+            position: e.position || '-',
+            start, resign, tenure: tenureMonths(start, resign)
+          };
+        });
+        RESIGN_LOADED = true;
+      } catch (e) {
+        console.warn('loadResign', e);
+        RESIGN = [];
+      }
+      return RESIGN;
+    }
+
+    function resignCutoff(months) {
+      const d = new Date(); d.setMonth(d.getMonth() - months + 1); d.setDate(1);
+      return d.toISOString().slice(0, 10);
+    }
+    function resignInRange() {
+      const from = resignCutoff(resignMonths);
+      return RESIGN.filter(r => r.resign >= from);
+    }
+
+    async function renderResign() {
+      const el = document.getElementById('resign-body');
+      if (!RESIGN_LOADED) el.innerHTML = '<div class="empty"><i class="ti ti-loader"></i>กำลังโหลดข้อมูล...</div>';
+      await loadResign();
+
+      const list = resignInRange().sort((a, b) => b.resign.localeCompare(a.resign));
+      const nc = document.getElementById('nc-resign'); if (nc) nc.textContent = list.length;
+
+      if (!RESIGN.length) {
+        el.innerHTML = '<div class="empty"><i class="ti ti-user-off"></i>ไม่พบข้อมูลพนักงานลาออก<br>'
+          + '<span style="font-size:13px;color:var(--muted)">ตรวจสอบสิทธิ์การอ่านตาราง daiki_employees</span></div>';
+        return;
+      }
+
+      const byMonth = {};
+      list.forEach(r => { const k = monthKey(r.resign); byMonth[k] = (byMonth[k] || 0) + 1; });
+      const months = Object.keys(byMonth).sort();
+      const avg = months.length ? (list.length / months.length).toFixed(1) : '0';
+
+      const byDept = {};
+      list.forEach(r => { byDept[r.dept] = (byDept[r.dept] || 0) + 1; });
+      const deptTop = Object.keys(byDept).map(k => ({ dept: k, n: byDept[k] }))
+        .sort((a, b) => b.n - a.n);
+
+      const early = list.filter(r => r.tenure !== null && r.tenure < 3).length;
+
+      const chips = [3, 6, 12, 24].map(m =>
+        `<button class="rs-chip${resignMonths === m ? ' on' : ''}" onclick="setResignRange(${m})">${m} เดือน</button>`).join('');
+
+      el.innerHTML =
+          `<div class="rs-bar">ช่วงข้อมูล: ${chips}
+            <span class="rs-note">ย้อนหลัง ${resignMonths} เดือน · ข้อมูลจากทะเบียนพนักงาน</span></div>`
+        + `<div class="rs-kpis">
+            <div class="rs-k"><div class="t">ลาออกทั้งหมด</div><div class="v">${list.length}<small>คน</small></div></div>
+            <div class="rs-k"><div class="t">เฉลี่ยต่อเดือน</div><div class="v">${avg}<small>คน</small></div></div>
+            <div class="rs-k"><div class="t">ลาออกก่อน 3 เดือน</div><div class="v ${early ? 'bad' : ''}">${early}<small>คน</small></div></div>
+            <div class="rs-k"><div class="t">แผนกที่ลาออกมากสุด</div><div class="v sm">${esc(deptTop[0] ? deptTop[0].dept : '-')}<small>${deptTop[0] ? deptTop[0].n + ' คน' : ''}</small></div></div>
+           </div>`
+        + `<div class="rs-tblwrap"><table class="rs-tbl">
+            <thead><tr><th>ชื่อ-นามสกุล</th><th>แผนก</th><th>ตำแหน่ง</th>
+              <th class="c">วันเริ่มงาน</th><th class="c">วันลาออก</th><th class="c">อายุงาน</th></tr></thead><tbody>`
+        + list.map(r => `<tr>
+            <td>${esc(r.name)}${r.nick ? ` <span class="rs-nick">(${esc(r.nick)})</span>` : ''}</td>
+            <td>${esc(r.dept)}</td><td>${esc(r.position)}</td>
+            <td class="c">${esc(thDate(r.start) || '-')}</td>
+            <td class="c">${esc(thDate(r.resign) || '-')}</td>
+            <td class="c${r.tenure !== null && r.tenure < 3 ? ' bad' : ''}">${esc(tenureText(r.tenure))}</td>
+          </tr>`).join('')
+        + '</tbody></table></div>';
+    }
+    function setResignRange(m) { resignMonths = m; renderResign(); }
+    window.setResignRange = setResignRange;
+
     function renderStartDates() {
       const hidden = startHidden();
       const all = DATA.filter(a => ['offer', 'hired'].includes(statusOf(a)) && a.offerStart);
@@ -2939,8 +3110,89 @@ setTimeout(function(){ if (!document.querySelector('.page')) paginate(); }, 2500
             <span><b>เหตุผลไม่ผ่าน</b> = เหตุผลปิดเคส / ผลสัมภาษณ์</span>
           </div>
           <div class="dsrc-note">💡 นับจาก “ร่องรอยที่เกิดขึ้นจริง” ไม่ใช่สถานะปัจจุบัน — คนที่เคยสัมภาษณ์แล้วไม่ผ่าน จะยังถูกนับในขั้นสัมภาษณ์ ทำให้อัตราการผ่านแต่ละด่านตรงความจริง</div>
-        </div>`;
+        </div>
+        <div id="dash-resign"></div>`;
       updateLiveBadge();
+      renderResignDash();
+    }
+
+    /* ---------- สถิติการลาออก (ต่อท้ายแดชบอร์ด) ---------- */
+    async function renderResignDash() {
+      const host = document.getElementById('dash-resign');
+      if (!host) return;
+      await loadResign();
+      if (!RESIGN.length) { host.innerHTML = ''; return; }
+
+      const M = 12;
+      const from = resignCutoff(M);
+      const list = RESIGN.filter(r => r.resign >= from);
+      if (!list.length) { host.innerHTML = ''; return; }
+
+      // รายเดือน 12 เดือนล่าสุด
+      const keys = [];
+      const now = new Date();
+      for (let i = M - 1; i >= 0; i--) {
+        const d0 = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        keys.push(d0.toISOString().slice(0, 7));
+      }
+      const byMonth = {}; keys.forEach(k => byMonth[k] = 0);
+      list.forEach(r => { const k = monthKey(r.resign); if (k in byMonth) byMonth[k]++; });
+      const maxM = Math.max(1, ...keys.map(k => byMonth[k]));
+
+      // แผนก
+      const byDept = {};
+      list.forEach(r => { byDept[r.dept] = (byDept[r.dept] || 0) + 1; });
+      const depts = Object.keys(byDept).map(k => ({ k, n: byDept[k] })).sort((a, b) => b.n - a.n).slice(0, 8);
+      const maxD = Math.max(1, ...depts.map(x => x.n));
+
+      // อายุงานตอนลาออก
+      const bands = ['ต่ำกว่า 3 เดือน', '3–6 เดือน', '6–12 เดือน', '1–2 ปี', 'เกิน 2 ปี', 'ไม่ระบุ'];
+      const byBand = {}; bands.forEach(b => byBand[b] = 0);
+      list.forEach(r => byBand[tenureBand(r.tenure)]++);
+      const maxB = Math.max(1, ...bands.map(b => byBand[b]));
+
+      const withT = list.filter(r => r.tenure !== null);
+      const avgT = withT.length ? Math.round(withT.reduce((s, r) => s + r.tenure, 0) / withT.length) : null;
+      const early = list.filter(r => r.tenure !== null && r.tenure < 3).length;
+      const hired12 = DATA.filter(a => statusOf(a) === 'hired' && a.offerStart && a.offerStart >= from).length;
+
+      const barsM = keys.map(k =>
+        `<div class="rd-col" title="${monthLabel(k)}: ${byMonth[k]} คน">
+           <div class="rd-v">${byMonth[k] || ''}</div>
+           <div class="rd-b" style="height:${Math.round((byMonth[k] / maxM) * 100)}%"></div>
+           <div class="rd-x">${monthLabel(k)}</div></div>`).join('');
+
+      const rowsD = depts.map(x =>
+        `<div class="rd-row"><span class="rd-l">${esc(x.k)}</span>
+           <span class="rd-t"><i style="width:${Math.round((x.n / maxD) * 100)}%"></i></span>
+           <b>${x.n}</b></div>`).join('');
+
+      const rowsB = bands.filter(b => byBand[b]).map(b =>
+        `<div class="rd-row"><span class="rd-l">${b}</span>
+           <span class="rd-t"><i class="${b === 'ต่ำกว่า 3 เดือน' ? 'warn' : ''}" style="width:${Math.round((byBand[b] / maxB) * 100)}%"></i></span>
+           <b>${byBand[b]}</b></div>`).join('');
+
+      host.innerHTML = `
+        <div class="dash-hr"><span><i class="ti ti-user-off"></i> สถิติการลาออก (12 เดือนล่าสุด)</span></div>
+        <div class="kpi-grid">
+          <div class="kpi" style="--k:#64708a"><div class="k-l">ลาออกทั้งหมด</div><div class="k-v">${list.length}<small>คน</small></div></div>
+          <div class="kpi" style="--k:#2E75B6"><div class="k-l">เฉลี่ยต่อเดือน</div><div class="k-v">${(list.length / M).toFixed(1)}<small>คน</small></div></div>
+          <div class="kpi" style="--k:#D64545"><div class="k-l">ลาออกก่อน 3 เดือน</div><div class="k-v">${early}<small>คน</small></div></div>
+          <div class="kpi" style="--k:#6B3FA0"><div class="k-l">อายุงานเฉลี่ย</div><div class="k-v">${avgT === null ? '-' : tenureText(avgT)}</div></div>
+          <div class="kpi" style="--k:#2E9E63"><div class="k-l">รับเข้าทำงานช่วงเดียวกัน</div><div class="k-v">${hired12}<small>คน</small></div></div>
+          <div class="kpi" style="--k:#8A6D1F"><div class="k-l">รับเข้า − ลาออก</div><div class="k-v">${hired12 - list.length >= 0 ? '+' : ''}${hired12 - list.length}<small>คน</small></div></div>
+        </div>
+        <div class="dcard"><div class="dc-h"><b>จำนวนผู้ลาออกรายเดือน</b></div>
+          <div class="rd-cols">${barsM}</div></div>
+        <div class="dgrid g2">
+          <div class="dcard"><div class="dc-h"><b>แผนกที่มีผู้ลาออกมากที่สุด</b></div>${rowsD}</div>
+          <div class="dcard"><div class="dc-h"><b>อายุงาน ณ วันลาออก</b></div>${rowsB}
+            <div class="dsrc-note">ลาออกก่อน 3 เดือน มักสะท้อนปัญหาการคัดเลือกหรือการปฐมนิเทศ</div></div>
+        </div>
+        <div class="dsource"><b><i class="ti ti-database"></i> ที่มาของข้อมูล</b> — ตาราง <code>daiki_employees</code> (ทะเบียนพนักงาน)
+          เฉพาะผู้ที่สถานะ “ลาออกแล้ว” และมีวันลาออกระบุไว้
+          <div class="dsrc-note">อายุงาน = วันเริ่มงาน → วันลาออก · คนที่ไม่ได้ระบุวันเริ่มงานจะนับอยู่ในกลุ่ม “ไม่ระบุ”</div>
+        </div>`;
     }
 
     // ═══════════════ รายงานแดชบอร์ด A4 (จัดหน้าอัตโนมัติ ไม่ขาดท่อน) ═══════════════
