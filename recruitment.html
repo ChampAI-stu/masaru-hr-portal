@@ -121,7 +121,7 @@
     #pg-int .rep-wrap, #pg-start .rep-wrap, #pg-rep .rep-wrap,
     #pg-hired .rep-wrap, #pg-resign .rep-wrap { padding-bottom: 60px; }
     /* หน้าตารางกว้าง ให้ใช้พื้นที่เต็มจอกว่าหน้าอื่น */
-    #pg-hired .rep-wrap, #pg-resign .rep-wrap { max-width: 1240px; }
+    #pg-hired .rep-wrap, #pg-resign .rep-wrap { max-width: min(1240px, 100%); }
     .pg.on { display: flex; }
 
     /* ── Candidate list column ───────────────────────── */
@@ -363,8 +363,10 @@
     .rs-k .v.sm { font-size:16px; }
     .rs-k .v.bad { color:#D64545; }
     .rs-k .v small { font-size:12px; font-weight:600; margin-left:5px; color:var(--muted); }
+    /* พื้นหลังต้องอยู่ที่ "ตาราง" ไม่ใช่กล่องที่เลื่อน — ไม่งั้นตอนเลื่อนขวาจะเห็นพื้นหลังหน้าเว็บโผล่ */
     .rs-tblwrap { border:1px solid #e3e8f0; border-radius:11px; overflow-x:auto; background:#fff; }
-    .rs-tblwrap .rs-tbl { min-width:760px; }
+    .rs-tblwrap .rs-tbl { min-width:760px; background:#fff; }
+    .rs-tbl tbody tr { background:#fff; }
     .rs-k .v.prob { color:#1f5f8c; } .rs-k .v.soon { color:#7a4a12; }
     .rs-tbl td.prob { color:#1f5f8c; font-weight:700; }
     .hs { display:inline-block; font-size:11.5px; font-weight:700; padding:2px 9px; border-radius:20px; }
@@ -392,10 +394,10 @@
 
     /* ── Reports ─────────────────────────────────────── */
     #pg-rep, #pg-int { flex-direction: column; overflow-y: auto; }
-    .rep-wrap { max-width: 860px; margin: 0 auto; padding: 30px 32px; width: 100%; }
+    .rep-wrap { max-width: min(860px, 100%); margin: 0 auto; padding: 30px 32px; width: 100%; }
     .rep-title { font-size: 20px; font-weight: 700; margin-bottom: 22px; }
     /* ═══════════════ DASHBOARD (แท็บรายงาน) ═══════════════ */
-    #pg-rep .rep-wrap { max-width: 1320px; padding: 22px 20px 64px; }
+    #pg-rep .rep-wrap { max-width: min(1320px, 100%); padding: 22px 20px 64px; }
     .dash { display: block; }
     .dash > * + * { margin-top: 14px; }
 
@@ -591,7 +593,11 @@
     .int-day-t { font-size: 12px; color: var(--muted); margin-top: 1px; }
     .int-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .int-pos { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .int-rel { font-size: 12px; font-weight: 700; flex-shrink: 0; }
+    .int-rel { font-size: 12px; font-weight: 700; flex-shrink: 0; white-space: nowrap; }
+    /* กันการ์ดกว้างเกินคอลัมน์จนพื้นหลังคลุมไม่ถึง */
+    .int-card { max-width: 100%; overflow: hidden; }
+    .int-card > div { min-width: 0; }
+    .int-day { min-width: 74px; }
     .pipe h3 { font-size: 14px; font-weight: 700; margin-bottom: 18px; }
     .pbar { margin-bottom: 14px; }
     .pb-lbl { display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 5px; }
