@@ -121,7 +121,19 @@
     #pg-int .rep-wrap, #pg-start .rep-wrap, #pg-rep .rep-wrap,
     #pg-hired .rep-wrap, #pg-resign .rep-wrap { padding-bottom: 60px; }
     /* หน้าตารางกว้าง ให้ใช้พื้นที่เต็มจอกว่าหน้าอื่น */
-    #pg-hired .rep-wrap, #pg-resign .rep-wrap { max-width: min(1240px, 100%); }
+    #pg-hired .rep-wrap { max-width: min(1240px, 100%); }
+    /* หน้าคนลาออก — ใช้เต็มความกว้างจอ ตารางจะได้อ่านง่าย ไม่ต้องบีบ */
+    #pg-resign .rep-wrap { max-width: 100%; padding: 26px 26px 60px; }
+    #pg-resign .rs-tbl { font-size: 13.5px; }
+    #pg-resign .rs-tbl th { padding: 11px 13px; font-size: 12.5px; }
+    #pg-resign .rs-tbl td { padding: 11px 13px; }
+    #pg-resign .rs-kpis { grid-template-columns: repeat(4, minmax(0,1fr)); }
+    /* จอกว้างพอแล้ว ไม่ต้องซ่อนคอลัมน์ */
+    @media (min-width:1100px){
+      #pg-resign .rs-tbl .col-sal,
+      #pg-resign .rs-tbl .col-src,
+      #pg-resign .rs-tbl .col-pos { display: table-cell; }
+    }
     .pg.on { display: flex; }
 
     /* ── Candidate list column ───────────────────────── */
@@ -2465,17 +2477,19 @@
             <div class="rs-k"><div class="t">ตำแหน่งที่ลาออกมากสุด</div><div class="v sm">${esc(deptTop[0] ? deptTop[0].dept : '-')}<small>${deptTop[0] ? deptTop[0].n + ' คน' : ''}</small></div></div>
            </div>`
         + `<div class="rs-tblwrap"><table class="rs-tbl">
-            <thead><tr><th style="width:22%">ชื่อ-นามสกุล</th><th class="col-pos" style="width:15%">ตำแหน่งที่จ้าง</th>
-              <th class="col-src" style="width:11%">ช่องทางที่มา</th>
-              <th class="c" style="width:12%">วันเริ่มงาน</th><th class="c" style="width:12%">วันลาออก</th>
-              <th class="c" style="width:10%">อายุงาน</th><th style="width:18%">ประเภท / เหตุผล</th></tr></thead><tbody>`
+            <thead><tr><th style="width:20%">ชื่อ-นามสกุล</th><th class="col-pos" style="width:14%">ตำแหน่งที่จ้าง</th>
+              <th class="col-src" style="width:9%">ช่องทางที่มา</th>
+              <th class="c" style="width:10%">วันเริ่มงาน</th><th class="c" style="width:10%">วันลาออก</th>
+              <th class="c" style="width:8%">อายุงาน</th><th class="col-pos" style="width:13%">ประเภท</th>
+              <th style="width:16%">เหตุผล</th></tr></thead><tbody>`
         + list.map(r => `<tr>
             <td class="nm">${esc(r.name)}</td>
             <td class="col-pos">${esc(r.pos)}</td><td class="col-src">${esc(r.src)}</td>
             <td class="c">${esc(thDate(r.start) || '-')}</td>
             <td class="c">${esc(thDate(r.resign) || '-')}</td>
             <td class="c${r.days !== null && r.days <= 90 ? ' bad' : ''}">${esc(r.days === null ? '-' : (r.days < 31 ? r.days + ' วัน' : tenureTextM(r.tenure)))}</td>
-            <td class="nm">${esc(r.type)}${r.reason ? ' — ' + esc(r.reason) : ''}</td>
+            <td class="col-pos">${esc(r.type)}</td>
+            <td class="nm">${esc(r.reason || '-')}</td>
           </tr>`).join('')
         + '</tbody></table></div>';
     }
