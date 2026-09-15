@@ -397,6 +397,8 @@
     .rs-foot { margin-top:12px; font-size:12.5px; color:var(--muted); background:#fff;
       border:1px solid #e3e8f0; border-radius:9px; padding:9px 12px; line-height:1.7; }
     .rs-foot b { color:var(--ink); }
+    .rs-sec { font-size:15px; font-weight:700; color:var(--ink); margin:26px 0 12px;
+      border-left:4px solid #d62030; padding-left:10px; }
     .rs-tbl { width:100%; border-collapse:collapse; font-size:13px; }
     .rs-tbl th { background:#f2f5fa; text-align:left; padding:9px 11px; font-size:12px; color:#48566e; border-bottom:1px solid #e3e8f0; }
     .rs-tbl td { padding:8px 11px; border-bottom:1px solid #eef1f6; }
@@ -1852,7 +1854,35 @@
 
       if (await dbUpdate(id, { status: 'resigned', resignDate: date, resignType: type,
                                resignReason: reason, closedAt: date, prevStatus: 'hired' })) {
-        showToast('บันทึกการลาออกแล้ว'); await refresh();
+        const reg = await syncResignToRegistry(a.name, date);
+        showToast('บันทึกการลาออกแล้ว' + (reg.ok ? ' · อัปเดตทะเบียนพนักงานด้วย' : ''));
+        if (!reg.ok && reg.msg) alert('บันทึกในระบบรับสมัครเรียบร้อย\n\n⚠️ ' + reg.msg);
+        REG_LOADED = false;            // ให้ดึงทะเบียนใหม่รอบหน้า
+        await refresh();
+      }
+    }
+
+    /* อัปเดตสถานะลาออกในทะเบียนพนักงาน (daiki_employees) ให้ตรงกัน
+       จับคู่ด้วยชื่อ-นามสกุล ถ้าไม่เจอหรือเจอหลายคน จะไม่แก้อะไรแล้วแจ้งให้ไปทำเอง */
+    async function syncResignToRegistry(name, date) {
+      const key = _nkey(name);
+      if (!key) return { ok: false, msg: '' };
+      try {
+        const r = await _sb.from('daiki_employees')
+          .select('id,full_name,is_active').eq('is_active', true).limit(5000);
+        if (r.error) throw r.error;
+        const hits = (r.data || []).filter(e => {
+          const k = _nkey(e.full_name);
+          return k && (k === key || k.indexOf(key) >= 0 || key.indexOf(k) >= 0);
+        });
+        if (!hits.length) return { ok: false, msg: 'ไม่พบ "' + name + '" ในทะเบียนพนักงาน (อาจยังไม่ได้เพิ่มเข้าระบบบันทึกเวลา) กรุณาแจ้งลาออกในระบบนั้นเอง' };
+        if (hits.length > 1) return { ok: false, msg: 'พบชื่อคล้ายกัน ' + hits.length + ' คนในทะเบียนพนักงาน จึงไม่แก้ให้อัตโนมัติ กรุณาแจ้งลาออกในระบบบันทึกเวลาเอง' };
+        const u = await _sb.from('daiki_employees')
+          .update({ is_active: false, resign_date: date }).eq('id', hits[0].id);
+        if (u.error) throw u.error;
+        return { ok: true, msg: '' };
+      } catch (e) {
+        return { ok: false, msg: 'อัปเดตทะเบียนพนักงานไม่สำเร็จ: ' + (e.message || e) };
       }
     }
     window.actResign = actResign;
@@ -2470,6 +2500,50 @@
       return RESIGN;
     }
 
+    /* ───── ระยะเวลาหาคนทดแทนตำแหน่งที่ลาออก ─────
+       จับคู่: คนลาออกตำแหน่ง X เมื่อวันที่ D → หาคนที่ "เริ่มงาน" ตำแหน่ง X คนแรกหลังวันที่ D
+       ใช้ได้เฉพาะรายที่รู้ตำแหน่ง (ทั้งจากระบบรับสมัครและทะเบียนพนักงาน)          */
+    function _pkey(s) { return String(s || '').trim().toLowerCase().replace(/\s+/g, ' '); }
+
+    function replacementRows(list) {
+      // ผู้ที่เริ่มงานจริง (รับเข้า/ลาออกไปแล้วก็นับ เพราะเคยมาทดแทน)
+      const hires = DATA.filter(a => ['hired', 'resigned'].includes(statusOf(a)) && a.offerStart)
+        .map(a => ({ pos: _pkey(a.pos), start: String(a.offerStart).slice(0, 10), name: a.name }))
+        .sort((x, y) => x.start.localeCompare(y.start));
+
+      const used = {};
+      return list.filter(r => r.pos && r.pos !== '-' && r.resign)
+        .sort((a, b) => a.resign.localeCompare(b.resign))
+        .map(r => {
+          const k = _pkey(r.pos);
+          // คนแรกที่เริ่มงานตำแหน่งเดียวกัน หลังวันลาออก และยังไม่ถูกจับคู่ไปก่อน
+          const hit = hires.find((h, i) => h.pos === k && h.start >= r.resign && !used[i]
+                                        && h.name !== r.name);
+          if (hit) {
+            used[hires.indexOf(hit)] = true;
+            const days = Math.round((new Date(hit.start) - new Date(r.resign)) / 86400000);
+            return { pos: r.pos, out: r.name, resign: r.resign, in: hit.name, start: hit.start, days, open: false };
+          }
+          const wait = Math.round((new Date() - new Date(r.resign)) / 86400000);
+          return { pos: r.pos, out: r.name, resign: r.resign, in: null, start: null, days: wait, open: true };
+        });
+    }
+
+    function replacementSummary(rows) {
+      const filled = rows.filter(r => !r.open);
+      const open = rows.filter(r => r.open);
+      const avg = filled.length ? Math.round(filled.reduce((s, r) => s + r.days, 0) / filled.length) : null;
+      const fast = filled.length ? Math.min(...filled.map(r => r.days)) : null;
+      const slow = filled.length ? Math.max(...filled.map(r => r.days)) : null;
+      const byPos = {};
+      filled.forEach(r => { (byPos[r.pos] = byPos[r.pos] || []).push(r.days); });
+      const pos = Object.keys(byPos).map(k => ({
+        k, n: byPos[k].length,
+        avg: Math.round(byPos[k].reduce((s, v) => s + v, 0) / byPos[k].length)
+      })).sort((a, b) => b.avg - a.avg);
+      return { filled: filled.length, open: open.length, avg, fast, slow, pos, openList: open };
+    }
+
     function resignCutoff(months) {
       const d = new Date(); d.setMonth(d.getMonth() - months + 1); d.setDate(1);
       return d.toISOString().slice(0, 10);
@@ -2538,8 +2612,45 @@
               ? `<span class="hs prob">ระบบรับสมัคร</span>${r.type && r.type !== 'ไม่ระบุ' ? ' ' + esc(r.type) : ''}${r.reason ? ' — ' + esc(r.reason) : ''}`
               : '<span class="hs none">ทะเบียนพนักงาน</span>'}</td>
           </tr>`).join('')
-        + '</tbody></table></div>';
+        + '</tbody></table></div>'
+        + replacementBlock(list);
     }
+
+    /* การ์ด "ระยะเวลาหาคนทดแทน" ต่อท้ายตารางคนลาออก */
+    function replacementBlock(list) {
+      const rows = replacementRows(list);
+      if (!rows.length) return '';
+      const S = replacementSummary(rows);
+      const nowISO = new Date().toISOString().slice(0, 10);
+
+      return '<div class="rs-sec">ระยะเวลาหาคนทดแทน</div>'
+        + `<div class="rs-kpis">
+            <div class="rs-k"><div class="t">หาคนทดแทนได้แล้ว</div><div class="v">${S.filled}<small>ตำแหน่ง</small></div></div>
+            <div class="rs-k"><div class="t">เฉลี่ยที่ใช้</div><div class="v">${S.avg === null ? '-' : S.avg}<small>วัน</small></div></div>
+            <div class="rs-k"><div class="t">เร็วสุด / ช้าสุด</div><div class="v sm">${S.fast === null ? '-' : S.fast + ' / ' + S.slow}<small>วัน</small></div></div>
+            <div class="rs-k"><div class="t">ยังไม่มีคนทดแทน</div><div class="v ${S.open ? 'bad' : ''}">${S.open}<small>ตำแหน่ง</small></div></div>
+           </div>`
+        + '<div class="rs-tblwrap"><table class="rs-tbl">'
+        + '<thead><tr><th style="width:20%">ตำแหน่ง</th><th class="col-pos" style="width:20%">คนที่ลาออก</th>'
+        + '<th class="c" style="width:12%">วันลาออก</th><th class="col-src" style="width:20%">คนที่มาแทน</th>'
+        + '<th class="c" style="width:12%">วันเริ่มงาน</th><th class="c" style="width:16%">ใช้เวลา</th></tr></thead><tbody>'
+        + rows.map(r => `<tr>
+            <td class="nm">${esc(r.pos)}</td>
+            <td class="col-pos nm">${esc(r.out)}</td>
+            <td class="c">${esc(thDate(r.resign) || '-')}</td>
+            <td class="col-src nm">${r.in ? esc(r.in) : '<span class="hs soon">ยังไม่มีคนทดแทน</span>'}</td>
+            <td class="c">${r.start ? esc(thDate(r.start)) : '-'}</td>
+            <td class="c${r.open ? ' bad' : ''}"><b>${r.days} วัน</b>${r.open ? ' (ถึงวันนี้)' : ''}</td>
+          </tr>`).join('')
+        + '</tbody></table></div>'
+        + (S.pos.length ? '<div class="rs-foot"><b>ตำแหน่งที่หาคนทดแทนได้ช้าที่สุด:</b> '
+            + S.pos.slice(0, 5).map(x => esc(x.k) + ' เฉลี่ย ' + x.avg + ' วัน (' + x.n + ' ครั้ง)').join(' · ')
+            + '</div>' : '')
+        + '<div class="rs-foot">วิธีนับ: จับคู่คนที่ลาออกกับคนที่ <b>เริ่มงานตำแหน่งเดียวกันคนถัดไป</b> '
+        + 'หลังวันลาออก (ต้องเป็นคนละคน และจับคู่ได้ครั้งเดียว) · '
+        + 'ตำแหน่งที่ยังไม่มีคนมาแทนนับจำนวนวันถึงวันนี้ (' + thDate(nowISO) + ')</div>';
+    }
+
     /* ================= แท็บ "รับเข้าแล้ว" =================
        รายชื่อผู้ที่จ้างผ่านระบบนี้และยังทำงานอยู่ (status = hired)
        ใช้ติดตามช่วงทดลองงาน + ดูว่าคนที่รับเข้ามาอยู่กันได้นานแค่ไหน        */
