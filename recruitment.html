@@ -154,6 +154,24 @@
     }
     .fchip:hover { background: var(--line-soft); }
     .fchip.on { background: var(--green-soft); color: var(--green-dark); border-color: var(--green-line); }
+    .rs-kpi { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin-bottom:11px; }
+    .rs-kpi > div { border:1px solid #dfe5ee; border-radius:9px; padding:9px 11px; background:#fbfcfe; font-size:12.5px; color:#64708a; }
+    .rs-kpi span { display:block; font-size:11.5px; }
+    .rs-kpi b { font-size:22px; font-weight:800; color:#16294d; margin-right:3px; }
+    .rs-kpi b.ok { color:#17845f; } .rs-kpi b.warn { color:#8a5a12; } .rs-kpi b.bad { color:#b4530f; }
+    .rs-bands { font-size:12.5px; color:#48566e; background:#fdf3ec; border:1px solid #f3cdb4; border-radius:9px; padding:9px 12px; margin-bottom:11px; line-height:1.7; }
+    .rs-bands u { font-weight:800; color:#8a3d0f; text-decoration:none; }
+    .rs-split { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:11px; font-size:12.5px; color:#48566e; }
+    .rs-split b { display:block; color:#16294d; margin-bottom:5px; }
+    .rs-split u { font-weight:800; color:#16294d; text-decoration:none; float:right; }
+    .rs-split > div > div { border-bottom:1px solid #eef1f6; padding:3px 0; }
+    .rs-none { font-size:13px; color:#17845f; padding:10px 0; }
+    .fchip-rs { display: inline-flex; align-items: center; gap: 4px; color: #8a3d0f; }
+    .fchip-rs i { font-size: 12px; }
+    .fchip-rs.on { background: #fdeee3; color: #8a3d0f; border-color: #f3cdb4; }
+    .icon-btn.resign { border-color: #f3cdb4; background: #fdf3ec; color: #8a3d0f; }
+    .icon-btn.resign:hover { background: #fbe6d7; }
+    .stag.tag-rs { background:#fdeee3; color:#8a3d0f; }
     .fchip-ns { display: inline-flex; align-items: center; gap: 4px; color: #9A3412; }
     .fchip-ns i { font-size: 12px; }
     .fchip-ns.on { background: #FFEDD5; color: #9A3412; border-color: #FBD4A8; }
@@ -804,6 +822,7 @@
           <div class="fchip fchip-int" data-f="interested" onclick="setFilter('interested')"><i class="ti ti-star-filled"></i>สนใจ</div>
           <div class="fchip fchip-bk" data-f="backup" onclick="setFilter('backup')"><i class="ti ti-bookmark-filled"></i>สำรอง</div>
           <div class="fchip fchip-ns" data-f="noshow" onclick="setFilter('noshow')"><i class="ti ti-calendar-x"></i>ไม่เข้าสัมภาษณ์ <b class="fc-n" id="nc-noshow">0</b></div>
+          <div class="fchip fchip-rs" data-f="resigned" onclick="setFilter('resigned')"><i class="ti ti-door-exit"></i>ลาออกแล้ว <b class="fc-n" id="nc-resigned">0</b></div>
         </div>
         <div id="alist"></div>
       </div>
@@ -939,7 +958,9 @@
       hired:     { label: 'รับเข้าทำงาน',    color: '#16294d', bg: '#e7ecf5', icon: 'ti-circle-check' },
       rejected:  { label: 'ไม่ผ่าน',         color: '#9a2b48', bg: '#fbe9ee', icon: 'ti-circle-x' },
       cancelled: { label: 'ยกเลิก',          color: '#556066', bg: '#eceef0', icon: 'ti-user-x' },
+      resigned:  { label: 'ลาออกแล้ว',       color: '#8a3d0f', bg: '#fdeee3', icon: 'ti-door-exit' },
     };
+    const RESIGN_TYPES = ['ลาออกเอง', 'ไม่ผ่านทดลองงาน', 'เลิกจ้าง', 'ไม่มาทำงาน (หายไป)'];
     const FLOW = ['new', 'screening', 'interview', 'offer', 'hired'];
     const STATUS_FALLBACK = { label: 'ปิดเคส', color: '#556066', bg: '#eceef0', icon: 'ti-circle-x' };
     function stMeta(s) { return STATUS[s] || STATUS_FALLBACK; }
@@ -1034,6 +1055,7 @@
       closeReason: 'close_reason', execInterested: 'exec_interested', photoPath: 'photo_path',
       interestedBy: 'interested_by', closedAt: 'closed_at', prevStatus: 'prev_status',
       isBackup: 'is_backup', backupNote: 'backup_note',
+      resignDate: 'resign_date', resignReason: 'resign_reason', resignType: 'resign_type',
     };
     function mapRow(r) {
       return {
@@ -1048,6 +1070,7 @@
         offerResult: r.offer_result || '', respondedAt: r.responded_at || '', offerRespNote: r.offer_resp_note || '',
         closeReason: r.close_reason || '', execInterested: r.exec_interested === true, photoPath: r.photo_path || '',
         interestedBy: r.interested_by || '', closedAt: r.closed_at || '', prevStatus: r.prev_status || '',
+        resignDate: r.resign_date || '', resignReason: r.resign_reason || '', resignType: r.resign_type || '',
         isBackup: r.is_backup === true, backupNote: r.backup_note || '',
       };
     }
@@ -1215,10 +1238,13 @@
       if (filter === 'interested') list = list.filter(a => a.interestedBy);
       else if (filter === 'backup') list = list.filter(a => a.isBackup);
       else if (filter === 'noshow') list = list.filter(a => isNoShow(a));
+      else if (filter === 'resigned') list = list.filter(a => statusOf(a) === 'resigned');
       else if (filter !== 'all') list = list.filter(a => statusOf(a) === filter);
       document.getElementById('nc-list').textContent = DATA.length;
       const nsEl = document.getElementById('nc-noshow');
       if (nsEl) nsEl.textContent = DATA.filter(a => isNoShow(a)).length;
+      const rsEl = document.getElementById('nc-resigned');
+      if (rsEl) rsEl.textContent = DATA.filter(a => statusOf(a) === 'resigned').length;
 
       const el = document.getElementById('alist');
       if (!list.length) {
@@ -1240,6 +1266,7 @@
             <span class="stag" style="background:${st.bg};color:${st.color}"><i class="ti ${st.icon}"></i>${st.label}</span>
             ${a.isBackup ? `<span class="stag tag-bk"><i class="ti ti-bookmark-filled"></i>สำรอง</span>` : ''}
             ${isNoShow(a) ? NOSHOW_TAG : ''}
+            ${statusOf(a) === 'resigned' && a.offerStart && a.resignDate ? `<span class="stag tag-rs"><i class="ti ti-clock"></i>${esc(tenureText(a))}</span>` : ''}
           </div>
           ${a.interestedBy ? `<span class="int-star" title="${roleLabel(a.interestedBy)}สนใจ"><i class="ti ti-star-filled"></i></span>` : ''}
         </div>`;
@@ -1350,6 +1377,7 @@
             ${interestBtn(a)}
             ${isExec ? '' : backupBtn(a)}
             ${isExec ? '' : `${['cancelled','rejected','hired'].includes(st) ? `<button class="icon-btn restore" onclick="restoreCancelled('${a.id}')" title="ย้อนกลับไปสถานะก่อนหน้า"><i class="ti ti-arrow-back-up"></i>ย้อนกลับ</button>` : ''}
+            ${st === 'hired' ? `<button class="icon-btn resign" onclick="actResign('${a.id}')" title="พนักงานลาออก / พ้นสภาพ"><i class="ti ti-door-exit"></i>บันทึกลาออก</button>` : ''}
             ${['new','screening','interview'].includes(st) ? `<button class="icon-btn noshow" onclick="actNoShow('${a.id}')" title="ติดต่อแล้วไม่มาตามนัด / ไม่ตอบกลับ — ปิดเคสพร้อมติดแท็ก"><i class="ti ti-calendar-x"></i>ไม่เข้าสัมภาษณ์</button>` : ''}
             ${!['rejected','cancelled'].includes(st) ? `<button class="icon-btn warn" onclick="doWithdraw('${a.id}')"><i class="ti ti-user-x"></i>ผู้สมัครยกเลิก</button>` : ''}
             <button class="icon-btn danger" onclick="doDelete('${a.id}')"><i class="ti ti-trash"></i></button>`}
@@ -1454,6 +1482,19 @@
           </div>`;
         }
         return detailCard + flowCard;
+      }
+      if (st === 'resigned') {
+        return `<div class="card">
+          <div class="card-title"><i class="ti ti-door-exit"></i>พ้นสภาพพนักงาน</div>
+          <div class="banner banner-cancel"><i class="ti ti-door-exit"></i><div><b>${esc(a.resignType || 'ลาออก')}</b>${a.resignDate ? ' · ' + esc(thDate(a.resignDate) || a.resignDate) : ''}</div></div>
+          <div class="info-grid">
+            <div class="info-f"><div class="k">ตำแหน่ง</div><div class="v">${esc(a.pos)}</div></div>
+            <div class="info-f"><div class="k">วันเริ่มงาน</div><div class="v">${a.offerStart ? esc(thDate(a.offerStart) || a.offerStart) : '—'}</div></div>
+            <div class="info-f"><div class="k">วันที่ลาออก</div><div class="v">${a.resignDate ? esc(thDate(a.resignDate) || a.resignDate) : '—'}</div></div>
+            <div class="info-f"><div class="k">อายุงานรวม</div><div class="v"><b>${esc(tenureText(a))}</b></div></div>
+          </div>
+          ${a.resignReason ? `<div class="note-box" style="margin-top:8px">เหตุผล: ${esc(a.resignReason)}</div>` : ''}
+        </div>`;
       }
       if (st === 'hired') {
         return `<div class="card">
@@ -1640,6 +1681,82 @@
       if (note) fields.hrNote = note;
       if (await dbUpdate(id, fields)) { showToast('บันทึกว่าไม่ผ่านแล้ว'); await refresh(); }
     }
+    // ── สถิติการลาออก (ใช้ร่วมกันทั้งแดชบอร์ดและรายงาน PDF) ──
+    // นับเฉพาะคนที่ถูกจ้างผ่านระบบรับสมัครนี้เท่านั้น
+    function resignStats(hiredList, resignedList) {
+      const hiredTotal = hiredList.length + resignedList.length;   // เคยรับเข้าทั้งหมดในงวด
+      const tn = resignedList.map(a => tenureDays(a)).filter(v => v !== null);
+      const avg = tn.length ? Math.round(tn.reduce((s, v) => s + v, 0) / tn.length) : null;
+      const band = n => resignedList.filter(a => { const d = tenureDays(a); return d !== null && d <= n; }).length;
+      const byType = {}, byPos = {}, byReason = {};
+      resignedList.forEach(a => {
+        const ty = a.resignType || 'ไม่ระบุ';   byType[ty] = (byType[ty] || 0) + 1;
+        const po = a.pos || 'ไม่ระบุ';          byPos[po] = (byPos[po] || 0) + 1;
+        const rs = (a.resignReason || '').trim() || 'ไม่ระบุเหตุผล';
+        byReason[rs] = (byReason[rs] || 0) + 1;
+      });
+      const srt = o => Object.keys(o).map(k => ({ k, n: o[k] })).sort((x, y) => y.n - x.n);
+      return {
+        hiredTotal, resigned: resignedList.length,
+        stillIn: hiredList.length,
+        retention: hiredTotal ? Math.round(hiredList.length * 100 / hiredTotal) : 0,
+        turnover: hiredTotal ? Math.round(resignedList.length * 100 / hiredTotal) : 0,
+        avgTenure: avg, d30: band(30), d60: band(60), d90: band(90),
+        types: srt(byType), positions: srt(byPos), reasons: srt(byReason),
+        list: [...resignedList].sort((a, b) => (tenureDays(a) ?? 9e9) - (tenureDays(b) ?? 9e9))
+      };
+    }
+
+    // ── ลาออกหลังรับเข้าทำงาน ──
+    function tenureDays(a) {
+      if (!a.offerStart || !a.resignDate) return null;
+      const s = new Date(a.offerStart), e = new Date(a.resignDate);
+      if (isNaN(s) || isNaN(e)) return null;
+      return Math.max(0, Math.round((e - s) / 86400000));
+    }
+    function tenureText(a) {
+      const d = tenureDays(a);
+      if (d === null) return '—';
+      if (d < 31) return d + ' วัน';
+      const m = Math.floor(d / 30);
+      return m + ' เดือน' + (d % 30 ? ' ' + (d % 30) + ' วัน' : '');
+    }
+    async function actResign(id) {
+      const a = getA(id); if (!a) return;
+      if (statusOf(a) !== 'hired') { showToast('ใช้ได้เฉพาะผู้ที่รับเข้าทำงานแล้ว', true); return; }
+
+      let date = prompt('วันที่ลาออก / พ้นสภาพ (YYYY-MM-DD)', todayTh());
+      if (date === null) return;
+      date = (date || '').trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { showToast('รูปแบบวันที่ไม่ถูกต้อง ใช้ YYYY-MM-DD', true); return; }
+
+      let type = prompt('ประเภทการพ้นสภาพ — พิมพ์เลข\n' +
+        RESIGN_TYPES.map((t, i) => (i + 1) + '. ' + t).join('\n'), '1');
+      if (type === null) return;
+      type = RESIGN_TYPES[(parseInt(type, 10) || 1) - 1] || RESIGN_TYPES[0];
+
+      let reason = prompt('เหตุผล / บันทึกเพิ่มเติม (ไม่ใส่ก็ได้)', '');
+      if (reason === null) return;
+      reason = (reason || '').trim();
+
+      const tmp = { offerStart: a.offerStart, resignDate: date };
+      const tn = tenureDays(tmp);
+      if (!await askConfirm(
+            `บันทึกการลาออกของ <b>${esc(a.name)}</b>?` +
+            `<br><span style="color:var(--muted);font-size:13px">` +
+            `ประเภท: ${esc(type)}<br>` +
+            (a.offerStart ? `เริ่มงาน ${esc(thDate(a.offerStart) || a.offerStart)} → ลาออก ${esc(thDate(date) || date)}` +
+              (tn !== null ? ` (อายุงาน ${tn} วัน)` : '') + '<br>' : '') +
+            `ประวัติการสรรหาทั้งหมดถูกเก็บไว้ กด "ย้อนกลับ" คืนสถานะ "รับเข้าทำงาน" ได้</span>`,
+            { title: 'บันทึกการลาออก', okText: 'บันทึก', danger: true })) return;
+
+      if (await dbUpdate(id, { status: 'resigned', resignDate: date, resignType: type,
+                               resignReason: reason, closedAt: date, prevStatus: 'hired' })) {
+        showToast('บันทึกการลาออกแล้ว'); await refresh();
+      }
+    }
+    window.actResign = actResign;
+
     // ผู้สมัครไม่มาตามนัด → ปิดเคสทันที พร้อมติดแท็กไว้
     async function actNoShow(id) {
       const a = getA(id); if (!a) return;
@@ -2486,6 +2603,9 @@
         inRange(a.respondedAt || a.offerStart || a.offerSentAt || repAppDate(a), f, t));
       const closedInP = DATA.filter(a => ['rejected', 'cancelled'].includes(statusOf(a)) &&
         inRange(a.closedAt || repAppDate(a), f, t));
+      // ลาออก: ยึดวันที่ลาออกอยู่ในช่วง · ยังอยู่: รับเข้าในช่วงและยังไม่ลาออก
+      const resignInP = DATA.filter(a => statusOf(a) === 'resigned' && inRange(a.resignDate || a.closedAt, f, t));
+      const RS = resignStats(hiredInP, resignInP);
 
       const logoVar = getComputedStyle(document.documentElement).getPropertyValue('--logo').trim();
       const lm = logoVar.match(/url\(["']?(data:[^"')]+)["']?\)/);
@@ -2498,6 +2618,7 @@
         { l: 'นัดสัมภาษณ์', v: intInP.length, c: '#c9992a' },
         { l: 'ส่ง Offer', v: offerInP.length, c: '#7a4a12' },
         { l: 'รับเข้าทำงาน', v: hiredInP.length, c: '#17845f' },
+        { l: 'ลาออกหลังรับเข้า', v: RS.resigned, c: '#b4530f' },
         { l: 'ไม่ผ่าน / ยกเลิก', v: closedInP.length, c: '#9a2b48' },
       ];
 
@@ -2624,7 +2745,27 @@ td.none{text-align:center;color:#9aa4b5;padding:14px;font-style:italic}
   ${SEC(5, `รับเข้าทำงานในช่วงนี้ (${hiredInP.length} คน)`, 'ผู้ที่ตอบรับข้อเสนอแล้ว',
     TB('<th style="width:26px;text-align:center">#</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th style="width:78px">วันเริ่มงาน</th><th style="width:86px">เงินเดือน</th><th style="width:86px">ประเภทจ้าง</th><th style="width:78px">วันตอบรับ</th>',
       rows([...hiredInP].sort(byD('offerStart')), [a => thD(a.offerStart), a => esc(a.offerSalary ? a.offerSalary + ' บาท' : '-'), a => esc(a.offerType || '-'), a => thD(a.respondedAt)])))}
-  ${SEC(6, `ไม่ผ่าน / ยกเลิก ในช่วงนี้ (${closedInP.length} คน)`, 'พร้อมเหตุผล',
+  ${SEC(6, `การลาออกหลังรับเข้าทำงาน (${RS.resigned} คน)`, 'วิเคราะห์คุณภาพการสรรหา — นับเฉพาะคนที่จ้างผ่านระบบนี้',
+    `<div class="rs-kpi">
+      <div><span>เคยรับเข้าในช่วงนี้</span><b>${RS.hiredTotal}</b> คน</div>
+      <div><span>ยังทำงานอยู่</span><b class="ok">${RS.stillIn}</b> คน</div>
+      <div><span>ลาออกแล้ว</span><b class="bad">${RS.resigned}</b> คน</div>
+      <div><span>อัตราคงอยู่</span><b class="${RS.retention >= 80 ? 'ok' : RS.retention >= 60 ? 'warn' : 'bad'}">${RS.retention}%</b></div>
+      <div><span>อายุงานเฉลี่ยก่อนลาออก</span><b>${RS.avgTenure === null ? '—' : RS.avgTenure + ' วัน'}</b></div>
+      <div><span>ลาออกภายใน 90 วัน</span><b class="${RS.d90 ? 'bad' : 'ok'}">${RS.d90}</b> คน</div>
+    </div>
+    <div class="rs-bands">
+      <b>ลาออกเร็ว (Early turnover):</b>
+      ภายใน 30 วัน <u>${RS.d30}</u> คน · ภายใน 60 วัน <u>${RS.d60}</u> คน · ภายใน 90 วัน <u>${RS.d90}</u> คน
+      ${RS.d90 ? `— คิดเป็น ${Math.round(RS.d90 * 100 / (RS.hiredTotal || 1))}% ของคนที่รับเข้าทั้งหมด` : ''}
+    </div>` +
+    (RS.resigned ? TB('<th style="width:26px;text-align:center">#</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th style="width:78px">วันเริ่มงาน</th><th style="width:78px">วันที่ลาออก</th><th style="width:80px">อายุงาน</th><th style="width:110px">ประเภท</th><th>เหตุผล</th>',
+      rows(RS.list, [a => thD(a.offerStart), a => thD(a.resignDate), a => `<b>${esc(tenureText(a))}</b>`,
+                     a => esc(a.resignType || '-'), a => esc(a.resignReason || '-')]))
+     + (RS.types.length ? `<div class="rs-split"><div><b>แยกตามประเภท</b>${RS.types.map(x => `<div>${esc(x.k)} <u>${x.n}</u></div>`).join('')}</div>`
+        + `<div><b>ตำแหน่งที่ลาออกบ่อย</b>${RS.positions.slice(0, 5).map(x => `<div>${esc(x.k)} <u>${x.n}</u></div>`).join('')}</div></div>` : '')
+     : '<div class="rs-none">✅ ไม่มีผู้ลาออกในช่วงนี้</div>'))}
+  ${SEC(7, `ไม่ผ่าน / ยกเลิก ในช่วงนี้ (${closedInP.length} คน)`, 'พร้อมเหตุผล',
     TB('<th style="width:26px;text-align:center">#</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th style="width:78px">วันที่ปิดเคส</th><th style="width:82px">สถานะ</th><th>เหตุผล</th>',
       rows([...closedInP].sort(byD('closedAt')), [a => thD(a.closedAt || repAppDate(a)), a => badge(a), a => esc(a.closeReason || a.resultNote || '-')])))}
   <div class="sign">
@@ -3211,6 +3352,8 @@ setTimeout(function(){ if (!document.querySelector('.page')) paginate(); }, 2500
                           inRange(a.respondedAt || a.offerStart || a.offerSentAt || repAppDate(a), f, t));
       const closedInP = DATA.filter(a => ['rejected', 'cancelled'].includes(statusOf(a)) &&
                           inRange(a.closedAt || repAppDate(a), f, t));
+      const resignInP = DATA.filter(a => statusOf(a) === 'resigned' && inRange(a.resignDate || a.closedAt, f, t));
+      const RS        = resignStats(hiredInP, resignInP);
       const screenInP = newOnes.filter(a => !!(a.hrNote || a.hrBy) || !!a.intDate || !!a.result || !!a.offerSentAt);
 
       const dayCount = Math.round((Date.parse(t) - Date.parse(f)) / 86400000) + 1;
@@ -3232,6 +3375,7 @@ setTimeout(function(){ if (!document.querySelector('.page')) paginate(); }, 2500
         { l: 'เข้าสัมภาษณ์',      v: intInP.length,    s: `${pct(intInP.length, newOnes.length)}% ของผู้สมัครใหม่`,  c: '#c9992a' },
         { l: 'ส่ง Offer',        v: offerInP.length,  s: `${pct(offerInP.length, intInP.length)}% ของผู้สัมภาษณ์`,  c: '#7a4a12' },
         { l: 'รับเข้าทำงาน',      v: hiredInP.length,  s: `${pct(hiredInP.length, newOnes.length)}% ของผู้สมัครใหม่`, c: '#17845f' },
+        { l: 'ลาออกหลังรับเข้า',   v: RS.resigned,      s: `อัตราคงอยู่ ${RS.retention}%`, c: '#b4530f' },
         { l: 'ไม่ผ่าน / ยกเลิก',  v: closedInP.length, s: `${pct(closedInP.length, newOnes.length)}% ของผู้สมัครใหม่`, c: '#9a2b48' },
         { l: 'เวลาเฉลี่ยจนรับเข้า', v: avgTth == null ? '—' : avgTth, s: avgTth == null ? 'ยังไม่มีข้อมูล' : 'วัน นับจากวันสมัคร', c: '#6555c7' },
       ];
@@ -3395,6 +3539,15 @@ body{background:#e9edf3;font-family:'IBM Plex Sans Thai',sans-serif;color:#16233
 .kpi .v{font-size:26px;font-weight:800;color:#0e1c38;line-height:1.15;margin:3px 0 2px}
 .kpi .s{font-size:9.5px;color:#8a94a6}
 
+.rs-kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:9px}
+.rs-kpi > div{border:1px solid #dfe5ee;border-radius:7px;padding:7px 9px;background:#fbfcfe;font-size:10px;color:#64708a}
+.rs-kpi span{display:block;font-size:9.5px}
+.rs-kpi b{font-size:18px;font-weight:800;color:#16294d;margin-right:3px}
+.rs-kpi b.ok{color:#17845f}.rs-kpi b.bad{color:#b4530f}
+.rs-bands{font-size:10px;color:#48566e;background:#fdf3ec;border:1px solid #f3cdb4;border-radius:7px;padding:7px 10px;margin-bottom:9px;line-height:1.65}
+.rs-bands u{font-weight:800;color:#8a3d0f;text-decoration:none}
+.rs-none{font-size:10.5px;color:#17845f;padding:7px 0}
+
 .sec{margin-bottom:16px}
 .sh{display:flex;align-items:center;gap:10px;margin-bottom:9px;padding-bottom:7px;border-bottom:1.5px solid #16294d}
 .sh .no{width:23px;height:23px;border-radius:7px;background:#16294d;color:#fff;font-size:10px;font-weight:700;
@@ -3492,7 +3645,23 @@ td.none{text-align:center;color:#9aa4b5;padding:14px;font-style:italic}
     TB('<th style="width:26px;text-align:center">#</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th style="width:74px">วันที่สมัคร</th><th style="width:84px">ช่องทาง</th><th style="width:86px">เบอร์โทร</th><th style="width:86px">สถานะปัจจุบัน</th>',
       rows([...newOnes].sort(byD('date')), [a => thD(repAppDate(a)), a => esc(a.src || '-'), a => esc(a.phone || '-'), a => badge(a)], 7)))}
 
-  ${SEC('12', `ไม่ผ่าน / ยกเลิก ในช่วงนี้ (${closedInP.length} คน)`, 'พร้อมเหตุผลปิดเคส',
+  ${SEC('12', `การลาออกหลังรับเข้าทำงาน (${RS.resigned} คน)`, 'ตัวชี้วัดคุณภาพการสรรหา — นับเฉพาะผู้ที่จ้างผ่านระบบนี้',
+    `<div class="rs-kpi">
+      <div><span>เคยรับเข้าในช่วงนี้</span><b>${RS.hiredTotal}</b> คน</div>
+      <div><span>ยังทำงานอยู่</span><b class="ok">${RS.stillIn}</b> คน</div>
+      <div><span>ลาออกแล้ว</span><b class="bad">${RS.resigned}</b> คน</div>
+      <div><span>อัตราคงอยู่</span><b>${RS.retention}%</b></div>
+      <div><span>อายุงานเฉลี่ยก่อนลาออก</span><b>${RS.avgTenure === null ? '—' : RS.avgTenure + ' วัน'}</b></div>
+      <div><span>ลาออกภายใน 90 วัน</span><b>${RS.d90}</b> คน</div>
+    </div>
+    <div class="rs-bands"><b>ลาออกเร็ว (Early turnover):</b> ภายใน 30 วัน <u>${RS.d30}</u> คน · ภายใน 60 วัน <u>${RS.d60}</u> คน · ภายใน 90 วัน <u>${RS.d90}</u> คน${RS.d90 ? ` — คิดเป็น ${Math.round(RS.d90 * 100 / (RS.hiredTotal || 1))}% ของคนที่รับเข้าทั้งหมด` : ''}</div>` +
+    (RS.resigned
+      ? TB('<th style="width:26px;text-align:center">#</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th style="width:76px">วันเริ่มงาน</th><th style="width:76px">วันที่ลาออก</th><th style="width:74px">อายุงาน</th><th style="width:104px">ประเภท</th><th>เหตุผล</th>',
+          rows(RS.list, [a => thD(a.offerStart), a => thD(a.resignDate), a => `<b>${esc(tenureText(a))}</b>`,
+                         a => esc(a.resignType || '-'), a => esc(a.resignReason || '-')], 8))
+      : '<div class="rs-none">ไม่มีผู้ลาออกในช่วงนี้</div>'))}
+
+  ${SEC('13', `ไม่ผ่าน / ยกเลิก ในช่วงนี้ (${closedInP.length} คน)`, 'พร้อมเหตุผลปิดเคส',
     TB('<th style="width:26px;text-align:center">#</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th style="width:78px">วันที่ปิดเคส</th><th style="width:84px">สถานะ</th><th>เหตุผล</th>',
       rows([...closedInP].sort(byD('closedAt')), [a => thD(a.closedAt || repAppDate(a)), a => badge(a), a => esc(a.closeReason || a.resultNote || '-')], 6)))}
 
