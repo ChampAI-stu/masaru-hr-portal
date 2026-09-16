@@ -130,7 +130,6 @@
     #pg-resign .rs-kpis { grid-template-columns: repeat(4, minmax(0,1fr)); }
     /* จอกว้างพอแล้ว ไม่ต้องซ่อนคอลัมน์ */
     @media (min-width:1100px){
-      #pg-resign .rs-tbl .col-sal,
       #pg-resign .rs-tbl .col-src,
       #pg-resign .rs-tbl .col-pos { display: table-cell; }
     }
@@ -384,7 +383,6 @@
     .rs-tbl td, .rs-tbl th { overflow:hidden; text-overflow:ellipsis; }
     .rs-tbl td.nm { white-space:normal; word-break:break-word; }
     /* คอลัมน์รองซ่อนเมื่อจอแคบ แทนการดันตารางให้ล้น */
-    @media (max-width:1180px){ .rs-tbl .col-sal { display:none; } }
     @media (max-width:1040px){ .rs-tbl .col-src { display:none; } }
     @media (max-width:880px){ .rs-tbl .col-pos { display:none; } }
     .rs-k .v.prob { color:#1f5f8c; } .rs-k .v.soon { color:#7a4a12; }
@@ -2716,10 +2714,10 @@
             <div class="rs-k"><div class="t">อัตราคงอยู่</div><div class="v ${retention >= 80 ? '' : 'bad'}">${retention}<small>%</small></div></div>
            </div>`
         + `<div class="rs-tblwrap"><table class="rs-tbl">
-            <thead><tr><th style="width:26%">ชื่อ-นามสกุล</th><th class="col-pos" style="width:17%">ตำแหน่ง</th>
-              <th class="col-src" style="width:13%">ช่องทางที่มา</th>
-              <th class="c" style="width:13%">วันเริ่มงาน</th><th class="c" style="width:12%">ทำงานมาแล้ว</th>
-              <th class="c" style="width:11%">สถานะ</th><th class="c col-sal" style="width:11%">เงินเดือน</th></tr></thead><tbody>`
+            <thead><tr><th style="width:30%">ชื่อ-นามสกุล</th><th class="col-pos" style="width:19%">ตำแหน่ง</th>
+              <th class="col-src" style="width:14%">ช่องทางที่มา</th>
+              <th class="c" style="width:14%">วันเริ่มงาน</th><th class="c" style="width:12%">ทำงานมาแล้ว</th>
+              <th class="c" style="width:11%">สถานะ</th></tr></thead><tbody>`
         + rows.map(({ a, d }) => {
             const tag = d === null ? '<span class="hs none">ไม่ระบุวันเริ่มงาน</span>'
                       : d < 0     ? '<span class="hs soon">ยังไม่เริ่มงาน</span>'
@@ -2731,7 +2729,6 @@
               <td class="c">${esc(thDate(a.offerStart) || '-')}</td>
               <td class="c${d !== null && d >= 0 && d <= 90 ? ' prob' : ''}">${esc(hiredDaysText(d))}</td>
               <td class="c">${tag}</td>
-              <td class="c col-sal">${a.offerSalary ? esc(String(a.offerSalary)) : '-'}</td>
             </tr>`;
           }).join('')
         + '</tbody></table></div>'
