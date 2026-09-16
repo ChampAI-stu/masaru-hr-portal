@@ -1074,8 +1074,6 @@
       return dt.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
     }
     function todayTh() { return new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }); }
-    function money(v) { const d = String(v == null ? '' : v).replace(/[^\d]/g, ''); return d ? Number(d).toLocaleString('en-US') : ''; }
-    function fmtMoney(el) { const d = el.value.replace(/[^\d]/g, ''); el.value = d ? Number(d).toLocaleString('en-US') : ''; }
     // ── แปลงวันที่ทุกรูปแบบให้เป็น ISO (YYYY-MM-DD) เพื่อใช้เปรียบเทียบช่วงเวลา ──
     // ข้อมูลเก่าบางฟิลด์ถูกบันทึกเป็นข้อความไทย เช่น "2 ก.ย. 69" (จาก todayTh())
     // ถ้าเอาไปเทียบกับ "2026-08-01" ตรง ๆ จะได้ผลผิดทั้งหมด
@@ -1126,8 +1124,8 @@
       name: 'name', pos: 'pos', src: 'src', phone: 'phone', date: 'date', status: 'status',
       resumePath: 'resume_path', hrNote: 'hr_note', hrBy: 'hr_by',
       intDate: 'int_date', intTime: 'int_time', intBy: 'int_by', intMode: 'int_mode', intLink: 'int_link',
-      result: 'result', resultNote: 'result_note', agreedSalary: 'agreed_salary',
-      offerSalary: 'offer_salary', offerStart: 'offer_start', offerType: 'offer_type', offerBenefits: 'offer_benefits',
+      result: 'result', resultNote: 'result_note',
+      offerStart: 'offer_start', offerType: 'offer_type', offerBenefits: 'offer_benefits',
       offerSentAt: 'offer_sent_at', offerChannel: 'offer_channel', offerEmail: 'offer_email',
       offerSentNote: 'offer_sent_note', offerSentBy: 'offer_sent_by',
       offerResult: 'offer_result', respondedAt: 'responded_at', offerRespNote: 'offer_resp_note',
@@ -1142,8 +1140,8 @@
         status: r.status || 'new', resumePath: r.resume_path || '',
         hrNote: r.hr_note || '', hrBy: r.hr_by || '',
         intDate: r.int_date || '', intTime: r.int_time || '', intBy: r.int_by || '', intMode: r.int_mode || 'onsite', intLink: r.int_link || '',
-        result: r.result || '', resultNote: r.result_note || '', agreedSalary: r.agreed_salary || '',
-        offerSalary: r.offer_salary || '', offerStart: r.offer_start || '', offerType: r.offer_type || 'พนักงานประจำ',
+        result: r.result || '', resultNote: r.result_note || '',
+        offerStart: r.offer_start || '', offerType: r.offer_type || 'พนักงานประจำ',
         offerBenefits: r.offer_benefits || '', offerSentAt: r.offer_sent_at || '', offerChannel: r.offer_channel || 'Email',
         offerEmail: r.offer_email || '', offerSentNote: r.offer_sent_note || '', offerSentBy: r.offer_sent_by || '',
         offerResult: r.offer_result || '', respondedAt: r.responded_at || '', offerRespNote: r.offer_resp_note || '',
@@ -1456,7 +1454,7 @@
               ${isExec ? '' : `<button class="icon-btn" style="text-transform:none;letter-spacing:0" onclick="editInterview('${a.id}')"><i class="ti ti-pencil"></i>แก้ไขวัน/เวลา</button>`}
             </div>
             <div class="note-box">📅 ${esc(thDate(a.intDate))} เวลา ${esc(a.intTime)} น.${a.intBy ? ' · ผู้สัมภาษณ์: ' + esc(a.intBy) : ''} ${modeBadge(a.intMode)}${a.intMode === 'online' && a.intLink ? ` · <a href="${esc(a.intLink)}" target="_blank" rel="noopener" class="mlink"><i class="ti ti-external-link"></i>เข้าห้องสัมภาษณ์</a>` : ''}</div>
-            ${a.result ? `<div class="note-box" style="margin-top:8px">${interviewResult(a).code === 'pass' ? '✅ ' : '❌ '}${esc(interviewResult(a).label)}${a.resultNote ? ' — ' + esc(a.resultNote) : ''}${a.agreedSalary ? `<br>💰 เงินเดือนที่ตกลง: <b>${money(a.agreedSalary)} บาท</b>` : ''}</div>` : ''}</div>`;
+            ${a.result ? `<div class="note-box" style="margin-top:8px">${interviewResult(a).code === 'pass' ? '✅ ' : '❌ '}${esc(interviewResult(a).label)}${a.resultNote ? ' — ' + esc(a.resultNote) : ''}</div>` : ''}</div>`;
         }
       }
 
@@ -1524,7 +1522,6 @@
         return `<div class="card">
           <div class="card-title"><i class="ti ti-clipboard-check"></i>บันทึกผลสัมภาษณ์</div>
           <div class="field"><label>รายละเอียดผลสัมภาษณ์</label><textarea id="f-resnote" data-af="resultNote" placeholder="สรุปผล จุดเด่น ข้อสังเกต...">${esc(a.resultNote)}</textarea><div class="autosave-hint"><i class="ti ti-cloud-check"></i>บันทึกอัตโนมัติขณะพิมพ์</div></div>
-          <div class="field"><label>เงินเดือนที่ตกลงกับผู้สมัคร (บาท)</label><input class="inp" id="f-agreedsal" data-af="agreedSalary" inputmode="numeric" placeholder="เช่น 25,000" value="${money(a.agreedSalary)}" oninput="fmtMoney(this)"></div>
           <div class="btn-row">
             ${stepBackBtn(a)}
             <button class="btn btn-warn" onclick="actNoShow('${a.id}')"><i class="ti ti-calendar-x"></i>ไม่เข้าสัมภาษณ์</button>
@@ -1539,7 +1536,6 @@
         const detailCard = `<div class="card">
           <div class="card-title"><i class="ti ti-briefcase"></i>รายละเอียด Offer</div>
           <div class="grid-2">
-            <div class="field"><label>เงินเดือน (บาท) <span class="req">*</span></label><input class="inp" id="f-osal" data-af="offerSalary" inputmode="numeric" placeholder="เช่น 25,000" value="${money(a.offerSalary || a.agreedSalary)}" oninput="fmtMoney(this)"></div>
             <div class="field"><label>วันเริ่มงาน</label><input type="date" id="f-ostart" data-af="offerStart" value="${esc(a.offerStart)}"></div>
           </div>
           <div class="grid-2">
@@ -1602,7 +1598,6 @@
           <div class="banner banner-ok"><i class="ti ti-circle-check"></i><div><b>ผู้สมัครตอบรับ Offer แล้ว</b>${a.respondedAt ? ' · ' + esc(a.respondedAt) : ''}</div></div>
           <div class="info-grid">
             <div class="info-f"><div class="k">ตำแหน่ง</div><div class="v">${esc(a.pos)}</div></div>
-            <div class="info-f"><div class="k">เงินเดือน</div><div class="v">${a.offerSalary ? money(a.offerSalary) : '—'} บาท</div></div>
             <div class="info-f edit"><div class="k">วันเริ่มงาน <span class="k-edit"><i class="ti ti-pencil"></i>แก้ไขได้</span></div>
               <div class="v"><input type="date" class="inp inp-date" id="f-hstart" data-af="offerStart" value="${esc(a.offerStart)}"></div></div>
             <div class="info-f"><div class="k">รูปแบบการจ้าง</div><div class="v">${esc(a.offerType)}</div></div>
@@ -1739,11 +1734,10 @@
     }
     async function actResult(id, r) {
       const note = document.getElementById('f-resnote')?.value || '';
-      const sal = document.getElementById('f-agreedsal')?.value || '';
       const label = r === 'pass' ? 'ผ่าน → เตรียม Offer' : 'ไม่ผ่าน';
       if (!await askConfirm(`บันทึกผลสัมภาษณ์: <b>${label}</b>?`, { title: 'ผลสัมภาษณ์', okText: 'ยืนยัน', danger: r === 'fail' })) return;
       if (r === 'pass') {
-        if (await dbUpdate(id, { result: 'pass', resultNote: note, agreedSalary: sal, offerSalary: sal, status: 'offer' })) { showToast('ผ่าน → ไปขั้น Offer'); await refresh(); }
+        if (await dbUpdate(id, { result: 'pass', resultNote: note, status: 'offer' })) { showToast('ผ่าน → ไปขั้น Offer'); await refresh(); }
       } else {
         if (await dbUpdate(id, { result: 'fail', resultNote: note, status: 'rejected', closeReason: 'ไม่ผ่านการสัมภาษณ์', closedAt: todayTh() })) { showToast('บันทึก: ไม่ผ่านสัมภาษณ์'); await refresh(); }
       }
@@ -1753,7 +1747,6 @@
       const email = document.getElementById('f-oemail')?.value.trim() || '';
       const note = document.getElementById('f-osentnote')?.value || '';
       const a = getA(id);
-      if (!a.offerSalary && !document.getElementById('f-osal')) { showToast('กรุณาบันทึกเงินเดือนก่อน', true); return; }
       if (ch === 'Email' && !email) { showToast('กรุณากรอก Email ผู้สมัคร', true); return; }
       if (!await askConfirm(`บันทึกว่าส่ง Offer Letter ทาง <b>${ch}</b> แล้ว?`, { title: 'ส่ง Offer', okText: 'ยืนยัน' })) return;
       if (await dbUpdate(id, { offerChannel: ch, offerEmail: email, offerSentNote: note, offerSentAt: todayTh(), offerSentBy: currentUser?.name || '' })) {
@@ -1916,7 +1909,7 @@
       if (await dbUpdate(id, { status: 'cancelled', closeReason: reason, closedAt: todayTh(), prevStatus: st })) { showToast('ย้ายไปหมวดยกเลิกแล้ว'); await refresh(); }
     }
     function inferPrev(a) {
-      if (a.offerResult === 'rejected' || a.offerSentAt || a.offerSalary) return 'offer';
+      if (a.offerResult === 'rejected' || a.offerSentAt) return 'offer';
       if (a.result === 'pass') return 'offer';
       if (a.intDate) return 'interview';
       if (a.hrBy || a.hrNote) return 'screening';
@@ -2039,10 +2032,9 @@
         F('รูปแบบ', a.intDate ? modeBadge(a.intMode) : '') +
         (a.intMode === 'online' && a.intLink ? F('ลิงก์ประชุม', `<a href="${esc(a.intLink)}" target="_blank" rel="noopener" class="mlink">${esc(a.intLink)}</a>`) : '') +
         F('ผู้สัมภาษณ์', esc(a.intBy)) + F('ผลสัมภาษณ์', resTag) +
-        F('เงินเดือนที่ตกลง', a.agreedSalary ? money(a.agreedSalary) + ' บาท' : '') +
         FULL('รายละเอียดผล', esc(a.resultNote));
       const respTag = a.offerResult === 'accepted' ? '<span class="tag ok">ตอบรับ</span>' : a.offerResult === 'rejected' ? '<span class="tag no">ปฏิเสธ</span>' : '';
-      const offer = F('เงินเดือน', a.offerSalary ? money(a.offerSalary) + ' บาท' : '') +
+      const offer = 
         F('วันเริ่มงาน', esc(thDate(a.offerStart))) + F('รูปแบบการจ้าง', esc(a.offerType)) +
         F('ส่ง Offer', a.offerSentAt ? esc(a.offerSentAt) + ' · ' + esc(a.offerChannel) : '') +
         F('ผลตอบรับ', respTag);
@@ -3090,8 +3082,8 @@ td.none{text-align:center;color:#9aa4b5;padding:14px;font-style:italic}
     TB('<th style="width:26px;text-align:center">#</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th style="width:104px">วัน/เวลา</th><th style="width:80px">ผู้สัมภาษณ์</th><th style="width:62px">รูปแบบ</th><th style="width:78px">ผล</th>',
       rows([...intInP].sort(byD('intDate')), [a => `${thD(a.intDate)}${a.intTime ? ' ' + esc(a.intTime.slice(0, 5)) + ' น.' : ''}`, a => esc(a.intBy || '-'), a => a.intMode === 'online' ? 'ออนไลน์' : 'ออนไซต์', a => esc(a.result || '-')])))}
   ${SEC(5, `รับเข้าทำงานในช่วงนี้ (${hiredInP.length} คน)`, 'ผู้ที่ตอบรับข้อเสนอแล้ว',
-    TB('<th style="width:26px;text-align:center">#</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th style="width:78px">วันเริ่มงาน</th><th style="width:86px">เงินเดือน</th><th style="width:86px">ประเภทจ้าง</th><th style="width:78px">วันตอบรับ</th>',
-      rows([...hiredInP].sort(byD('offerStart')), [a => thD(a.offerStart), a => esc(a.offerSalary ? a.offerSalary + ' บาท' : '-'), a => esc(a.offerType || '-'), a => thD(a.respondedAt)])))}
+    TB('<th style="width:26px;text-align:center">#</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th style="width:90px">วันเริ่มงาน</th><th style="width:96px">ประเภทจ้าง</th><th style="width:90px">วันตอบรับ</th>',
+      rows([...hiredInP].sort(byD('offerStart')), [a => thD(a.offerStart), a => esc(a.offerType || '-'), a => thD(a.respondedAt)])))}
   ${SEC(6, `การลาออกหลังรับเข้าทำงาน (${RS.resigned} คน)`, 'วิเคราะห์คุณภาพการสรรหา — นับเฉพาะคนที่จ้างผ่านระบบนี้',
     `<div class="rs-kpi">
       <div><span>เคยรับเข้าในช่วงนี้</span><b>${RS.hiredTotal}</b> คน</div>
@@ -3371,9 +3363,9 @@ setTimeout(function(){ if (!document.querySelector('.page')) paginate(); }, 2500
       // ── นับจาก "ร่องรอยที่เกิดขึ้นจริง" ไม่ใช่สถานะปัจจุบัน ──
       // คนที่เคยผ่านขั้นนั้นแล้วตอนนี้ไม่ผ่าน จะยังถูกนับใน funnel
       const didScreen = a => !!(a.hrNote || a.hrBy) || !!a.intDate || !!a.result
-                            || !!a.offerSentAt || !!a.offerSalary || statusOf(a) === 'hired';
-      const didInterview = a => !!a.intDate || !!a.result || !!a.offerSentAt || !!a.offerSalary || statusOf(a) === 'hired';
-      const didOffer = a => !!a.offerSentAt || !!a.offerSalary || !!a.offerResult || statusOf(a) === 'hired';
+                            || !!a.offerSentAt || statusOf(a) === 'hired';
+      const didInterview = a => !!a.intDate || !!a.result || !!a.offerSentAt || statusOf(a) === 'hired';
+      const didOffer = a => !!a.offerSentAt || !!a.offerResult || statusOf(a) === 'hired';
 
       const openPos = new Set(DATA.filter(isActive).map(a => (a.pos || '').trim()).filter(Boolean)).size;
       const upcomingCnt = DATA.filter(a => a.intDate && a.intDate >= todayISO && isActive(a)).length;
@@ -3400,7 +3392,7 @@ setTimeout(function(){ if (!document.querySelector('.page')) paginate(); }, 2500
         { k: 'new', n: 'รับใบสมัคร', d: 'ผู้สมัครส่งเข้ามา', i: 'ti-inbox' },
         { k: 'screening', n: 'คัดกรอง', d: 'HR คัดเบื้องต้น', i: 'ti-file-search' },
         { k: 'interview', n: 'สัมภาษณ์', d: 'นัดและประเมิน', i: 'ti-users-group' },
-        { k: 'offer', n: 'เสนอเงินเดือน', d: 'ส่ง Offer', i: 'ti-mail-forward' },
+        { k: 'offer', n: 'ส่ง Offer', d: 'เสนอเข้าทำงาน', i: 'ti-mail-forward' },
         { k: 'hired', n: 'รับเข้าทำงาน', d: 'เริ่มงานจริง', i: 'ti-circle-check' },
       ];
       const flowHtml = FL.map((f, i) => {
@@ -3592,7 +3584,7 @@ setTimeout(function(){ if (!document.querySelector('.page')) paginate(); }, 2500
           <div class="dsrc-grid">
             <span><b>คัดกรอง</b> = มีผู้ตรวจหรือความเห็นคัดกรอง</span>
             <span><b>สัมภาษณ์</b> = มีวันนัด หรือบันทึกผลสัมภาษณ์</span>
-            <span><b>Offer</b> = มีวันส่ง Offer หรือเงินเดือนที่เสนอ</span>
+            <span><b>Offer</b> = มีวันส่ง Offer หรือผลการตอบรับ</span>
             <span><b>รับเข้าทำงาน</b> = สถานะ “รับเข้าทำงาน”</span>
             <span><b>Time to Hire</b> = วันที่สมัคร → วันตอบรับ Offer</span>
             <span><b>เหตุผลไม่ผ่าน</b> = เหตุผลปิดเคส / ผลสัมภาษณ์</span>
@@ -3845,7 +3837,6 @@ setTimeout(function(){ if (!document.querySelector('.page')) paginate(); }, 2500
       // ───── ตารางรายชื่อ ─────
       const badge = a => { const m = stMeta(statusOf(a));
         return `<span class="bg" style="color:${m.color};background:${m.bg}">${m.label}</span>`; };
-      const money2 = v => v ? Number(v).toLocaleString('th-TH') + ' บาท' : '-';
       const rows = (arr, cols, span) => arr.length
         ? arr.map((a, i) => `<tr><td class="c">${i + 1}</td><td><b>${esc(a.name)}</b></td><td>${esc(a.pos || '-')}</td>${cols.map(fn => `<td>${fn(a)}</td>`).join('')}</tr>`).join('')
         : `<tr><td colspan="${span}" class="none">ไม่มีข้อมูลในช่วงนี้</td></tr>`;
@@ -3997,8 +3988,8 @@ td.none{text-align:center;color:#9aa4b5;padding:14px;font-style:italic}
     TB('<th>ตำแหน่ง</th><th class="c" style="text-align:center;width:74px">สมัครใหม่</th><th style="text-align:center;width:74px">สัมภาษณ์</th><th style="text-align:center;width:66px">รับเข้า</th><th style="text-align:center;width:80px">อัตรารับเข้า</th>', posRows))}
 
   ${SEC('10', `รับเข้าทำงานในช่วงนี้ (${hiredInP.length} คน)`, 'ผู้ที่ตอบรับข้อเสนอแล้ว',
-    TB('<th style="width:26px;text-align:center">#</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th style="width:78px">วันเริ่มงาน</th><th style="width:88px">เงินเดือน</th><th style="width:82px">ประเภทจ้าง</th><th style="width:76px">ช่องทาง</th>',
-      rows([...hiredInP].sort(byD('offerStart')), [a => thD(a.offerStart), a => money2(a.offerSalary), a => esc(a.offerType || '-'), a => esc(a.src || '-')], 7)))}
+    TB('<th style="width:26px;text-align:center">#</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th style="width:88px">วันเริ่มงาน</th><th style="width:92px">ประเภทจ้าง</th><th style="width:86px">ช่องทาง</th>',
+      rows([...hiredInP].sort(byD('offerStart')), [a => thD(a.offerStart), a => esc(a.offerType || '-'), a => esc(a.src || '-')], 6)))}
 
   ${SEC('11', `ผู้สมัครใหม่ในช่วงนี้ (${newOnes.length} คน)`, 'เรียงตามวันที่สมัคร',
     TB('<th style="width:26px;text-align:center">#</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th style="width:74px">วันที่สมัคร</th><th style="width:84px">ช่องทาง</th><th style="width:86px">เบอร์โทร</th><th style="width:86px">สถานะปัจจุบัน</th>',
