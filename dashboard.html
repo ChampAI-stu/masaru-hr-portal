@@ -348,12 +348,33 @@
     <div class="panel">
       <div class="panel-title"><div class="panel-title-main"><span class="panel-title-icon"><i class="ti ti-users-group"></i></span>ผู้สมัคร</div><span class="count" id="cnt">0</span></div>
       <button class="allpdf" id="allPdf"><i class="ti ti-file-type-pdf"></i> ดาวน์โหลด PDF ทั้งหมด</button>
+      <div class="searchbox" id="searchbox">
+        <i class="ti ti-search"></i>
+        <input id="q" type="search" placeholder="ค้นหาชื่อ ตำแหน่ง หรือผล MBTI / BOSI" autocomplete="off">
+        <button id="qclear" title="ล้างคำค้นหา"><i class="ti ti-x"></i></button>
+      </div>
+      <div class="searchinfo" id="qinfo" style="display:none"></div>
       <div id="list"><div class="empty">กำลังโหลด...</div></div>
     </div>
     <div class="panel" id="detail"><div class="empty detail-empty"><div class="empty-graphic"><i class="ti ti-user-scan"></i></div><b>เลือกผู้สมัครเพื่อดูภาพบุคลิก</b><span>ระบบจะแสดงกราฟิก MBTI, BOSI และลายเซ็นการทำงาน</span></div></div>
   </div>
 </div>
 
+<style>
+  .searchbox{position:relative;display:flex;align-items:center;margin:0 0 12px}
+  .searchbox > i{position:absolute;left:13px;font-size:16px;color:#9aabc1;pointer-events:none}
+  .searchbox input{width:100%;font-family:inherit;font-size:14px;color:#1b2a44;
+    padding:11px 38px 11px 38px;border:1px solid #dde4ee;border-radius:12px;background:#fff;outline:none;
+    transition:border-color .15s, box-shadow .15s}
+  .searchbox input:focus{border-color:#2c67ad;box-shadow:0 0 0 3px rgba(44,103,173,.13)}
+  .searchbox input::-webkit-search-cancel-button{display:none}
+  .searchbox #qclear{position:absolute;right:8px;display:none;border:0;background:#eef2f7;color:#64748b;
+    width:24px;height:24px;border-radius:50%;cursor:pointer;line-height:1;font-size:13px}
+  .searchbox.has #qclear{display:flex;align-items:center;justify-content:center}
+  .searchbox #qclear:hover{background:#dde4ee;color:#1b2a44}
+  .hitmark{background:#fff3c4;border-radius:3px;padding:0 1px}
+  .searchinfo{font-size:12.5px;color:#7a8ba3;margin:-4px 0 10px;padding-left:2px}
+</style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -520,15 +541,52 @@ async function loadData(){
   if(selId && DATA[selId]) renderDetail(DATA[selId]);
 }
 
+// ---------- ค้นหา ----------
+let QUERY = "";
+// ตัดวรรณยุกต์/ช่องว่าง เพื่อให้พิมพ์คร่าว ๆ ก็เจอ
+const norm = s => String(s||"").toLowerCase().replace(/\s+/g,"").replace(/[\u0E47-\u0E4E]/g,"");
+function candMatch(a, q){
+  if(!q) return true;
+  const bmeta = a.bosi && BOSI[a.bosi.type] ? BOSI[a.bosi.type] : null;
+  const hay = [a.name, a.pos, a.mbti && a.mbti.type, a.bosi && a.bosi.type,
+               bmeta && bmeta[0]].filter(Boolean).map(norm).join("|");
+  // พิมพ์หลายคำ = ต้องเจอทุกคำ
+  return String(q).trim().split(/\s+/).every(w => hay.includes(norm(w)));
+}
+// ไฮไลต์คำที่ค้นในชื่อ/ตำแหน่ง
+function hi(text){
+  const t = String(text==null?"":text);
+  const q = QUERY.trim();
+  if(!q) return esc(t);
+  const words = q.split(/\s+/).filter(w=>w.length>1)
+    .map(w=>w.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"));
+  if(!words.length) return esc(t);
+  try{
+    return esc(t).replace(new RegExp("("+words.join("|")+")","gi"), '<mark class="hitmark">$1</mark>');
+  }catch(e){ return esc(t); }
+}
+
 function renderList(){
-  const arr = Object.values(DATA);
-  $("cnt").textContent = arr.length;
-  const complete = arr.filter(a=>a.mbti && a.bosi).length;
-  if($("statTotal")) $("statTotal").textContent = arr.length;
+  const all = Object.values(DATA);
+  const arr = all.filter(a => candMatch(a, QUERY));
+  $("cnt").textContent = QUERY ? `${arr.length}/${all.length}` : all.length;
+  const complete = all.filter(a=>a.mbti && a.bosi).length;
+  if($("statTotal")) $("statTotal").textContent = all.length;
   if($("statComplete")) $("statComplete").textContent = complete;
-  if($("statPending")) $("statPending").textContent = arr.length - complete;
-  if(!arr.length){
+  if($("statPending")) $("statPending").textContent = all.length - complete;
+
+  const info = $("qinfo");
+  if(info){
+    if(QUERY){ info.style.display="block"; info.textContent = `พบ ${arr.length} คน จากทั้งหมด ${all.length} คน`; }
+    else info.style.display="none";
+  }
+
+  if(!all.length){
     $("list").innerHTML = `<div class="empty"><div style="font-size:30px;margin-bottom:8px;color:#9aabc1"><i class="ti ti-users-minus"></i></div>ยังไม่มีผู้สมัครที่ทำแบบทดสอบ</div>`;
+    return;
+  }
+  if(!arr.length){
+    $("list").innerHTML = `<div class="empty"><div style="font-size:30px;margin-bottom:8px;color:#9aabc1"><i class="ti ti-search-off"></i></div>ไม่พบผู้สมัครที่ตรงกับ "${esc(QUERY)}"<br><span style="font-size:13px;color:#9aabc1">ลองพิมพ์เฉพาะชื่อจริง หรือชื่อเล่น</span></div>`;
     return;
   }
   $("list").innerHTML = arr.map(a => {
@@ -541,7 +599,7 @@ function renderList(){
       <button class="cand-del" data-del="${a.id}" title="ลบผู้ทำแบบทดสอบ"><i class="ti ti-trash"></i></button>
       <div class="cand-top">
         <div class="cand-avatar">${ini(a.name)}<i class="ti ${visual.icon}"></i></div>
-        <div class="cand-copy"><div class="nm">${esc(a.name)}</div><div class="ps">${esc(a.pos||"—")}</div></div>
+        <div class="cand-copy"><div class="nm">${hi(a.name)}</div><div class="ps">${hi(a.pos||"—")}</div></div>
         <div class="completion-ring" style="--progress:${done*50}%" title="ทำแบบประเมินแล้ว ${done} จาก 2 แบบ"><span>${done}/2</span></div>
       </div>
       <div class="result-preview">
@@ -838,7 +896,35 @@ async function exportPdf(list, filename){
   }
 }
 
-$("allPdf").onclick = () => exportPdf(Object.values(DATA), "ผลแบบทดสอบทั้งหมด_MASARU");
+// PDF: ถ้ากำลังค้นหาอยู่ ให้ออกเฉพาะคนที่ค้นเจอ
+$("allPdf").onclick = () => {
+  const all = Object.values(DATA);
+  const arr = all.filter(a => candMatch(a, QUERY));
+  if(!arr.length){ alert("ไม่มีผู้สมัครให้ออกรายงาน"); return; }
+  const name = QUERY ? `ผลแบบทดสอบ_${QUERY.trim().replace(/\s+/g,"_")}_MASARU`
+                     : "ผลแบบทดสอบทั้งหมด_MASARU";
+  if(QUERY && !confirm(`จะออก PDF เฉพาะ ${arr.length} คนที่ค้นเจอ\n(ทั้งหมดมี ${all.length} คน)\n\nตกลงเพื่อดำเนินการต่อ`)) return;
+  exportPdf(arr, name);
+};
+
+// ---------- ผูกช่องค้นหา ----------
+(function(){
+  const box = $("searchbox"), inp = $("q"), clr = $("qclear");
+  if(!inp) return;
+  let t;
+  const apply = () => {
+    QUERY = inp.value;
+    box.classList.toggle("has", !!QUERY);
+    renderList();
+  };
+  inp.addEventListener("input", () => { clearTimeout(t); t = setTimeout(apply, 120); });
+  inp.addEventListener("keydown", e => { if(e.key === "Escape"){ inp.value = ""; apply(); inp.blur(); } });
+  clr.addEventListener("click", () => { inp.value = ""; apply(); inp.focus(); });
+  // กด Ctrl/⌘ + K เพื่อโฟกัสช่องค้นหา
+  document.addEventListener("keydown", e => {
+    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k"){ e.preventDefault(); inp.focus(); inp.select(); }
+  });
+})();
 </script>
 </body>
 </html>
