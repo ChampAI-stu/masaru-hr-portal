@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MASARU HR — คู่มือการใช้งานระบบ</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--ink:#16294d;--muted:#64708a;--faint:#97a1b5;--line:#e2e7ef;--bg:#f2f4f8;
+      --red:#d62030;--green:#17845f;--gold:#b8860b;--blue:#2E75B6;--surface:#fff;
+      --radius:14px;--shadow:0 6px 22px rgba(16,41,77,.09)}
+body{font-family:'IBM Plex Sans Thai',system-ui,sans-serif;background:var(--bg);color:var(--ink);
+     font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+
+/* ---------- โครงหน้า ---------- */
+.top{position:sticky;top:0;z-index:40;background:linear-gradient(135deg,#0e1c38,#16294d);color:#fff;
+     padding:13px 22px;display:flex;align-items:center;gap:14px;box-shadow:0 3px 16px rgba(9,26,54,.28)}
+.top .bd{font-size:14px;font-weight:800;letter-spacing:2px}
+.top .tt{font-size:14px;opacity:.9}
+.top .sp{margin-left:auto;display:flex;gap:9px;flex-wrap:wrap}
+.top a.btn{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.14);color:#fff;
+     text-decoration:none;font-size:12.5px;font-weight:700;padding:7px 13px;border-radius:9px}
+.top a.btn:hover{background:rgba(255,255,255,.26)}
+.top a.btn.print{background:var(--red)}
+
+.shell{display:grid;grid-template-columns:266px 1fr;gap:26px;max-width:1280px;margin:0 auto;padding:24px 20px 80px}
+@media(max-width:980px){.shell{grid-template-columns:1fr;gap:14px}}
+
+nav.toc{position:sticky;top:72px;align-self:start;background:var(--surface);border:1px solid var(--line);
+        border-radius:var(--radius);padding:15px;max-height:calc(100vh - 100px);overflow:auto;box-shadow:var(--shadow)}
+@media(max-width:980px){nav.toc{position:static;max-height:none}}
+nav.toc h4{font-size:11.5px;letter-spacing:1.4px;color:var(--faint);font-weight:800;margin:12px 0 7px}
+nav.toc h4:first-child{margin-top:0}
+nav.toc a{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--ink);font-size:13.5px;
+          padding:7px 10px;border-radius:9px;margin-bottom:2px}
+nav.toc a:hover{background:#eef2f8}
+nav.toc a.on{background:#16294d;color:#fff;font-weight:700}
+nav.toc a i{font-size:15px;opacity:.75}
+nav.toc a.on i{opacity:1}
+
+section{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+        padding:26px 30px;margin-bottom:20px;box-shadow:var(--shadow);scroll-margin-top:78px}
+@media(max-width:600px){section{padding:20px 17px}}
+section > h2{font-size:22px;font-weight:800;display:flex;align-items:center;gap:11px;margin-bottom:5px}
+section > h2 .ic{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;
+        background:#eaf2fb;color:var(--blue);font-size:21px;flex-shrink:0}
+section > .lead{color:var(--muted);font-size:14px;margin-bottom:20px}
+h3{font-size:17px;font-weight:700;margin:26px 0 10px;padding-left:11px;border-left:4px solid var(--red)}
+h4{font-size:14.5px;font-weight:700;margin:18px 0 7px}
+p{margin-bottom:10px}
+ul,ol{margin:0 0 12px 22px}
+li{margin-bottom:5px}
+b{font-weight:700}
+code{background:#eef2f8;padding:1px 7px;border-radius:5px;font-size:13px;font-family:inherit;font-weight:600}
+
+/* ---------- ส่วนประกอบ ---------- */
+.steps{counter-reset:s;list-style:none;margin:0}
+.steps > li{counter-increment:s;position:relative;padding:12px 14px 12px 50px;margin-bottom:9px;
+     background:#fbfcfe;border:1px solid var(--line);border-radius:11px}
+.steps > li::before{content:counter(s);position:absolute;left:13px;top:12px;width:25px;height:25px;
+     border-radius:50%;background:var(--ink);color:#fff;font-size:13px;font-weight:800;display:grid;place-items:center}
+.steps > li b{display:block;margin-bottom:2px}
+.steps ul{margin:6px 0 0 18px;font-size:14px;color:var(--muted)}
+
+.note{border-radius:11px;padding:12px 15px;margin:14px 0;font-size:14px;line-height:1.7;
+      border-left:4px solid;display:flex;gap:10px}
+.note i{font-size:17px;margin-top:2px;flex-shrink:0}
+.note.tip{background:#eafaf2;border-color:var(--green);color:#0d5c42}
+.note.warn{background:#fff8e6;border-color:var(--gold);color:#7a5a12}
+.note.stop{background:#fdecec;border-color:var(--red);color:#96202c}
+.note.info{background:#eef5fc;border-color:var(--blue);color:#1b4c7a}
+
+table{width:100%;border-collapse:collapse;font-size:14px;margin:12px 0}
+th{background:#f2f5fa;text-align:left;padding:9px 11px;border-bottom:1px solid var(--line);font-size:13px;color:#48566e}
+td{padding:9px 11px;border-bottom:1px solid #eef1f6;vertical-align:top}
+tr:last-child td{border-bottom:0}
+
+.fig{margin:16px 0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fbfcfe}
+.fig svg{display:block;width:100%;height:auto}
+.fig .cap{font-size:12.5px;color:var(--muted);padding:9px 14px;background:#fff;border-top:1px solid var(--line)}
+.fig .cap b{color:var(--ink)}
+
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:700;
+      padding:2px 10px;border-radius:20px;background:#eef2f8;color:#48566e}
+.pill.g{background:#e3f5ec;color:#12674a}
+.pill.y{background:#fdf3e3;color:#8a5a12}
+.pill.r{background:#fdeaea;color:#9b1c1c}
+.pill.b{background:#e7f0fa;color:#1b4c7a}
+
+.faq{border:1px solid var(--line);border-radius:11px;margin-bottom:8px;overflow:hidden}
+.faq summary{cursor:pointer;padding:12px 15px;font-weight:700;font-size:14.5px;background:#fbfcfe;list-style:none;
+     display:flex;align-items:center;gap:9px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::before{content:"?";width:21px;height:21px;border-radius:50%;background:var(--blue);color:#fff;
+     font-size:12px;display:grid;place-items:center;flex-shrink:0}
+.faq[open] summary{border-bottom:1px solid var(--line)}
+.faq .a{padding:13px 15px;font-size:14px;color:#3b4a66}
+
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:12px;margin:14px 0}
+.card{border:1px solid var(--line);border-radius:11px;padding:14px;background:#fbfcfe}
+.card .h{font-weight:700;display:flex;align-items:center;gap:7px;margin-bottom:5px}
+.card .h i{color:var(--blue)}
+.card p{font-size:13.5px;color:var(--muted);margin:0}
+
+.kbd{display:inline-block;border:1px solid #cfd8e6;border-bottom-width:2px;border-radius:6px;
+     padding:1px 7px;font-size:12.5px;font-weight:700;background:#fff}
+
+@media print{
+  .top,nav.toc{display:none}
+  .shell{grid-template-columns:1fr;padding:0;max-width:none}
+  section{break-inside:auto;page-break-inside:auto;box-shadow:none;border:0;padding:0 0 18px}
+  .fig,.note,.steps>li,table{break-inside:avoid;page-break-inside:avoid}
+  body{background:#fff;font-size:12px}
+  @page{size:A4;margin:14mm 12mm}
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  .faq{break-inside:avoid}
+  .faq .a{display:block!important}
+}
+</style>
+</head>
+<body>
+<div class="top">
+  <span class="bd">MASARU</span><span class="tt">คู่มือการใช้งานระบบ HR</span>
+  <span class="sp">
+    <a class="btn" href="index.html"><i class="ti ti-arrow-left"></i> กลับหน้าหลัก</a>
+    <a class="btn print" href="#" onclick="window.print();return false"><i class="ti ti-printer"></i> พิมพ์ / บันทึก PDF</a>
+  </span>
+</div>
+
+<div class="shell">
+<nav class="toc" id="toc">
+  <h4>เริ่มต้น</h4>
+  <a href="#start"><i class="ti ti-flag"></i> ก่อนเริ่มใช้งาน</a>
+  <a href="#login"><i class="ti ti-login"></i> เข้าสู่ระบบ / สมัคร</a>
+  <a href="#portal"><i class="ti ti-layout-grid"></i> หน้าหลักพอร์ทัล</a>
+  <h4>ระบบงาน</h4>
+  <a href="#recruit"><i class="ti ti-users-group"></i> ระบบรับสมัครงาน</a>
+  <a href="#personality"><i class="ti ti-chart-radar"></i> แดชบอร์ดบุคลิกภาพ</a>
+  <a href="#probation"><i class="ti ti-clipboard-check"></i> ระบบประเมินทดลองงาน</a>
+  <a href="#training"><i class="ti ti-school"></i> ระบบฝึกอบรม</a>
+  <a href="#attendance"><i class="ti ti-clipboard-list"></i> ระบบบันทึกการมาทำงาน</a>
+  <a href="#hrtime"><i class="ti ti-calendar-time"></i> ระบบลงเวลา ขาด-ลา-มาสาย</a>
+  <h4>ทั่วไป</h4>
+  <a href="#howto"><i class="ti ti-bulb"></i> เทคนิคใช้งานร่วมกัน</a>
+  <a href="#faq"><i class="ti ti-help"></i> ปัญหาที่พบบ่อย</a>
+</nav>
+
+<main>
+<section id="start">
+<h2><span class="ic"><i class="ti ti-flag"></i></span>ก่อนเริ่มใช้งาน</h2>
+<div class="lead">คู่มือนี้อธิบายวิธีใช้ระบบ HR ทั้งหมดของ MASARU แบบทีละขั้น — อ่านเฉพาะหัวข้อที่ตัวเองต้องใช้ก็ได้ ไม่ต้องอ่านทั้งเล่ม</div>
+
+<h3>ระบบทั้งหมดเชื่อมกันอย่างไร</h3>
+<p>ระบบ HR ของเราไม่ได้แยกกันอยู่ แต่ส่งข้อมูลต่อกันเป็นทอด ๆ ตามเส้นทางชีวิตของพนักงาน 1 คน</p>
+<div class="fig"><svg viewBox="0 0 800 210" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans Thai, sans-serif">
+<rect width="800" height="210" fill="#fbfcfe"/>
+<rect x="28" y="58" width="132" height="92" rx="10" fill="#fff" stroke="#cfd8e6"/><circle cx="40" cy="72" r="13" fill="#d62030"/><text x="40" y="77" fill="#fff" font-size="13" font-weight="800" text-anchor="middle">1</text>
+<text x="94" y="100" font-size="13" fill="#16294d" font-weight="700" text-anchor="middle">ผู้สมัคร</text><text x="94" y="120" font-size="10.5" fill="#64708a" font-weight="500" text-anchor="middle">สมัคร · สัมภาษณ์</text>
+<path d="M168 104 h44" stroke="#9aabc1" stroke-width="2"/><path d="M212 104 l-8 -5 v10 z" fill="#9aabc1"/>
+<rect x="220" y="58" width="132" height="92" rx="10" fill="#fff" stroke="#cfd8e6"/><circle cx="232" cy="72" r="13" fill="#d62030"/><text x="232" y="77" fill="#fff" font-size="13" font-weight="800" text-anchor="middle">2</text>
+<text x="286" y="100" font-size="13" fill="#16294d" font-weight="700" text-anchor="middle">รับเข้าทำงาน</text><text x="286" y="120" font-size="10.5" fill="#64708a" font-weight="500" text-anchor="middle">บันทึกวันเริ่มงาน</text>
+<path d="M360 104 h44" stroke="#9aabc1" stroke-width="2"/><path d="M404 104 l-8 -5 v10 z" fill="#9aabc1"/>
+<rect x="412" y="58" width="132" height="92" rx="10" fill="#fff" stroke="#cfd8e6"/><circle cx="424" cy="72" r="13" fill="#d62030"/><text x="424" y="77" fill="#fff" font-size="13" font-weight="800" text-anchor="middle">3</text>
+<text x="478" y="100" font-size="13" fill="#16294d" font-weight="700" text-anchor="middle">ทดลองงาน</text><text x="478" y="120" font-size="10.5" fill="#64708a" font-weight="500" text-anchor="middle">ประเมิน 30/60/90</text>
+<path d="M552 104 h44" stroke="#9aabc1" stroke-width="2"/><path d="M596 104 l-8 -5 v10 z" fill="#9aabc1"/>
+<rect x="604" y="58" width="168" height="92" rx="10" fill="#fff" stroke="#cfd8e6"/><circle cx="616" cy="72" r="13" fill="#d62030"/><text x="616" y="77" fill="#fff" font-size="13" font-weight="800" text-anchor="middle">4</text>
+<text x="688" y="100" font-size="13" fill="#16294d" font-weight="700" text-anchor="middle">พนักงานประจำ</text><text x="688" y="120" font-size="10.5" fill="#64708a" font-weight="500" text-anchor="middle">ลงเวลา · อบรม</text>
+<text x="400" y="32" font-size="14" fill="#16294d" font-weight="700" text-anchor="middle">เส้นทางข้อมูลของพนักงาน 1 คน ตั้งแต่สมัครจนเป็นพนักงาน</text>
+<text x="400" y="188" font-size="11.5" fill="#64708a" font-weight="500" text-anchor="middle">ข้อมูลไหลต่อกัน — กรอกครั้งเดียวที่ต้นทาง ระบบถัดไปดึงไปใช้เอง</text>
+</svg><div class="cap"><b>ภาพที่ 1</b> — เส้นทางข้อมูล: ผู้สมัคร → รับเข้าทำงาน → ทดลองงาน → พนักงานประจำ</div></div>
+
+<div class="note info"><i class="ti ti-info-circle"></i><div>
+<b>เรื่องสำคัญที่สุดในคู่มือเล่มนี้:</b> กรอกข้อมูลให้ครบที่ <b>ต้นทาง</b> แล้วระบบปลายทางจะทำงานถูกต้องเอง
+เช่น ถ้ากรอก “วันเริ่มงาน” ตอนรับเข้าทำงาน ระบบทดลองงานจะคำนวณวันครบ 30/60/90 วันให้อัตโนมัติ ไม่ต้องมานั่งนับเอง
+</div></div>
+
+<h3>สิ่งที่ต้องเตรียม</h3>
+<table>
+<tr><th style="width:26%">รายการ</th><th>รายละเอียด</th></tr>
+<tr><td><b>บัญชีผู้ใช้</b></td><td>อีเมลและรหัสผ่านที่สมัครไว้ในระบบ (คนละอันกับรหัส Gmail)</td></tr>
+<tr><td><b>รหัสเชิญ</b></td><td>ขอจากฝ่ายบุคคล ใช้ตอนสมัครครั้งแรกเท่านั้น</td></tr>
+<tr><td><b>อุปกรณ์</b></td><td>คอมพิวเตอร์หรือมือถือที่ต่ออินเทอร์เน็ต — แนะนำ Google Chrome</td></tr>
+<tr><td><b>สิทธิ์การใช้งาน</b></td><td>แต่ละบทบาทเห็นระบบไม่เท่ากัน ถ้าไม่เห็นระบบที่ต้องใช้ ให้แจ้งฝ่ายบุคคล</td></tr>
+</table>
+
+<h3>บทบาทผู้ใช้</h3>
+<div class="cards">
+<div class="card"><div class="h"><i class="ti ti-user"></i>เจ้าหน้าที่ HR</div><p>ใช้งานประจำวันได้ทุกระบบ — กรอกข้อมูล บันทึกผล ออกรายงาน</p></div>
+<div class="card"><div class="h"><i class="ti ti-user-search"></i>สรรหาบุคลากร</div><p>เน้นระบบรับสมัครงานและแดชบอร์ดบุคลิกภาพ</p></div>
+<div class="card"><div class="h"><i class="ti ti-user-star"></i>หัวหน้าฝ่ายบุคคล</div><p>เห็นทุกระบบ พร้อมสิทธิ์อนุมัติและแก้ไขข้อมูลย้อนหลัง</p></div>
+<div class="card"><div class="h"><i class="ti ti-eye"></i>ผู้บริหาร</div><p>ดูรายงานและแดชบอร์ดได้ แต่แก้ไขข้อมูลไม่ได้</p></div>
+</div>
+</section>
+<section id="login">
+<h2><span class="ic"><i class="ti ti-login"></i></span>เข้าสู่ระบบ / สมัครบัญชี</h2>
+<div class="lead">ทุกระบบใช้บัญชีเดียวกัน เข้าครั้งเดียวใช้ได้ทุกระบบ</div>
+
+<div class="fig"><svg viewBox="0 0 800 420" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans Thai, sans-serif">
+<rect width="800" height="420" fill="#f2f4f8"/>
+<rect x="14" y="12" width="772" height="396" rx="12" fill="#fff" stroke="#e2e7ef"/>
+<rect x="14" y="12" width="772" height="40" rx="12" fill="#16294d"/>
+<rect x="14" y="40" width="772" height="12" fill="#16294d"/>
+<circle cx="36" cy="32" r="5" fill="#ff5f57"/><circle cx="52" cy="32" r="5" fill="#febc2e"/><circle cx="68" cy="32" r="5" fill="#28c840"/>
+<text x="88" y="37" fill="#fff" font-size="13" font-weight="700">เข้าสู่ระบบ</text>
+<rect x="230" y="95" width="340" height="275" rx="12" fill="#fff" stroke="#e2e7ef"/><rect x="230" y="95" width="340" height="52" rx="12" fill="#0e1c38"/><rect x="230" y="128" width="340" height="19" fill="#0e1c38"/><text x="400" y="128" font-size="13" fill="#fff" font-weight="800" text-anchor="middle">MASARU HR PORTAL</text><text x="258" y="175" font-size="11" fill="#64708a" font-weight="600" text-anchor="start">อีเมล</text><rect x="258" y="182" width="284" height="32" rx="8" fill="#fbfcfe" stroke="#dde4ee"/><text x="270" y="203" font-size="11.5" fill="#97a1b5" font-weight="500" text-anchor="start">hr.yourname@gmail.com</text><text x="258" y="232" font-size="11" fill="#64708a" font-weight="600" text-anchor="start">รหัสผ่าน</text><rect x="258" y="239" width="284" height="32" rx="8" fill="#fbfcfe" stroke="#dde4ee"/><text x="270" y="260" font-size="12" fill="#97a1b5" font-weight="500" text-anchor="start">••••••••••</text><rect x="258" y="288" width="284" height="38" rx="9" fill="#d62030"/><text x="400" y="312" font-size="13" fill="#fff" font-weight="700" text-anchor="middle">เข้าสู่ระบบ</text><text x="400" y="348" font-size="11" fill="#2E75B6" font-weight="600" text-anchor="middle">ยังไม่มีบัญชี? สมัคร / กลับหน้าหลัก →</text><circle cx="215" cy="198" r="13" fill="#d62030"/><text x="215" y="203" fill="#fff" font-size="13" font-weight="800" text-anchor="middle">1</text><circle cx="215" cy="255" r="13" fill="#d62030"/><text x="215" y="260" fill="#fff" font-size="13" font-weight="800" text-anchor="middle">2</text><circle cx="215" cy="307" r="13" fill="#d62030"/><text x="215" y="312" fill="#fff" font-size="13" font-weight="800" text-anchor="middle">3</text>
+</svg><div class="cap"><b>ภาพที่ 2</b> — หน้าเข้าสู่ระบบ: ① ใส่อีเมล ② ใส่รหัสผ่าน ③ กดเข้าสู่ระบบ</div></div>
+
+<h3>เข้าสู่ระบบ</h3>
+<ol class="steps">
+<li><b>เปิดลิงก์ระบบ</b> ที่ฝ่ายบุคคลส่งให้ แนะนำให้บันทึกเป็นบุ๊กมาร์กไว้</li>
+<li><b>กรอกอีเมลและรหัสผ่าน</b> ที่ตั้งไว้ตอนสมัคร
+  <ul><li>รหัสนี้ <b>คนละอันกับรหัส Gmail</b> — เป็นรหัสที่ตั้งเองตอนกดสมัครในระบบ</li></ul></li>
+<li><b>กดปุ่ม “เข้าสู่ระบบ”</b> แล้วรอสักครู่ ระบบจะพาไปหน้ารวมระบบทั้งหมด</li>
+</ol>
+
+<h3>สมัครบัญชีครั้งแรก</h3>
+<ol class="steps">
+<li><b>กด “ยังไม่มีบัญชี? สมัคร”</b> ที่ด้านล่างของกล่องเข้าสู่ระบบ</li>
+<li><b>กรอกอีเมล ตั้งรหัสผ่าน และเลือกบทบาท</b> ตามงานที่ทำจริง</li>
+<li><b>ใส่รหัสเชิญ</b> ที่ขอจากฝ่ายบุคคล — ถ้าไม่มีรหัสนี้จะสมัครไม่ได้</li>
+<li><b>ยืนยันอีเมล</b> เปิดกล่องจดหมายแล้วกดลิงก์ยืนยัน (ถ้าไม่เจอให้ดูในสแปม)</li>
+<li><b>กลับมาเข้าสู่ระบบ</b> ด้วยอีเมลและรหัสที่เพิ่งตั้ง</li>
+</ol>
+
+<div class="note warn"><i class="ti ti-alert-triangle"></i><div>
+<b>อย่าใช้บัญชีร่วมกันหลายคน</b> — ระบบบันทึกว่าใครแก้อะไรไว้ ถ้าใช้บัญชีเดียวกันจะตรวจสอบย้อนหลังไม่ได้
+และถ้าคนหนึ่งเปลี่ยนรหัส อีกคนจะเข้าไม่ได้ทันที
+</div></div>
+
+<div class="note tip"><i class="ti ti-bulb"></i><div>
+<b>ลืมรหัสผ่าน?</b> ติดต่อฝ่ายบุคคลเพื่อขอตั้งรหัสใหม่ ระบบจะส่งลิงก์ตั้งรหัสไปที่อีเมลของคุณ
+</div></div>
+</section>
+<section id="portal">
+<h2><span class="ic"><i class="ti ti-layout-grid"></i></span>หน้าหลักพอร์ทัล</h2>
+<div class="lead">ศูนย์รวมทุกระบบ — เข้าสู่ระบบแล้วจะมาที่หน้านี้เสมอ</div>
+
+<div class="fig"><svg viewBox="0 0 800 360" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans Thai, sans-serif">
+<rect width="800" height="360" fill="#f2f4f8"/>
+<rect x="14" y="12" width="772" height="336" rx="12" fill="#fff" stroke="#e2e7ef"/>
+<rect x="14" y="12" width="772" height="40" rx="12" fill="#16294d"/>
+<rect x="14" y="40" width="772" height="12" fill="#16294d"/>
+<circle cx="36" cy="32" r="5" fill="#ff5f57"/><circle cx="52" cy="32" r="5" fill="#febc2e"/><circle cx="68" cy="32" r="5" fill="#28c840"/>
+<text x="88" y="37" fill="#fff" font-size="13" font-weight="700">MASARU HR Portal</text>
+<text x="40" y="74" font-size="14" fill="#16294d" font-weight="700" text-anchor="start">เลือกระบบที่ต้องการใช้งาน</text><rect x="40" y="92" width="228" height="104" rx="11" fill="#fff" stroke="#e2e7ef"/><rect x="40" y="92" width="228" height="4" rx="2" fill="#17845f"/><rect x="56" y="110" width="34" height="34" rx="9" fill="#eaf2fb"/><circle cx="73" cy="127" r="8" fill="#2E75B6" opacity=".55"/><text x="56" y="162" font-size="12.5" fill="#16294d" font-weight="700" text-anchor="start">ระบบรับสมัครงาน</text><text x="56" y="180" font-size="10.5" fill="#64708a" font-weight="500" text-anchor="start">จัดการผู้สมัคร คัดกรอง สัมภาษณ์</text><rect x="288" y="92" width="228" height="104" rx="11" fill="#fff" stroke="#e2e7ef"/><rect x="288" y="92" width="228" height="4" rx="2" fill="#17845f"/><rect x="304" y="110" width="34" height="34" rx="9" fill="#eaf2fb"/><circle cx="321" cy="127" r="8" fill="#2E75B6" opacity=".55"/><text x="304" y="162" font-size="12.5" fill="#16294d" font-weight="700" text-anchor="start">ระบบบันทึกการมาทำงาน</text><text x="304" y="180" font-size="10.5" fill="#64708a" font-weight="500" text-anchor="start">กรอกการมาทำงานรายวัน</text><rect x="536" y="92" width="228" height="104" rx="11" fill="#fff" stroke="#e2e7ef"/><rect x="536" y="92" width="228" height="4" rx="2" fill="#17845f"/><rect x="552" y="110" width="34" height="34" rx="9" fill="#eaf2fb"/><circle cx="569" cy="127" r="8" fill="#2E75B6" opacity=".55"/><text x="552" y="162" font-size="12.5" fill="#16294d" font-weight="700" text-anchor="start">ระบบประเมินทดลองงาน</text><text x="552" y="180" font-size="10.5" fill="#64708a" font-weight="500" text-anchor="start">เตือนครบ 30/60/90 วัน</text><rect x="40" y="214" width="228" height="104" rx="11" fill="#fff" stroke="#e2e7ef"/><rect x="40" y="214" width="228" height="4" rx="2" fill="#17845f"/><rect x="56" y="232" width="34" height="34" rx="9" fill="#eaf2fb"/><circle cx="73" cy="249" r="8" fill="#2E75B6" opacity=".55"/><text x="56" y="284" font-size="12.5" fill="#16294d" font-weight="700" text-anchor="start">แดชบอร์ดบุคลิกภาพ</text><text x="56" y="302" font-size="10.5" fill="#64708a" font-weight="500" text-anchor="start">ผล MBTI และ BOSI</text><rect x="288" y="214" width="228" height="104" rx="11" fill="#fff" stroke="#e2e7ef"/><rect x="288" y="214" width="228" height="4" rx="2" fill="#17845f"/><rect x="304" y="232" width="34" height="34" rx="9" fill="#eaf2fb"/><circle cx="321" cy="249" r="8" fill="#2E75B6" opacity=".55"/><text x="304" y="284" font-size="12.5" fill="#16294d" font-weight="700" text-anchor="start">ระบบลงเวลา</text><text x="304" y="302" font-size="10.5" fill="#64708a" font-weight="500" text-anchor="start">ขาด ลา มาสาย OT</text><rect x="536" y="214" width="228" height="104" rx="11" fill="#fff" stroke="#e2e7ef"/><rect x="536" y="214" width="228" height="4" rx="2" fill="#17845f"/><rect x="552" y="232" width="34" height="34" rx="9" fill="#eaf2fb"/><circle cx="569" cy="249" r="8" fill="#2E75B6" opacity=".55"/><text x="552" y="284" font-size="12.5" fill="#16294d" font-weight="700" text-anchor="start">ระบบฝึกอบรม</text><text x="552" y="302" font-size="10.5" fill="#64708a" font-weight="500" text-anchor="start">แผนอบรม หลักสูตร QR</text><circle cx="258" cy="96" r="13" fill="#d62030"/><text x="258" y="101" fill="#fff" font-size="13" font-weight="800" text-anchor="middle">1</text><circle cx="28" cy="74" r="13" fill="#17845f"/><text x="28" y="79" fill="#fff" font-size="13" font-weight="800" text-anchor="middle">2</text>
+</svg><div class="cap"><b>ภาพที่ 3</b> — หน้ารวมระบบ: ① แตะการ์ดเพื่อเปิดระบบ ② จำนวนระบบที่คุณมีสิทธิ์เข้าใช้</div></div>
+
+<h3>วิธีใช้</h3>
+<ol class="steps">
+<li><b>แตะการ์ดระบบ</b> เพื่อเปิดระบบนั้นในแท็บเดิม</li>
+<li><b>กด “แท็บใหม่”</b> มุมล่างของการ์ด ถ้าต้องการเปิดหลายระบบพร้อมกัน
+  <ul><li>เหมาะเวลาต้องเทียบข้อมูลสองระบบ เช่น เปิดระบบรับสมัครคู่กับระบบทดลองงาน</li></ul></li>
+<li><b>ปุ่ม “กลับหน้าหลัก”</b> มีอยู่ทุกระบบ กดแล้วกลับมาหน้านี้ได้ตลอด</li>
+</ol>
+
+<div class="note info"><i class="ti ti-info-circle"></i><div>
+<b>เห็นระบบไม่ครบ?</b> เป็นเพราะสิทธิ์ของบทบาทคุณ ไม่ใช่ระบบเสีย — แจ้งฝ่ายบุคคลเพื่อขอสิทธิ์เพิ่ม
+</div></div>
+</section>
+<section id="recruit">
+<h2><span class="ic"><i class="ti ti-users-group"></i></span>ระบบรับสมัครงาน</h2>
+<div class="lead">ตั้งแต่รับใบสมัคร คัดกรอง นัดสัมภาษณ์ ส่ง Offer จนถึงรับเข้าทำงานและบันทึกลาออก</div>
+
+<div class="fig"><svg viewBox="0 0 800 350" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans Thai, sans-serif">
+<rect width="800" height="350" fill="#f2f4f8"/>
+<rect x="14" y="12" width="772" height="326" rx="12" fill="#fff" stroke="#e2e7ef"/>
+<rect x="14" y="12" width="772" height="40" rx="12" fill="#16294d"/>
+<rect x="14" y="40" width="772" height="12" fill="#16294d"/>
+<circle cx="36" cy="32" r="5" fill="#ff5f57"/><circle cx="52" cy="32" r="5" fill="#febc2e"/><circle cx="68" cy="32" r="5" fill="#28c840"/>
+<text x="88" y="37" fill="#fff" font-size="13" font-weight="700">ระบบรับสมัครงาน</text>
+<text x="38" y="68" font-size="13.5" fill="#16294d" font-weight="700" text-anchor="start">ขั้นตอนของผู้สมัคร</text><rect x="38" y="86" width="124" height="56" rx="10" fill="#eef2f7" stroke="#dde4ee"/><text x="100" y="112" font-size="12.5" fill="#16294d" font-weight="700" text-anchor="middle">ใหม่</text><text x="100" y="130" font-size="10" fill="#64708a" font-weight="500" text-anchor="middle">ขั้นที่ 1</text><path d="M166 114 h14" stroke="#9aabc1" stroke-width="2"/><path d="M182 114 l-7 -4 v8 z" fill="#9aabc1"/><rect x="186" y="86" width="124" height="56" rx="10" fill="#e7f0fa" stroke="#dde4ee"/><text x="248" y="112" font-size="12.5" fill="#16294d" font-weight="700" text-anchor="middle">คัดกรอง</text><text x="248" y="130" font-size="10" fill="#64708a" font-weight="500" text-anchor="middle">ขั้นที่ 2</text><path d="M314 114 h14" stroke="#9aabc1" stroke-width="2"/><path d="M330 114 l-7 -4 v8 z" fill="#9aabc1"/><rect x="334" y="86" width="124" height="56" rx="10" fill="#fdf3e3" stroke="#dde4ee"/><text x="396" y="112" font-size="12.5" fill="#16294d" font-weight="700" text-anchor="middle">สัมภาษณ์</text><text x="396" y="130" font-size="10" fill="#64708a" font-weight="500" text-anchor="middle">ขั้นที่ 3</text><path d="M462 114 h14" stroke="#9aabc1" stroke-width="2"/><path d="M478 114 l-7 -4 v8 z" fill="#9aabc1"/><rect x="482" y="86" width="124" height="56" rx="10" fill="#f3ecfb" stroke="#dde4ee"/><text x="544" y="112" font-size="12.5" fill="#16294d" font-weight="700" text-anchor="middle">Offer</text><text x="544" y="130" font-size="10" fill="#64708a" font-weight="500" text-anchor="middle">ขั้นที่ 4</text><path d="M610 114 h14" stroke="#9aabc1" stroke-width="2"/><path d="M626 114 l-7 -4 v8 z" fill="#9aabc1"/><rect x="630" y="86" width="124" height="56" rx="10" fill="#e3f5ec" stroke="#dde4ee"/><text x="692" y="112" font-size="12.5" fill="#16294d" font-weight="700" text-anchor="middle">รับเข้า</text><text x="692" y="130" font-size="10" fill="#64708a" font-weight="500" text-anchor="middle">ขั้นที่ 5</text><text x="38" y="180" font-size="13.5" fill="#16294d" font-weight="700" text-anchor="start">รายชื่อผู้สมัคร</text><rect x="38" y="196" width="724" height="40" rx="9" fill="#fff" stroke="#eef1f6"/><circle cx="62" cy="216" r="13" fill="#e7f0fa"/><text x="88" y="214" font-size="12" fill="#16294d" font-weight="700" text-anchor="start">นางสาวสมหญิง ใจดี</text><text x="88" y="229" font-size="10.5" fill="#64708a" font-weight="500" text-anchor="start">Telesale</text><rect x="600" y="207" width="148" height="19" rx="9" fill="#fdf3e3"/><text x="674.0" y="221" font-size="10.5" fill="#8a5a12" font-weight="700" text-anchor="middle">กำลังสัมภาษณ์</text><rect x="38" y="242" width="724" height="40" rx="9" fill="#fff" stroke="#eef1f6"/><circle cx="62" cy="262" r="13" fill="#e7f0fa"/><text x="88" y="260" font-size="12" fill="#16294d" font-weight="700" text-anchor="start">นายสมชาย รักงาน</text><text x="88" y="275" font-size="10.5" fill="#64708a" font-weight="500" text-anchor="start">Sale Admin</text><rect x="600" y="253" width="148" height="19" rx="9" fill="#e3f5ec"/><text x="674.0" y="267" font-size="10.5" fill="#12674a" font-weight="700" text-anchor="middle">รับเข้าทำงาน</text><rect x="38" y="288" width="724" height="40" rx="9" fill="#fff" stroke="#eef1f6"/><circle cx="62" cy="308" r="13" fill="#e7f0fa"/><text x="88" y="306" font-size="12" fill="#16294d" font-weight="700" text-anchor="start">นางสาวมานี มีนา</text><text x="88" y="321" font-size="10.5" fill="#64708a" font-weight="500" text-anchor="start">Content</text><rect x="600" y="299" width="148" height="19" rx="9" fill="#fdeee3"/><text x="674.0" y="313" font-size="10.5" fill="#8a3d0f" font-weight="700" text-anchor="middle">ไม่เข้าสัมภาษณ์</text><circle cx="26" cy="114" r="13" fill="#d62030"/><text x="26" y="119" fill="#fff" font-size="13" font-weight="800" text-anchor="middle">1</text><circle cx="26" cy="216" r="13" fill="#d62030"/><text x="26" y="221" fill="#fff" font-size="13" font-weight="800" text-anchor="middle">2</text>
+</svg><div class="cap"><b>ภาพที่ 4</b> — ① ผู้สมัครเดินผ่าน 5 ขั้นตามลำดับ ② รายชื่อพร้อมป้ายสถานะ</div></div>
+
+<h3>5 ขั้นตอนของผู้สมัคร</h3>
+<table>
+<tr><th style="width:18%">ขั้น</th><th>ทำอะไร</th><th style="width:30%">ปุ่มที่ใช้</th></tr>
+<tr><td><span class="pill">ใหม่</span></td><td>เพิ่งได้รับใบสมัคร ยังไม่ได้ดู</td><td>กด “เริ่มคัดกรอง”</td></tr>
+<tr><td><span class="pill b">คัดกรอง</span></td><td>อ่านเรซูเม่ ดูคุณสมบัติ โทรคุยเบื้องต้น</td><td>“นัดสัมภาษณ์” หรือ “ไม่ผ่าน”</td></tr>
+<tr><td><span class="pill y">สัมภาษณ์</span></td><td>นัดวัน บันทึกผลสัมภาษณ์</td><td>“ผ่าน → เตรียม Offer” / “ไม่ผ่าน” / “ไม่เข้าสัมภาษณ์”</td></tr>
+<tr><td><span class="pill b">Offer</span></td><td>ส่งข้อเสนอ รอผู้สมัครตอบรับ</td><td>“ผู้สมัครตอบรับ” หรือ “ปฏิเสธ”</td></tr>
+<tr><td><span class="pill g">รับเข้า</span></td><td>เป็นพนักงานแล้ว รอเริ่มงาน</td><td>“บันทึกลาออก” (เมื่อถึงเวลา)</td></tr>
+</table>
+
+<h3>เพิ่มผู้สมัครใหม่</h3>
+<ol class="steps">
+<li><b>กดปุ่ม “เพิ่มผู้สมัคร”</b> มุมบนของรายชื่อ</li>
+<li><b>กรอกข้อมูลพื้นฐาน</b> — ชื่อ-นามสกุล เบอร์โทร ตำแหน่งที่สมัคร ช่องทางที่มา
+  <ul><li><b>ช่องทางที่มา</b> สำคัญมาก เพราะระบบใช้วิเคราะห์ว่าแหล่งไหนได้คนดีที่สุด</li></ul></li>
+<li><b>แนบเรซูเม่และรูป</b> (ถ้ามี) ลากไฟล์มาวางได้เลย</li>
+<li><b>กดบันทึก</b> ผู้สมัครจะไปอยู่ในสถานะ “ใหม่”</li>
+</ol>
+
+<h3>นัดและบันทึกผลสัมภาษณ์</h3>
+<ol class="steps">
+<li><b>เปิดการ์ดผู้สมัคร</b> จากรายชื่อฝั่งซ้าย</li>
+<li><b>กด “นัดสัมภาษณ์”</b> แล้วเลือกวันและเวลา — จะไปโผล่ในแท็บ “สัมภาษณ์” อัตโนมัติ</li>
+<li><b>หลังสัมภาษณ์เสร็จ</b> เลือกอย่างใดอย่างหนึ่ง
+  <ul>
+    <li><b>ผ่าน</b> → ไปขั้น Offer</li>
+    <li><b>ไม่ผ่าน</b> → ปิดเคส พร้อมระบุเหตุผล</li>
+    <li><b>ไม่เข้าสัมภาษณ์</b> → ใช้เมื่อผู้สมัครไม่มาตามนัดหรือติดต่อไม่ได้</li>
+  </ul></li>
+<li><b>ใส่บันทึกผลสัมภาษณ์</b> ให้ละเอียดพอที่คนอื่นอ่านแล้วเข้าใจ</li>
+</ol>
+
+<div class="note tip"><i class="ti ti-bulb"></i><div>
+<b>ปุ่ม “ไม่เข้าสัมภาษณ์” ใช้ได้ตั้งแต่ขั้นไหนก็ได้ก่อนถึง Offer</b> — รวมถึงตอนโทรคัดกรองแล้วไม่รับสาย
+ระบบจะติดป้ายส้มไว้และเก็บสถิติแยกให้ ทำให้เห็นว่าเดือนไหนมีคนเบี้ยวนัดเยอะผิดปกติ
+</div></div>
+
+<h3>รับเข้าทำงาน</h3>
+<ol class="steps">
+<li><b>กด “ผู้สมัครตอบรับ”</b> เมื่อผู้สมัครยืนยันว่าจะมาทำงาน</li>
+<li><b>กรอกวันเริ่มงาน</b> — ช่องนี้สำคัญที่สุดในทั้งระบบ
+  <ul><li>ระบบทดลองงานจะใช้วันนี้คำนวณกำหนดประเมิน 30/60/90 วัน</li>
+      <li>ถ้าไม่กรอก งานประเมินของคนนี้จะไม่ขึ้นเตือนเลย</li></ul></li>
+<li><b>เลือกประเภทการจ้าง</b> เช่น พนักงานประจำ หรือสัญญาจ้าง</li>
+</ol>
+
+<div class="note stop"><i class="ti ti-alert-octagon"></i><div>
+<b>ห้ามลืมกรอกวันเริ่มงาน</b> — นี่คือสาเหตุอันดับหนึ่งที่ทำให้พนักงานหลุดจากการประเมินทดลองงาน
+ถ้ายังไม่รู้วันแน่นอน ให้ใส่วันที่คาดไว้ก่อน แล้วค่อยกลับมาแก้ทีหลัง
+</div></div>
+
+<h3>บันทึกลาออก</h3>
+<ol class="steps">
+<li><b>เปิดการ์ดพนักงาน</b> ที่สถานะ “รับเข้าทำงาน”</li>
+<li><b>กดปุ่ม “บันทึกลาออก”</b> บนหัวการ์ด</li>
+<li><b>กรอก 3 อย่าง</b> — วันที่ลาออก · ประเภทการพ้นสภาพ · เหตุผลเพิ่มเติม
+  <ul><li>ประเภทมี 4 แบบ: ลาออกเอง · ไม่ผ่านทดลองงาน · เลิกจ้าง · ไม่มาทำงาน (หายไป)</li></ul></li>
+<li><b>ยืนยัน</b> ระบบจะแสดงอายุงานให้ดูก่อน และไปอัปเดตสถานะในระบบบันทึกการมาทำงานให้ด้วย</li>
+</ol>
+
+<div class="note warn"><i class="ti ti-alert-triangle"></i><div>
+<b>ถ้าระบบเตือนว่าหาชื่อในทะเบียนพนักงานไม่เจอ</b> แปลว่าคนนี้ยังไม่ถูกเพิ่มในระบบบันทึกการมาทำงาน
+ให้ไปแจ้งลาออกในระบบนั้นอีกรอบด้วยตัวเอง ระบบจะไม่เดาชื่อให้ เพื่อกันปิดสถานะผิดคน
+</div></div>
+
+<h3>แท็บต่าง ๆ ในระบบ</h3>
+<table>
+<tr><th style="width:24%">แท็บ</th><th>ใช้ทำอะไร</th></tr>
+<tr><td><b>ผู้สมัคร</b></td><td>รายชื่อทั้งหมด กรองตามสถานะได้ด้วยชิปด้านบน</td></tr>
+<tr><td><b>สัมภาษณ์</b></td><td>ตารางนัดสัมภาษณ์ที่ยังไม่ถึง เรียงตามวัน</td></tr>
+<tr><td><b>วันเริ่มงาน</b></td><td>คนที่ตอบรับแล้วและกำลังจะเริ่มงาน ใช้เตรียมของต้อนรับ</td></tr>
+<tr><td><b>รับเข้าแล้ว</b></td><td>พนักงานที่ยังทำงานอยู่ พร้อมอายุงานและสถานะทดลองงาน</td></tr>
+<tr><td><b>คนลาออก</b></td><td>ผู้ลาออกทั้งหมด + ระยะเวลาที่ใช้หาคนทดแทนแต่ละตำแหน่ง</td></tr>
+<tr><td><b>รายงาน</b></td><td>แดชบอร์ดสรุปและออกรายงาน PDF</td></tr>
+</table>
+
+<h3>ออกรายงาน</h3>
+<ol class="steps">
+<li><b>ไปแท็บ “รายงาน”</b> แล้วเลือกช่วงวันที่ หรือกดปุ่มลัด 7 / 30 วัน / เดือนนี้ / ไตรมาสนี้</li>
+<li><b>กด “ดูตัวอย่าง / พิมพ์”</b> ระบบเปิดแท็บใหม่แสดงเป็นหน้ากระดาษ A4 ให้ตรวจก่อน</li>
+<li><b>ตรวจให้ครบทุกหน้า</b> แล้วกด “บันทึกเป็น PDF” หรือ “พิมพ์”</li>
+</ol>
+
+<div class="note info"><i class="ti ti-info-circle"></i><div>
+<b>ถ้ากดแล้วไม่มีอะไรขึ้น</b> เบราว์เซอร์อาจบล็อกป็อปอัป — กดไอคอนที่แถบที่อยู่เว็บแล้วเลือก “อนุญาต”
+</div></div>
+</section>
+<section id="personality">
+<h2><span class="ic"><i class="ti ti-chart-radar"></i></span>แดชบอร์ดบุคลิกภาพผู้สมัคร</h2>
+<div class="lead">สรุปผลแบบทดสอบ MBTI และ BOSI ของผู้สมัคร ใช้เตรียมคำถามก่อนสัมภาษณ์และดูความเข้ากันกับทีม</div>
+
+<div class="fig"><svg viewBox="0 0 800 340" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans Thai, sans-serif">
+<rect width="800" height="340" fill="#f2f4f8"/>
+<rect x="14" y="12" width="772" height="316" rx="12" fill="#fff" stroke="#e2e7ef"/>
+<rect x="14" y="12" width="772" height="40" rx="12" fill="#16294d"/>
+<rect x="14" y="40" width="772" height="12" fill="#16294d"/>
+<circle cx="36" cy="32" r="5" fill="#ff5f57"/><circle cx="52" cy="32" r="5" fill="#febc2e"/><circle cx="68" cy="32" r="5" fill="#28c840"/>
+<text x="88" y="37" fill="#fff" font-size="13" font-weight="700">ผลแบบทดสอบผู้สมัคร</text>
+<rect x="38" y="68" width="300" height="180" rx="12" fill="#0e1c38" stroke="#0e1c38"/><text x="62" y="104" font-size="10" fill="#ff8a92" font-weight="800" text-anchor="start">PERSONALITY INTELLIGENCE</text><text x="62" y="134" font-size="16" fill="#fff" font-weight="800" text-anchor="start">มองเห็นบุคลิกของแต่ละคน</text><text x="62" y="158" font-size="16" fill="#fff" font-weight="800" text-anchor="start">ผ่านข้อมูลที่เข้าใจง่าย</text><rect x="62" y="180" width="74" height="48" rx="8" fill="#1c3157" stroke="#2a4470"/><text x="99" y="206" font-size="17" fill="#fff" font-weight="800" text-anchor="middle">75</text><text x="99" y="221" font-size="9" fill="#9fb4d4" font-weight="500" text-anchor="middle">ผู้ทำแบบ</text><rect x="146" y="180" width="74" height="48" rx="8" fill="#1c3157" stroke="#2a4470"/><text x="183" y="206" font-size="17" fill="#fff" font-weight="800" text-anchor="middle">75</text><text x="183" y="221" font-size="9" fill="#9fb4d4" font-weight="500" text-anchor="middle">ครบ 2 แบบ</text><rect x="230" y="180" width="74" height="48" rx="8" fill="#1c3157" stroke="#2a4470"/><text x="267" y="206" font-size="17" fill="#fff" font-weight="800" text-anchor="middle">0</text><text x="267" y="221" font-size="9" fill="#9fb4d4" font-weight="500" text-anchor="middle">รอผล</text><rect x="356" y="68" width="406" height="180" rx="12" fill="#fff" stroke="#e2e7ef"/><text x="380" y="100" font-size="10" fill="#2E75B6" font-weight="800" text-anchor="start">PERSONALITY TYPE</text><text x="380" y="130" font-size="22" fill="#16294d" font-weight="800" text-anchor="start">MBTI</text><text x="380" y="158" font-size="11.5" fill="#64708a" font-weight="500" text-anchor="start">แนวโน้มพลังงาน การรับข้อมูล การตัดสินใจ</text><text x="380" y="178" font-size="11.5" fill="#64708a" font-weight="500" text-anchor="start">และรูปแบบการใช้ชีวิต</text><rect x="380" y="196" width="360" height="34" rx="8" fill="#f7f9fc" stroke="#e8edf5"/><text x="400" y="218" font-size="12" fill="#16294d" font-weight="700" text-anchor="start">INFP · นักไกล่เกลี่ย</text><rect x="38" y="268" width="724" height="44" rx="10" fill="#fff" stroke="#dde4ee"/><circle cx="64" cy="290" r="9" fill="#eef2f8"/><text x="84" y="295" font-size="12" fill="#97a1b5" font-weight="500" text-anchor="start">ค้นหาชื่อ ตำแหน่ง หรือผล MBTI / BOSI</text><circle cx="26" cy="290" r="13" fill="#d62030"/><text x="26" y="295" fill="#fff" font-size="13" font-weight="800" text-anchor="middle">1</text>
+</svg><div class="cap"><b>ภาพที่ 5</b> — ① ช่องค้นหา: พิมพ์ชื่อ ตำแหน่ง หรือผลแบบทดสอบก็ได้</div></div>
+
+<h3>อ่านหน้านี้อย่างไร</h3>
+<table>
+<tr><th style="width:24%">ส่วน</th><th>ความหมาย</th></tr>
+<tr><td><b>ผู้ทำแบบประเมิน</b></td><td>จำนวนคนที่เข้ามาทำแบบทดสอบทั้งหมด</td></tr>
+<tr><td><b>ครบทั้ง 2 แบบ</b></td><td>ทำครบทั้ง MBTI และ BOSI — พร้อมอ่านผลเต็ม</td></tr>
+<tr><td><b>กำลังรอผลเพิ่ม</b></td><td>ทำแค่แบบเดียว ควรตามให้ทำอีกแบบให้ครบ</td></tr>
+<tr><td><b>MBTI</b></td><td>แนวโน้มด้านพลังงาน การรับข้อมูล การตัดสินใจ และการใช้ชีวิต</td></tr>
+<tr><td><b>BOSI</b></td><td>รูปแบบการทำงาน 4 ด้าน บอกว่าเหมาะกับงานลักษณะไหน</td></tr>
+</table>
+
+<h3>ค้นหาผู้สมัคร</h3>
+<ol class="steps">
+<li><b>พิมพ์ในช่องค้นหา</b> เหนือรายชื่อ — ค้นได้ทั้งชื่อ ตำแหน่ง ผล MBTI และ BOSI
+  <ul><li>พิมพ์ <code>INFP</code> → เห็นทุกคนที่ได้ผลนี้</li>
+      <li>พิมพ์ <code>Telesale</code> → เห็นทุกคนที่สมัครตำแหน่งนี้</li>
+      <li>พิมพ์หลายคำเช่น <code>INTJ ขายส่ง</code> → ต้องตรงทั้งสองคำ</li></ul></li>
+<li><b>คำที่ค้นเจอจะถูกไฮไลต์สีเหลือง</b> ในชื่อและตำแหน่ง</li>
+<li><b>กด <span class="kbd">Esc</span></b> เพื่อล้างคำค้น หรือกดกากบาทในช่อง</li>
+</ol>
+
+<div class="note tip"><i class="ti ti-bulb"></i><div>
+<b>เคล็ดลับ:</b> กด <span class="kbd">Ctrl</span> + <span class="kbd">K</span> ที่หน้าไหนก็ได้ เพื่อกระโดดไปช่องค้นหาทันที
+</div></div>
+
+<h3>ออกรายงาน PDF</h3>
+<ol class="steps">
+<li><b>กดที่ชื่อผู้สมัคร</b> เพื่อดูรายละเอียดฝั่งขวา แล้วกดปุ่มดาวน์โหลดในการ์ดนั้น (ได้เฉพาะคนเดียว)</li>
+<li><b>หรือกด “ดาวน์โหลด PDF ทั้งหมด”</b> เพื่อรวมทุกคนเป็นไฟล์เดียว</li>
+<li><b>ถ้ากำลังค้นหาอยู่</b> ปุ่มนี้จะออก PDF เฉพาะคนที่ค้นเจอ และถามยืนยันจำนวนก่อน
+  <ul><li>ใช้ตอนอยากได้รายงานเฉพาะตำแหน่งเดียว เช่น ค้น “Telesale” แล้วกดโหลด</li></ul></li>
+</ol>
+
+<div class="note warn"><i class="ti ti-alert-triangle"></i><div>
+<b>ผลแบบทดสอบเป็นข้อมูลประกอบ ไม่ใช่เกณฑ์ตัดสิน</b> — ห้ามใช้ผลนี้เป็นเหตุผลเดียวในการรับหรือไม่รับใคร
+ควรใช้เพื่อเตรียมคำถามสัมภาษณ์และวางแผนดูแลหลังเข้าทำงานมากกว่า
+</div></div>
+</section>
+<section id="probation">
+<h2><span class="ic"><i class="ti ti-clipboard-check"></i></span>ระบบประเมินทดลองงาน</h2>
+<div class="lead">เตือนล่วงหน้าเมื่อพนักงานใกล้ครบทดลองงาน 30 / 60 / 90 วัน พร้อมพิมพ์แบบประเมินและออกรายงานผู้บริหาร</div>
+
+<div class="fig"><svg viewBox="0 0 800 370" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans Thai, sans-serif">
+<rect width="800" height="370" fill="#f2f4f8"/>
+<rect x="14" y="12" width="772" height="346" rx="12" fill="#fff" stroke="#e2e7ef"/>
+<rect x="14" y="12" width="772" height="40" rx="12" fill="#16294d"/>
+<rect x="14" y="40" width="772" height="12" fill="#16294d"/>
+<circle cx="36" cy="32" r="5" fill="#ff5f57"/><circle cx="52" cy="32" r="5" fill="#febc2e"/><circle cx="68" cy="32" r="5" fill="#28c840"/>
+<text x="88" y="37" fill="#fff" font-size="13" font-weight="700">ระบบประเมินทดลองงาน</text>
+<text x="38" y="62" font-size="13.5" fill="#16294d" font-weight="700" text-anchor="start">ไทม์ไลน์การประเมินของพนักงาน 1 คน</text><circle cx="70" cy="120" r="11" fill="#16294d"/><text x="70" y="158" font-size="12" fill="#16294d" font-weight="700" text-anchor="middle">วันเริ่มงาน</text><circle cx="282" cy="120" r="11" fill="#2E75B6"/><text x="282" y="158" font-size="12" fill="#16294d" font-weight="700" text-anchor="middle">ครบ 30 วัน</text><line x1="81" y1="120" x2="271" y2="120" stroke="#cfd8e6" stroke-width="3"/><rect x="186" y="80" width="84" height="22" rx="11" fill="#fdf3e3"/><text x="228" y="95" font-size="9.5" fill="#8a5a12" font-weight="700" text-anchor="middle">เตือนก่อน 5 วัน</text><circle cx="494" cy="120" r="11" fill="#2E75B6"/><text x="494" y="158" font-size="12" fill="#16294d" font-weight="700" text-anchor="middle">ครบ 60 วัน</text><line x1="293" y1="120" x2="483" y2="120" stroke="#cfd8e6" stroke-width="3"/><rect x="398" y="80" width="84" height="22" rx="11" fill="#fdf3e3"/><text x="440" y="95" font-size="9.5" fill="#8a5a12" font-weight="700" text-anchor="middle">เตือนก่อน 5 วัน</text><circle cx="706" cy="120" r="11" fill="#17845f"/><text x="706" y="158" font-size="12" fill="#16294d" font-weight="700" text-anchor="middle">ครบ 90 วัน</text><line x1="505" y1="120" x2="695" y2="120" stroke="#cfd8e6" stroke-width="3"/><rect x="610" y="80" width="84" height="22" rx="11" fill="#fdf3e3"/><text x="652" y="95" font-size="9.5" fill="#8a5a12" font-weight="700" text-anchor="middle">เตือนก่อน 5 วัน</text><text x="38" y="200" font-size="13.5" fill="#16294d" font-weight="700" text-anchor="start">รายการเตือน</text><rect x="38" y="216" width="724" height="40" rx="9" fill="#fff" stroke="#eef1f6"/><text x="56" y="234" font-size="11.5" fill="#16294d" font-weight="700" text-anchor="start">บีบ (นางสาวธัญพิชชา)</text><text x="56" y="249" font-size="10" fill="#64708a" font-weight="500" text-anchor="start">Sale Admin</text><text x="330" y="241" font-size="11" fill="#48566e" font-weight="600" text-anchor="start">ประเมิน 30 วัน</text><rect x="600" y="227" width="148" height="19" rx="9" fill="#fdeaea"/><text x="674.0" y="241" font-size="10.5" fill="#9b1c1c" font-weight="700" text-anchor="middle">เลยกำหนด 17 วัน</text><rect x="38" y="262" width="724" height="40" rx="9" fill="#fff" stroke="#eef1f6"/><text x="56" y="280" font-size="11.5" fill="#16294d" font-weight="700" text-anchor="start">พลอย (นางสาวนลพรรณ)</text><text x="56" y="295" font-size="10" fill="#64708a" font-weight="500" text-anchor="start">Accountant</text><text x="330" y="287" font-size="11" fill="#48566e" font-weight="600" text-anchor="start">ประเมิน 60 วัน</text><rect x="600" y="273" width="148" height="19" rx="9" fill="#fdf3e3"/><text x="674.0" y="287" font-size="10.5" fill="#8a5a12" font-weight="700" text-anchor="middle">เหลืออีก 3 วัน</text><rect x="38" y="308" width="724" height="40" rx="9" fill="#fff" stroke="#eef1f6"/><text x="56" y="326" font-size="11.5" fill="#16294d" font-weight="700" text-anchor="start">มิ้ง (นางสาวสิรินทรา)</text><text x="56" y="341" font-size="10" fill="#64708a" font-weight="500" text-anchor="start">ไลฟ์สด</text><text x="330" y="333" font-size="11" fill="#48566e" font-weight="600" text-anchor="start">ประเมิน 30 วัน</text><rect x="600" y="319" width="148" height="19" rx="9" fill="#e3f5ec"/><text x="674.0" y="333" font-size="10.5" fill="#12674a" font-weight="700" text-anchor="middle">เสร็จแล้ว</text><circle cx="26" cy="120" r="13" fill="#d62030"/><text x="26" y="125" fill="#fff" font-size="13" font-weight="800" text-anchor="middle">1</text><circle cx="26" cy="236" r="13" fill="#d62030"/><text x="26" y="241" fill="#fff" font-size="13" font-weight="800" text-anchor="middle">2</text>
+</svg><div class="cap"><b>ภาพที่ 6</b> — ① ระบบเตือนล่วงหน้า 5 วันก่อนกำหนดจริงทุกจุด ② รายการเตือนพร้อมสถานะ</div></div>
+
+<h3>ระบบคำนวณให้อย่างไร</h3>
+<p>ระบบดึง <b>วันเริ่มงาน</b> มาบวก 30 / 60 / 90 วัน เพื่อหา “กำหนดจริง” แล้ว <b>หักออกอีก 5 วัน</b> เป็นวันที่ต้องส่งเอกสาร</p>
+<table>
+<tr><th style="width:28%">คำศัพท์</th><th>ความหมาย</th></tr>
+<tr><td><b>กำหนดจริง</b></td><td>วันที่พนักงานครบทดลองงานตามจริง</td></tr>
+<tr><td><b>ต้องส่งภายใน</b></td><td>กำหนดจริง ลบ 5 วัน — เผื่อเวลาให้หัวหน้าประเมินและส่งเอกสารทัน</td></tr>
+<tr><td><span class="pill r">เลยกำหนด</span></td><td>พ้นวันที่ต้องส่งแล้วแต่ยังไม่ติ๊กเสร็จ ตัวเลขติดลบคือจำนวนวันที่เลยมา</td></tr>
+<tr><td><span class="pill y">ใกล้ถึง</span></td><td>เหลือไม่เกิน 7 วัน ควรเริ่มดำเนินการได้แล้ว</td></tr>
+<tr><td><span class="pill g">เสร็จแล้ว</span></td><td>ติ๊กว่าดำเนินการเรียบร้อย พร้อมวันที่ส่งและวันประเมิน</td></tr>
+</table>
+
+<div class="note info"><i class="ti ti-info-circle"></i><div>
+<b>เลข -17 หมายความว่าอย่างไร?</b> แปลว่าเลยกำหนดที่ต้องส่งมาแล้ว 17 วัน ไม่ใช่ระบบคำนวณผิด
+ถ้าเห็นเลขติดลบเยอะ ๆ แปลว่างานค้างสะสม ควรรีบเคลียร์
+</div></div>
+
+<h3>เพิ่มพนักงานเข้าระบบ</h3>
+<ol class="steps">
+<li><b>กดปุ่ม “ซิงก์พนักงานใหม่”</b> ระบบจะดึงรายชื่อพนักงานใหม่จากทะเบียนพนักงานมาให้เลือก
+  <ul><li>คนที่เพิ่มไปแล้วจะถูกกรองออกอัตโนมัติ ไม่ต้องกลัวซ้ำ</li></ul></li>
+<li><b>ติ๊กเลือกคนที่ต้องการ</b> แล้วกด “เพิ่มรายการที่เลือก”</li>
+<li><b>หรือกด “+ เพิ่มรายการ”</b> ถ้าอยากเพิ่มทีละคนเอง — ต้องกรอกวันเริ่มงานให้ถูก</li>
+</ol>
+
+<h3>บันทึกว่าดำเนินการแล้ว</h3>
+<ol class="steps">
+<li><b>หาแถวของงานนั้น</b> ในแท็บ “รายการเตือน”</li>
+<li><b>กดติ๊กช่องเสร็จ</b> แล้วกรอกวันที่ส่งเอกสารและวันที่ประเมิน</li>
+<li><b>รายการจะเปลี่ยนเป็นสีเขียว</b> และหายออกจากกลุ่มที่ค้าง</li>
+</ol>
+
+<div class="note stop"><i class="ti ti-alert-octagon"></i><div>
+<b>ทำแล้วต้องติ๊กด้วย</b> — ปัญหาที่เจอบ่อยที่สุดคือ HR ทำงานเสร็จจริงแต่ลืมติ๊กในระบบ
+ทำให้รายงานผู้บริหารขึ้นว่าค้างทั้งที่ทำไปแล้ว ควรติ๊กทันทีหลังส่งเอกสาร
+</div></div>
+
+<h3>ต่ออายุทดลองงาน</h3>
+<ol class="steps">
+<li><b>เปิดรายการของคนนั้น</b> แล้วกดแก้ไข</li>
+<li><b>ใส่จำนวนวันที่ต่ออายุ</b> เช่น 30 หรือ 60 วัน</li>
+<li><b>ระบบสร้างรายการประเมินเพิ่มให้เอง</b> เช่น ต่อ 15 วัน จะมีรายการ “ครบ 105 วัน” โผล่ขึ้นมา</li>
+</ol>
+
+<h3>พิมพ์แบบประเมินผลการทดลองงาน</h3>
+<ol class="steps">
+<li><b>ไปแท็บ “แบบประเมินผลการทดลองงาน”</b></li>
+<li><b>ค้นหาชื่อพนักงาน</b> ระบบจะเติมข้อมูลพื้นฐานให้อัตโนมัติ</li>
+<li><b>กรอกคะแนนและความเห็น</b> ให้ครบทุกหัวข้อ</li>
+<li><b>กดพิมพ์</b> ได้เอกสาร 2 หน้าพร้อมช่องลงนาม</li>
+</ol>
+
+<h3>ตรวจรายการซ้ำ</h3>
+<p>ถ้าสงสัยว่ามีชื่อซ้ำ ให้กดปุ่ม <b>“ตรวจรายการซ้ำ”</b> ระบบจะแสดงรายการที่ซ้ำให้ดูก่อน แล้วลบตัวเกินให้
+โดย <b>เก็บตัวที่ติ๊กเสร็จไว้มากกว่าเสมอ</b> เพื่อไม่ให้ประวัติหาย</p>
+
+<h3>รายงานผู้บริหาร</h3>
+<ol class="steps">
+<li><b>ไปแท็บ “รายงาน / Dashboard”</b> เลือกช่วงวันที่หรือกดปุ่มลัด</li>
+<li><b>อ่านบทสรุปผู้บริหาร</b> ซึ่งระบบเขียนข้อค้นพบและข้อเสนอให้อัตโนมัติจากตัวเลขจริง</li>
+<li><b>กด “ดูตัวอย่าง / บันทึก PDF”</b> ตรวจแล้วบันทึกหรือพิมพ์</li>
+</ol>
+<p>รายงานแบ่งเป็น 4 ส่วน: บทสรุปผู้บริหาร · ภาพรวมเทียบงวดก่อน · วิเคราะห์รายแผนก · ภาคผนวกรายชื่อ พร้อมช่องลงนาม 3 ช่องท้ายเล่ม</p>
+</section>
+<section id="training">
+<h2><span class="ic"><i class="ti ti-school"></i></span>ระบบฝึกอบรมพนักงาน</h2>
+<div class="lead">วางแผนอบรมประจำปี จัดหลักสูตร ลงทะเบียนด้วย QR และเก็บประวัติการอบรมรายบุคคล</div>
+
+<div class="fig"><svg viewBox="0 0 800 250" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans Thai, sans-serif">
+<rect width="800" height="250" fill="#f2f4f8"/>
+<rect x="14" y="12" width="772" height="226" rx="12" fill="#fff" stroke="#e2e7ef"/>
+<rect x="14" y="12" width="772" height="40" rx="12" fill="#16294d"/>
+<rect x="14" y="40" width="772" height="12" fill="#16294d"/>
+<circle cx="36" cy="32" r="5" fill="#ff5f57"/><circle cx="52" cy="32" r="5" fill="#febc2e"/><circle cx="68" cy="32" r="5" fill="#28c840"/>
+<text x="88" y="37" fill="#fff" font-size="13" font-weight="700">ระบบฝึกอบรมพนักงาน</text>
+<rect x="38" y="66" width="352" height="150" rx="11" fill="#fff" stroke="#e2e7ef"/><text x="60" y="94" font-size="12.5" fill="#16294d" font-weight="700" text-anchor="start">หลักสูตร: ความปลอดภัยในการทำงาน</text><text x="60" y="116" font-size="11" fill="#64708a" font-weight="500" text-anchor="start">วิทยากร: คุณสมชาย · 3 ชม. · ปี 2569</text><rect x="60" y="130" width="140" height="64" rx="8" fill="#fbfcfe" stroke="#dde4ee"/><rect x="76" y="144" width="108" height="36" fill="#16294d"/><rect x="86" y="154" width="12" height="12" fill="#fff"/><rect x="162" y="154" width="12" height="12" fill="#fff"/><rect x="86" y="158" width="88" height="4" fill="#fff"/><text x="130" y="204" font-size="9.5" fill="#64708a" font-weight="600" text-anchor="middle">QR ลงทะเบียน</text><rect x="214" y="130" width="158" height="64" rx="8" fill="#fff3e6" stroke="#f3cdb4"/><text x="293" y="152" font-size="11" fill="#8a3d0f" font-weight="700" text-anchor="middle">พนักงานสแกน</text><text x="293" y="170" font-size="10" fill="#8a3d0f" font-weight="500" text-anchor="middle">กรอกชื่อ-แผนก</text><text x="293" y="186" font-size="10" fill="#8a3d0f" font-weight="500" text-anchor="middle">ผล = รอประเมิน</text><rect x="406" y="66" width="356" height="150" rx="11" fill="#fff" stroke="#e2e7ef"/><text x="428" y="94" font-size="12.5" fill="#16294d" font-weight="700" text-anchor="start">ผู้เข้าร่วมอบรม</text><rect x="428" y="108" width="54" height="19" rx="9" fill="#dcfce7"/><text x="455.0" y="122" font-size="10.5" fill="#166534" font-weight="700" text-anchor="middle">ผ่าน</text><rect x="490" y="108" width="74" height="19" rx="9" fill="#fbf0d9"/><text x="527.0" y="122" font-size="10.5" fill="#8a5a12" font-weight="700" text-anchor="middle">รอประเมิน</text><rect x="572" y="108" width="62" height="19" rx="9" fill="#fde4e4"/><text x="603.0" y="122" font-size="10.5" fill="#9b1c1c" font-weight="700" text-anchor="middle">ไม่ผ่าน</text><rect x="428" y="136" width="312" height="30" rx="8" fill="#fbf0d9" stroke="#ebd9ae"/><text x="444" y="156" font-size="10.5" fill="#7a5a12" font-weight="600" text-anchor="start">ตั้งผลให้ 12 คนที่ยังรอประเมิน:</text><rect x="620" y="141" width="52" height="19" rx="9" fill="#fff"/><text x="646.0" y="155" font-size="10.5" fill="#166534" font-weight="700" text-anchor="middle">ผ่านทั้งหมด</text><rect x="428" y="174" width="312" height="28" rx="8" fill="#fbfcfe" stroke="#dde4ee"/><text x="444" y="192" font-size="10.5" fill="#16294d" font-weight="500" text-anchor="start">นายสมชาย ใจดี — คลังสินค้า</text><rect x="660" y="178" width="68" height="19" rx="9" fill="#dcfce7"/><text x="694.0" y="192" font-size="10.5" fill="#166534" font-weight="700" text-anchor="middle">ผ่าน ▾</text><circle cx="26" cy="160" r="13" fill="#d62030"/><text x="26" y="165" fill="#fff" font-size="13" font-weight="800" text-anchor="middle">1</text><circle cx="394" cy="150" r="13" fill="#d62030"/><text x="394" y="155" fill="#fff" font-size="13" font-weight="800" text-anchor="middle">2</text>
+</svg><div class="cap"><b>ภาพที่ 7</b> — ① พนักงานสแกน QR เพื่อลงทะเบียนเอง ② HR ตั้งผลการอบรมทีหลัง</div></div>
+
+<h3>สร้างหลักสูตร</h3>
+<ol class="steps">
+<li><b>กด “เพิ่มหลักสูตร”</b> แล้วกรอกชื่อ วิทยากร จำนวนชั่วโมง งบประมาณ และปี</li>
+<li><b>ใส่รายละเอียดหลักสูตร</b> ว่าเรียนอะไร ผู้เรียนจะได้อะไร</li>
+<li><b>ใส่ลิงก์บทเรียน</b> (ถ้ามี) เช่นลิงก์ YouTube หรือ Google Drive
+  <ul><li>พิมพ์ <code>youtu.be/xxxx</code> เฉย ๆ ก็ได้ ระบบเติมส่วนหน้าให้เอง</li>
+      <li>กดปุ่ม “เปิด” เพื่อทดสอบลิงก์ก่อนบันทึก</li></ul></li>
+<li><b>กดบันทึก</b></li>
+</ol>
+
+<h3>ให้พนักงานลงทะเบียนด้วย QR</h3>
+<ol class="steps">
+<li><b>เปิดหลักสูตรที่ต้องการ</b> แล้วกดปุ่ม “QR ลงทะเบียน”</li>
+<li><b>พิมพ์ QR ออกมาแปะหน้าห้อง</b> หรือฉายขึ้นจอ</li>
+<li><b>พนักงานสแกนแล้วกรอกชื่อกับแผนก</b> ระบบบันทึกเข้าประวัติทันที ผลเริ่มต้นเป็น “รอประเมิน”</li>
+<li><b>ถ้าหลักสูตรมีลิงก์บทเรียน</b> พนักงานจะเห็นปุ่มใหญ่ให้กดดูวิดีโอได้เลยในหน้าเดียวกัน</li>
+</ol>
+
+<div class="note tip"><i class="ti ti-bulb"></i><div>
+<b>หลักสูตรออนไลน์ล้วนทำได้ในหน้าเดียว</b> — แปะ QR ไว้ที่บอร์ด พนักงานสแกน → ลงทะเบียน → กดดูคลิปต่อทันที
+ไม่ต้องส่งลิงก์ในไลน์กลุ่มให้กระจัดกระจาย
+</div></div>
+
+<h3>ตั้งผลการอบรม</h3>
+<ol class="steps">
+<li><b>เปิดหลักสูตร</b> เลื่อนลงไปที่ตาราง “ผู้เข้าร่วมอบรม”</li>
+<li><b>เปลี่ยนผลในช่องดรอปดาวน์</b> เลือก ผ่าน / รอประเมิน / ไม่ผ่าน — <b>บันทึกทันทีที่เลือก</b> ไม่ต้องกดบันทึกซ้ำ</li>
+<li><b>ใส่คะแนน</b> ในช่องถัดไป (ถ้ามีการวัดผล)</li>
+<li><b>หรือใช้ปุ่มตั้งผลหมู่</b> ถ้ามีคนค้าง “รอประเมิน” จะมีแถบเหลืองขึ้นมาให้กด “ผ่านทั้งหมด” ทีเดียว
+  <ul><li>ปุ่มนี้แตะเฉพาะคนที่ยังรอประเมิน คนที่ตั้งผลไว้แล้วจะไม่ถูกเขียนทับ</li></ul></li>
+</ol>
+
+<div class="note warn"><i class="ti ti-alert-triangle"></i><div>
+<b>กด F5 ตรวจสักครั้งหลังตั้งผล</b> เพื่อให้แน่ใจว่าบันทึกลงระบบจริง ไม่ใช่แค่เปลี่ยนบนหน้าจอ
+ถ้าอินเทอร์เน็ตหลุดระหว่างนั้น ระบบจะย้อนค่ากลับพร้อมแจ้งเตือน
+</div></div>
+
+<h3>ดูประวัติรายบุคคล</h3>
+<p>ไปแท็บ <b>“ประวัติรายบุคคล”</b> แล้วค้นชื่อพนักงาน จะเห็นหลักสูตรทั้งหมดที่เคยอบรม จำนวนชั่วโมงสะสม และผลแต่ละครั้ง
+ใช้ตอนทำเรื่องเลื่อนตำแหน่งหรือตรวจสอบตามข้อกำหนดได้ทันที</p>
+</section>
+<section id="attendance">
+<h2><span class="ic"><i class="ti ti-clipboard-list"></i></span>ระบบบันทึกการมาทำงาน</h2>
+<div class="lead">กรอกการมาทำงานรายวันแบบตาราง แยกตามแผนก พร้อมสรุปรายปีและสิทธิการลา</div>
+
+<div class="fig"><svg viewBox="0 0 800 320" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans Thai, sans-serif">
+<rect width="800" height="320" fill="#f2f4f8"/>
+<rect x="14" y="12" width="772" height="296" rx="12" fill="#fff" stroke="#e2e7ef"/>
+<rect x="14" y="12" width="772" height="40" rx="12" fill="#16294d"/>
+<rect x="14" y="40" width="772" height="12" fill="#16294d"/>
+<circle cx="36" cy="32" r="5" fill="#ff5f57"/><circle cx="52" cy="32" r="5" fill="#febc2e"/><circle cx="68" cy="32" r="5" fill="#28c840"/>
+<text x="88" y="37" fill="#fff" font-size="13" font-weight="700">ระบบบันทึกการมาทำงาน</text>
+<text x="38" y="72" font-size="13.5" fill="#16294d" font-weight="700" text-anchor="start">ตารางกรอกการมาทำงาน — เดือนกันยายน 2569</text><text x="238" y="100" font-size="10.5" fill="#64708a" font-weight="600" text-anchor="middle">1</text><text x="290" y="100" font-size="10.5" fill="#64708a" font-weight="600" text-anchor="middle">2</text><text x="342" y="100" font-size="10.5" fill="#64708a" font-weight="600" text-anchor="middle">3</text><text x="394" y="100" font-size="10.5" fill="#64708a" font-weight="600" text-anchor="middle">4</text><text x="446" y="100" font-size="10.5" fill="#64708a" font-weight="600" text-anchor="middle">5</text><text x="498" y="100" font-size="10.5" fill="#64708a" font-weight="600" text-anchor="middle">6</text><text x="550" y="100" font-size="10.5" fill="#64708a" font-weight="600" text-anchor="middle">7</text><text x="602" y="100" font-size="10.5" fill="#64708a" font-weight="600" text-anchor="middle">8</text><text x="654" y="100" font-size="10.5" fill="#64708a" font-weight="600" text-anchor="middle">9</text><text x="706" y="100" font-size="10.5" fill="#64708a" font-weight="600" text-anchor="middle">10</text><rect x="38" y="118" width="190" height="34" rx="7" fill="#fff" stroke="#eef1f6"/><text x="52" y="140" font-size="11" fill="#16294d" font-weight="600" text-anchor="start">นายสมชาย ใจดี</text><rect x="219" y="118" width="38" height="34" rx="7" fill="#e3f5ec" stroke="#fff"/><text x="238" y="140" font-size="12" fill="#12674a" font-weight="800" text-anchor="middle">✓</text><rect x="271" y="118" width="38" height="34" rx="7" fill="#e3f5ec" stroke="#fff"/><text x="290" y="140" font-size="12" fill="#12674a" font-weight="800" text-anchor="middle">✓</text><rect x="323" y="118" width="38" height="34" rx="7" fill="#e7f0fa" stroke="#fff"/><text x="342" y="140" font-size="12" fill="#1b4c7a" font-weight="800" text-anchor="middle">ล</text><rect x="375" y="118" width="38" height="34" rx="7" fill="#e3f5ec" stroke="#fff"/><text x="394" y="140" font-size="12" fill="#12674a" font-weight="800" text-anchor="middle">✓</text><rect x="427" y="118" width="38" height="34" rx="7" fill="#e3f5ec" stroke="#fff"/><text x="446" y="140" font-size="12" fill="#12674a" font-weight="800" text-anchor="middle">✓</text><rect x="479" y="118" width="38" height="34" rx="7" fill="#f2f4f8" stroke="#fff"/><text x="498" y="140" font-size="12" fill="#97a1b5" font-weight="800" text-anchor="middle">-</text><rect x="531" y="118" width="38" height="34" rx="7" fill="#f2f4f8" stroke="#fff"/><text x="550" y="140" font-size="12" fill="#97a1b5" font-weight="800" text-anchor="middle">-</text><rect x="583" y="118" width="38" height="34" rx="7" fill="#e3f5ec" stroke="#fff"/><text x="602" y="140" font-size="12" fill="#12674a" font-weight="800" text-anchor="middle">✓</text><rect x="635" y="118" width="38" height="34" rx="7" fill="#fdf3e3" stroke="#fff"/><text x="654" y="140" font-size="12" fill="#8a5a12" font-weight="800" text-anchor="middle">ส</text><rect x="687" y="118" width="38" height="34" rx="7" fill="#e3f5ec" stroke="#fff"/><text x="706" y="140" font-size="12" fill="#12674a" font-weight="800" text-anchor="middle">✓</text><rect x="38" y="160" width="190" height="34" rx="7" fill="#fff" stroke="#eef1f6"/><text x="52" y="182" font-size="11" fill="#16294d" font-weight="600" text-anchor="start">นางสาวมานี มีนา</text><rect x="219" y="160" width="38" height="34" rx="7" fill="#e3f5ec" stroke="#fff"/><text x="238" y="182" font-size="12" fill="#12674a" font-weight="800" text-anchor="middle">✓</text><rect x="271" y="160" width="38" height="34" rx="7" fill="#fdeaea" stroke="#fff"/><text x="290" y="182" font-size="12" fill="#9b1c1c" font-weight="800" text-anchor="middle">ข</text><rect x="323" y="160" width="38" height="34" rx="7" fill="#e3f5ec" stroke="#fff"/><text x="342" y="182" font-size="12" fill="#12674a" font-weight="800" text-anchor="middle">✓</text><rect x="375" y="160" width="38" height="34" rx="7" fill="#e3f5ec" stroke="#fff"/><text x="394" y="182" font-size="12" fill="#12674a" font-weight="800" text-anchor="middle">✓</text><rect x="427" y="160" width="38" height="34" rx="7" fill="#e3f5ec" stroke="#fff"/><text x="446" y="182" font-size="12" fill="#12674a" font-weight="800" text-anchor="middle">✓</text><rect x="479" y="160" width="38" height="34" rx="7" fill="#f2f4f8" stroke="#fff"/><text x="498" y="182" font-size="12" fill="#97a1b5" font-weight="800" text-anchor="middle">-</text><rect x="531" y="160" width="38" height="34" rx="7" fill="#f2f4f8" stroke="#fff"/><text x="550" y="182" font-size="12" fill="#97a1b5" font-weight="800" text-anchor="middle">-</text><rect x="583" y="160" width="38" height="34" rx="7" fill="#e3f5ec" stroke="#fff"/><text x="602" y="182" font-size="12" fill="#12674a" font-weight="800" text-anchor="middle">✓</text><rect x="635" y="160" width="38" height="34" rx="7" fill="#e3f5ec" stroke="#fff"/><text x="654" y="182" font-size="12" fill="#12674a" font-weight="800" text-anchor="middle">✓</text><rect x="687" y="160" width="38" height="34" rx="7" fill="#e3f5ec" stroke="#fff"/><text x="706" y="182" font-size="12" fill="#12674a" font-weight="800" text-anchor="middle">✓</text><rect x="38" y="202" width="190" height="34" rx="7" fill="#fff" stroke="#eef1f6"/><text x="52" y="224" font-size="11" fill="#16294d" font-weight="600" text-anchor="start">นายพิชัย ตั้งใจ</text><rect x="219" y="202" width="38" height="34" rx="7" fill="#e3f5ec" stroke="#fff"/><text x="238" y="224" font-size="12" fill="#12674a" font-weight="800" text-anchor="middle">✓</text><rect x="271" y="202" width="38" height="34" rx="7" fill="#e3f5ec" stroke="#fff"/><text x="290" y="224" font-size="12" fill="#12674a" font-weight="800" text-anchor="middle">✓</text><rect x="323" y="202" width="38" height="34" rx="7" fill="#e3f5ec" stroke="#fff"/><text x="342" y="224" font-size="12" fill="#12674a" font-weight="800" text-anchor="middle">✓</text><rect x="375" y="202" width="38" height="34" rx="7" fill="#fdf3e3" stroke="#fff"/><text x="394" y="224" font-size="12" fill="#8a5a12" font-weight="800" text-anchor="middle">ส</text><rect x="427" y="202" width="38" height="34" rx="7" fill="#e3f5ec" stroke="#fff"/><text x="446" y="224" font-size="12" fill="#12674a" font-weight="800" text-anchor="middle">✓</text><rect x="479" y="202" width="38" height="34" rx="7" fill="#f2f4f8" stroke="#fff"/><text x="498" y="224" font-size="12" fill="#97a1b5" font-weight="800" text-anchor="middle">-</text><rect x="531" y="202" width="38" height="34" rx="7" fill="#f2f4f8" stroke="#fff"/><text x="550" y="224" font-size="12" fill="#97a1b5" font-weight="800" text-anchor="middle">-</text><rect x="583" y="202" width="38" height="34" rx="7" fill="#e7f0fa" stroke="#fff"/><text x="602" y="224" font-size="12" fill="#1b4c7a" font-weight="800" text-anchor="middle">ล</text><rect x="635" y="202" width="38" height="34" rx="7" fill="#e3f5ec" stroke="#fff"/><text x="654" y="224" font-size="12" fill="#12674a" font-weight="800" text-anchor="middle">✓</text><rect x="687" y="202" width="38" height="34" rx="7" fill="#e3f5ec" stroke="#fff"/><text x="706" y="224" font-size="12" fill="#12674a" font-weight="800" text-anchor="middle">✓</text><rect x="38" y="252" width="724" height="44" rx="9" fill="#fbfcfe" stroke="#dde4ee"/><text x="56" y="270" font-size="11" fill="#16294d" font-weight="700" text-anchor="start">ความหมายสัญลักษณ์</text><rect x="56" y="276" width="44" height="19" rx="9" fill="#e3f5ec"/><text x="78.0" y="290" font-size="10.5" fill="#12674a" font-weight="700" text-anchor="middle">✓ มา</text><rect x="108" y="276" width="40" height="19" rx="9" fill="#e7f0fa"/><text x="128.0" y="290" font-size="10.5" fill="#1b4c7a" font-weight="700" text-anchor="middle">ล ลา</text><rect x="156" y="276" width="48" height="19" rx="9" fill="#fdeaea"/><text x="180.0" y="290" font-size="10.5" fill="#9b1c1c" font-weight="700" text-anchor="middle">ข ขาด</text><rect x="212" y="276" width="52" height="19" rx="9" fill="#fdf3e3"/><text x="238.0" y="290" font-size="10.5" fill="#8a5a12" font-weight="700" text-anchor="middle">ส สาย</text><rect x="272" y="276" width="60" height="19" rx="9" fill="#f2f4f8"/><text x="302.0" y="290" font-size="10.5" fill="#64708a" font-weight="700" text-anchor="middle">- วันหยุด</text><circle cx="26" cy="135" r="13" fill="#d62030"/><text x="26" y="140" fill="#fff" font-size="13" font-weight="800" text-anchor="middle">1</text><circle cx="226" cy="88" r="13" fill="#d62030"/><text x="226" y="93" fill="#fff" font-size="13" font-weight="800" text-anchor="middle">2</text>
+</svg><div class="cap"><b>ภาพที่ 8</b> — ① แต่ละแถวคือพนักงาน 1 คน ② แต่ละคอลัมน์คือวันที่</div></div>
+
+<h3>กรอกข้อมูลประจำวัน</h3>
+<ol class="steps">
+<li><b>เลือกเดือนและแผนก</b> ที่ต้องการกรอก</li>
+<li><b>คลิกที่ช่องของคนนั้นในวันนั้น</b> แล้วเลือกสัญลักษณ์</li>
+<li><b>กดปุ่มบันทึก</b> มุมบนขวา — ควรบันทึกทุกครั้งก่อนเปลี่ยนเดือนหรือปิดหน้า</li>
+</ol>
+
+<div class="note warn"><i class="ti ti-alert-triangle"></i><div>
+<b>อย่าลืมกดบันทึก</b> — การแก้ในตารางยังไม่ถูกส่งเข้าระบบจนกว่าจะกดปุ่มบันทึก ถ้าปิดหน้าก่อนข้อมูลจะหาย
+</div></div>
+
+<h3>จัดการฐานข้อมูลพนักงาน</h3>
+<ol class="steps">
+<li><b>ไปแท็บ “ข้อมูลพนักงาน”</b></li>
+<li><b>กดปุ่ม + เพื่อเพิ่มพนักงานใหม่</b> กรอกชื่อ-นามสกุล ชื่อเล่น ตำแหน่ง แผนก เบอร์โทร วันเริ่มงาน วันหยุดประจำ</li>
+<li><b>ถ้าระบบแจ้งว่าชื่อซ้ำ</b> แปลว่าเคยมีคนนี้ในระบบแล้ว
+  <ul><li>ระบบจะถามว่าต้องการ <b>คืนสภาพ</b> (กรณีพนักงานเก่ากลับมาทำงานใหม่) หรือ <b>เพิ่มเป็นคนใหม่</b> (กรณีคนละคนชื่อซ้ำกัน)</li>
+      <li>เลือก “คืนสภาพ” แล้วประวัติการมาทำงานเดิมจะยังอยู่ครบ</li></ul></li>
+<li><b>แจ้งลาออก</b> กดปุ่ม “ลาออก” ที่แถวของคนนั้น แล้วใส่วันที่</li>
+</ol>
+
+<div class="note tip"><i class="ti ti-bulb"></i><div>
+<b>คนที่ลาออกแล้วจะถูกซ่อนอัตโนมัติ</b> — ถ้าหาชื่อไม่เจอ ให้เปลี่ยนตัวกรองจาก “ทำงานอยู่” เป็น “ทั้งหมด” ก่อน
+</div></div>
+
+<h3>แท็บอื่น ๆ</h3>
+<table>
+<tr><th style="width:26%">แท็บ</th><th>ใช้ทำอะไร</th></tr>
+<tr><td><b>กรอกข้อมูล</b></td><td>ตารางกรอกการมาทำงานรายวัน</td></tr>
+<tr><td><b>แดชบอร์ด</b></td><td>สรุปภาพรวมการมาทำงานของทั้งแผนก</td></tr>
+<tr><td><b>สิทธิการลา</b></td><td>ดูว่าแต่ละคนใช้สิทธิลาไปเท่าไร เหลือเท่าไร</td></tr>
+<tr><td><b>ข้อมูลพนักงาน</b></td><td>เพิ่ม แก้ไข แจ้งลาออก</td></tr>
+<tr><td><b>สรุปรายปี</b></td><td>ภาพรวมทั้งปี ใช้ประกอบการประเมินประจำปี</td></tr>
+<tr><td><b>คะแนน / ใบเตือน</b></td><td>บันทึกใบเตือนและคะแนนพฤติกรรม</td></tr>
+</table>
+</section>
+<section id="hrtime">
+<h2><span class="ic"><i class="ti ti-calendar-time"></i></span>ระบบลงเวลา · ขาด-ลา-มาสาย</h2>
+<div class="lead">นำเข้าข้อมูลจากเครื่องสแกนนิ้ว แล้วสรุปการมาสาย ขาดงาน และ OT รายบุคคลกับรายทีม</div>
+
+<div class="fig"><svg viewBox="0 0 800 250" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans Thai, sans-serif">
+<rect width="800" height="250" fill="#f2f4f8"/>
+<rect x="14" y="12" width="772" height="226" rx="12" fill="#fff" stroke="#e2e7ef"/>
+<rect x="14" y="12" width="772" height="40" rx="12" fill="#16294d"/>
+<rect x="14" y="40" width="772" height="12" fill="#16294d"/>
+<circle cx="36" cy="32" r="5" fill="#ff5f57"/><circle cx="52" cy="32" r="5" fill="#febc2e"/><circle cx="68" cy="32" r="5" fill="#28c840"/>
+<text x="88" y="37" fill="#fff" font-size="13" font-weight="700">ระบบลงเวลา ขาด-ลา-มาสาย</text>
+<rect x="38" y="66" width="724" height="56" rx="10" fill="#eef5fc" stroke="#cfe0f2"/><text x="60" y="92" font-size="12.5" fill="#1b4c7a" font-weight="700" text-anchor="start">ลากไฟล์จาก HR Cloud มาวางที่นี่ หรือกดเพื่อเลือกไฟล์</text><text x="60" y="110" font-size="10.5" fill="#64708a" font-weight="500" text-anchor="start">รองรับไฟล์ Excel ที่ดาวน์โหลดจากเครื่องสแกนนิ้ว</text><circle cx="26" cy="94" r="13" fill="#d62030"/><text x="26" y="99" fill="#fff" font-size="13" font-weight="800" text-anchor="middle">1</text><rect x="38" y="140" width="236" height="84" rx="10" fill="#fff" stroke="#e2e7ef"/><text x="60" y="168" font-size="11.5" fill="#64708a" font-weight="600" text-anchor="start">มาสาย</text><text x="60" y="198" font-size="24" fill="#8a5a12" font-weight="800" text-anchor="start">24</text><text x="88" y="198" font-size="11" fill="#64708a" font-weight="500" text-anchor="start">ครั้ง</text><rect x="282" y="140" width="236" height="84" rx="10" fill="#fff" stroke="#e2e7ef"/><text x="304" y="168" font-size="11.5" fill="#64708a" font-weight="600" text-anchor="start">ขาดงาน</text><text x="304" y="198" font-size="24" fill="#9b1c1c" font-weight="800" text-anchor="start">3</text><text x="322" y="198" font-size="11" fill="#64708a" font-weight="500" text-anchor="start">ครั้ง</text><rect x="526" y="140" width="236" height="84" rx="10" fill="#fff" stroke="#e2e7ef"/><text x="548" y="168" font-size="11.5" fill="#64708a" font-weight="600" text-anchor="start">ชั่วโมง OT</text><text x="548" y="198" font-size="24" fill="#12674a" font-weight="800" text-anchor="start">182</text><text x="596" y="198" font-size="11" fill="#64708a" font-weight="500" text-anchor="start">ชม.</text><circle cx="26" cy="182" r="13" fill="#d62030"/><text x="26" y="187" fill="#fff" font-size="13" font-weight="800" text-anchor="middle">2</text>
+</svg><div class="cap"><b>ภาพที่ 9</b> — ① ลากไฟล์มาวางเพื่อนำเข้า ② ระบบสรุปตัวเลขให้อัตโนมัติ</div></div>
+
+<h3>นำเข้าข้อมูล</h3>
+<ol class="steps">
+<li><b>ดาวน์โหลดไฟล์จากระบบสแกนนิ้ว</b> ตามช่วงเดือนที่ต้องการ</li>
+<li><b>ลากไฟล์มาวางในกรอบ</b> หรือกดเพื่อเลือกไฟล์</li>
+<li><b>ตรวจตัวอย่างข้อมูล</b> ที่ระบบอ่านได้ ว่าชื่อและวันที่ตรงกับไฟล์ต้นทาง</li>
+<li><b>กดยืนยันนำเข้า</b></li>
+</ol>
+
+<div class="note warn"><i class="ti ti-alert-triangle"></i><div>
+<b>นำเข้าเดือนเดิมซ้ำจะทับข้อมูลเดิม</b> — ถ้าเคยแก้ไขอะไรด้วยมือไว้ในเดือนนั้น การนำเข้าใหม่จะเขียนทับ
+ควรนำเข้าให้ครบถูกต้องรอบเดียว แล้วค่อยแก้รายคนทีหลัง
+</div></div>
+
+<h3>อ่านผล</h3>
+<ul>
+<li><b>รายบุคคล</b> — ค้นชื่อพนักงานเพื่อดูว่าเดือนนี้มาสายกี่ครั้ง ขาดกี่วัน OT กี่ชั่วโมง</li>
+<li><b>รายทีม</b> — เปรียบเทียบระหว่างแผนก ใช้หาว่าทีมไหนมีปัญหาการมาสายผิดปกติ</li>
+<li><b>ส่งออกไฟล์</b> — กดปุ่มดาวน์โหลดเพื่อนำตัวเลขไปใช้ต่อในงานเงินเดือน</li>
+</ul>
+</section>
+<section id="howto">
+<h2><span class="ic"><i class="ti ti-bulb"></i></span>เทคนิคใช้งานร่วมกันทุกระบบ</h2>
+<div class="lead">เรื่องเล็ก ๆ ที่ช่วยให้ทำงานเร็วขึ้นและข้อมูลไม่เพี้ยน</div>
+
+<h3>ทำงานให้เร็วขึ้น</h3>
+<div class="cards">
+<div class="card"><div class="h"><i class="ti ti-refresh"></i>รีเฟรชแรง</div><p>กด <span class="kbd">Ctrl</span>+<span class="kbd">Shift</span>+<span class="kbd">R</span> เมื่อหน้าจอดูแปลก ๆ หรือระบบเพิ่งอัปเดต</p></div>
+<div class="card"><div class="h"><i class="ti ti-search"></i>ค้นหาก่อนเสมอ</div><p>ก่อนเพิ่มชื่อใหม่ ให้ค้นดูก่อนว่ามีอยู่แล้วหรือยัง ลดปัญหาข้อมูลซ้ำ</p></div>
+<div class="card"><div class="h"><i class="ti ti-external-link"></i>เปิดหลายแท็บ</div><p>กด “แท็บใหม่” ที่การ์ดระบบ เพื่อเทียบข้อมูลสองระบบพร้อมกัน</p></div>
+<div class="card"><div class="h"><i class="ti ti-device-mobile"></i>ใช้บนมือถือได้</div><p>ทุกระบบเปิดบนมือถือได้ แต่การกรอกตารางยาว ๆ แนะนำใช้คอมพิวเตอร์</p></div>
+</div>
+
+<h3>กติกาการกรอกข้อมูล</h3>
+<table>
+<tr><th style="width:28%">เรื่อง</th><th>แนวปฏิบัติ</th></tr>
+<tr><td><b>ชื่อ-นามสกุล</b></td><td>ใส่คำนำหน้าให้ครบและสะกดให้ตรงกับบัตรประชาชน เพราะระบบใช้ชื่อจับคู่ข้ามระบบ</td></tr>
+<tr><td><b>ชื่อแผนก</b></td><td>สะกดให้เหมือนกันทุกครั้ง — <code>Telesale</code> กับ <code>telesale</code> ระบบรวมให้ แต่ <code>Tele sale</code> จะกลายเป็นคนละแผนก</td></tr>
+<tr><td><b>วันที่</b></td><td>ใช้ปฏิทินที่ระบบให้เลือกเสมอ อย่าพิมพ์เอง เพื่อกันรูปแบบผิด</td></tr>
+<tr><td><b>เบอร์โทร</b></td><td>ใส่ครบ 10 หลัก ไม่ต้องใส่ขีดก็ได้ ระบบจัดรูปแบบให้</td></tr>
+<tr><td><b>หมายเหตุ</b></td><td>เขียนให้คนอื่นอ่านแล้วเข้าใจ อย่าใช้ตัวย่อที่รู้กันแค่คนเดียว</td></tr>
+</table>
+
+<h3>เรื่องความปลอดภัย</h3>
+<div class="note stop"><i class="ti ti-shield-lock"></i><div>
+<b>ข้อมูลในระบบเป็นข้อมูลส่วนบุคคลของพนักงาน</b>
+<ul style="margin:6px 0 0 18px">
+<li>ห้ามส่งภาพหน้าจอที่มีชื่อ เบอร์โทร หรือข้อมูลพนักงานออกนอกองค์กร</li>
+<li>ห้ามบอกรหัสผ่านให้คนอื่น แม้แต่เพื่อนร่วมทีม</li>
+<li>ออกจากระบบทุกครั้งเมื่อใช้เครื่องที่ไม่ใช่ของตัวเอง</li>
+<li>ไฟล์ PDF ที่ดาวน์โหลดมา ให้เก็บในที่ปลอดภัยและลบเมื่อใช้เสร็จ</li>
+</ul>
+</div></div>
+
+<h3>ลำดับงานประจำเดือนที่แนะนำ</h3>
+<ol class="steps">
+<li><b>ต้นเดือน</b> — นำเข้าข้อมูลลงเวลาของเดือนที่แล้ว และตรวจรายการประเมินทดลองงานที่ค้าง</li>
+<li><b>ทุกสัปดาห์</b> — อัปเดตสถานะผู้สมัคร และติ๊กงานประเมินที่ทำเสร็จแล้ว</li>
+<li><b>ทุกวัน</b> — กรอกการมาทำงาน และบันทึกผลสัมภาษณ์ในวันเดียวกับที่สัมภาษณ์</li>
+<li><b>สิ้นเดือน</b> — ออกรายงานผู้บริหารของระบบรับสมัครและระบบทดลองงาน</li>
+</ol>
+</section>
+<section id="faq">
+<h2><span class="ic"><i class="ti ti-help"></i></span>ปัญหาที่พบบ่อย</h2>
+<div class="lead">แตะที่คำถามเพื่อดูคำตอบ</div>
+<details class="faq"><summary>เข้าสู่ระบบไม่ได้ ขึ้นว่ารหัสผ่านไม่ถูกต้อง</summary><div class="a">ตรวจก่อนว่าใช้รหัสที่ตั้งไว้ตอนสมัครในระบบ ไม่ใช่รหัส Gmail · ลองพิมพ์รหัสในช่องอื่นเพื่อดูว่าพิมพ์ถูกไหม (ระวังปุ่ม Caps Lock) · ถ้ายังไม่ได้ ให้ติดต่อฝ่ายบุคคลขอตั้งรหัสใหม่</div></details><details class="faq"><summary>เพิ่มพนักงานใหม่ไม่ได้ ระบบบอกว่าชื่อซ้ำ</summary><div class="a">แปลว่ามีชื่อนี้อยู่แล้ว ส่วนใหญ่เป็นคนที่ลาออกไปแล้วจึงถูกซ่อนไว้ · เปลี่ยนตัวกรองเป็น “ทั้งหมด” แล้วค้นชื่อนั้น ถ้าเจอให้กด “คืนสภาพ” แทนการเพิ่มใหม่ · ถ้าเป็นคนละคนที่ชื่อซ้ำกันจริง ระบบมีตัวเลือกให้เพิ่มเป็นรายการใหม่แยกกัน</div></details><details class="faq"><summary>ทำไมพนักงานคนนี้ไม่ขึ้นในระบบประเมินทดลองงาน</summary><div class="a">สาเหตุที่พบบ่อยที่สุดคือไม่ได้กรอกวันเริ่มงาน · กลับไปที่ระบบรับสมัครงาน เปิดการ์ดคนนั้นแล้วเติมวันเริ่มงาน จากนั้นกด “ซิงก์พนักงานใหม่” ในระบบทดลองงาน</div></details><details class="faq"><summary>ตัวเลขในรายงานขึ้นติดลบ เช่น -17 หมายความว่าอะไร</summary><div class="a">เลขติดลบแปลว่าเลยกำหนดมาแล้วเท่านั้นวัน ไม่ใช่ระบบคำนวณผิด · ถ้าทำงานนั้นเสร็จแล้วจริง ให้กลับไปติ๊กว่าเสร็จในระบบ แล้วรายการจะหายจากกลุ่มที่ค้าง</div></details><details class="faq"><summary>กดปุ่มออกรายงาน PDF แล้วไม่มีอะไรเกิดขึ้น</summary><div class="a">เบราว์เซอร์บล็อกป็อปอัปอยู่ · กดไอคอนรูปหน้าต่างถูกบล็อกที่แถบที่อยู่เว็บด้านบน แล้วเลือก “อนุญาตเสมอ” จากนั้นกดปุ่มใหม่อีกครั้ง</div></details><details class="faq"><summary>ไฟล์ PDF ที่ได้สีหายหมด เหลือแต่ตัวอักษร</summary><div class="a">ในหน้าต่างพิมพ์ ให้กด “More settings” แล้วติ๊ก “Background graphics” · หรือใช้ปุ่ม “บันทึกเป็น PDF” ในระบบแทนการสั่งพิมพ์ ซึ่งจะได้สีครบโดยไม่ต้องตั้งค่าเอง</div></details><details class="faq"><summary>แก้ข้อมูลแล้วอีกคนยังเห็นข้อมูลเดิม</summary><div class="a">ให้อีกคนกด Ctrl+Shift+R เพื่อรีเฟรชแรง · ถ้าเปิดหน้าค้างไว้นาน ๆ ข้อมูลในหน้าจออาจเป็นของเก่า ควรรีเฟรชก่อนเริ่มกรอกทุกครั้ง</div></details><details class="faq"><summary>เห็นระบบไม่ครบเท่าเพื่อนร่วมทีม</summary><div class="a">เป็นเพราะสิทธิ์ของบทบาทต่างกัน ไม่ใช่ระบบเสีย · แจ้งฝ่ายบุคคลพร้อมบอกว่าต้องใช้ระบบไหนและเพราะอะไร</div></details><details class="faq"><summary>ลบข้อมูลผิดไปแล้ว กู้คืนได้ไหม</summary><div class="a">ระบบไม่มีถังขยะให้กู้เอง · ให้แจ้งฝ่ายบุคคลทันทีพร้อมบอกว่าลบอะไรไปเมื่อไร ยิ่งแจ้งเร็วยิ่งมีโอกาสกู้คืนได้</div></details><details class="faq"><summary>พนักงานลาออกแล้ว ต้องแจ้งกี่ระบบ</summary><div class="a">กดบันทึกลาออกในระบบรับสมัครงาน ระบบจะไปปิดสถานะในทะเบียนพนักงานให้อัตโนมัติ · แต่ถ้าพนักงานคนนั้นไม่ได้เข้ามาทางระบบรับสมัคร (เช่นเข้าทำงานก่อนใช้ระบบนี้) ต้องไปแจ้งลาออกในระบบบันทึกการมาทำงานเอง</div></details>
+
+<div class="note info" style="margin-top:20px"><i class="ti ti-message-circle"></i><div>
+<b>ยังไม่เจอคำตอบ?</b> แจ้งฝ่ายบุคคลพร้อมข้อมูล 3 อย่างนี้ จะช่วยให้แก้ได้เร็วขึ้นมาก:
+ระบบไหน · กดอะไรแล้วเกิดปัญหา · ภาพหน้าจอตอนที่ขึ้นข้อความผิดพลาด (ปิดบังชื่อพนักงานก่อนส่ง)
+</div></div>
+</section>
+
+</main>
+</div>
+
+<script>
+// ไฮไลต์หัวข้อในสารบัญตามตำแหน่งที่เลื่อนอยู่
+(function(){
+  var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
+  var secs  = links.map(function(a){ return document.querySelector(a.getAttribute('href')); }).filter(Boolean);
+  function sync(){
+    var top = window.scrollY + 120, cur = 0;
+    secs.forEach(function(s, i){ if(s.offsetTop <= top) cur = i; });
+    links.forEach(function(a, i){ a.classList.toggle('on', i === cur); });
+  }
+  window.addEventListener('scroll', sync, { passive:true });
+  sync();
+  links.forEach(function(a){
+    a.addEventListener('click', function(e){
+      var el = document.querySelector(a.getAttribute('href'));
+      if(!el) return;
+      e.preventDefault();
+      window.scrollTo({ top: el.offsetTop - 70, behavior:'smooth' });
+    });
+  });
+})();
+</script>
+</body>
+</html>
