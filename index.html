@@ -438,6 +438,12 @@ async function showHub(session){
       desc:'แผนอบรมประจำปี · หลักสูตรและผู้เข้าร่วม · แบบประเมิน QR · ประวัติการฝึกอบรมรายบุคคล',
       url:'training.html', roles:['hr','hr_manager','executive'] });
   }
+  // การ์ดคู่มือการใช้งาน — ทุกบทบาทเห็นได้ และวางไว้ท้ายสุดเสมอ
+  if(!all.some(a => a.url==='guide.html' || a.key==='guide')){
+    all.push({ key:'guide', icon:'ti-book-2', title:'คู่มือการใช้งานระบบ',
+      desc:'วิธีใช้ทุกระบบแบบทีละขั้น พร้อมภาพประกอบ · ปัญหาที่พบบ่อย · พิมพ์เก็บเป็น PDF ได้',
+      url:'guide.html', roles:[] });
+  }
   // ถ้าผู้ใช้ไม่มี role ที่กำหนด → เห็นทุกระบบ (กันล็อกเอาต์); ถ้ามี role → กรองตามสิทธิ์
   const apps = roles.length
     ? all.filter(a => !(a.roles||[]).length || a.roles.some(r => roles.includes(r)))
