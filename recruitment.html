@@ -2133,6 +2133,13 @@
   .signature{width:235px;margin:12px 0 0 auto;text-align:center;color:#685b42}
   .sig-line{border-bottom:1px dotted #9f927c;height:18px}
   .sig-label{font-size:9px;margin-top:4px;color:#9b8f79}
+  .sig-row{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:16px;page-break-inside:avoid}
+  .sig-cell{text-align:center;color:#685b42}
+  .sig-cell .sig-line{border-bottom:1px dotted #9f927c;height:26px}
+  .sig-cell .sig-name{font-size:9px;color:#9b8f79;margin-top:4px;letter-spacing:.3px}
+  .sig-cell .sig-label{font-size:9.5px;margin-top:3px;color:#6b5c3f}
+  .sig-cell .sig-label b{color:#4f3d16;font-weight:700}
+  .sig-cell .sig-date{font-size:8.5px;color:#a89c85;margin-top:3px}
   .rnote{font-size:10.5px;color:#7b8592;padding:2px 2px 7px}.rnote a{color:#16294d;font-weight:600}
   .foot{display:flex;align-items:center;justify-content:space-between;padding:10px 2px 0;color:#9aa4b2;font-size:8.8px;border-top:1px solid #edf0f4;margin-top:2px}
   .foot-brand{font-weight:700;color:#647087;letter-spacing:.5px}
@@ -2176,7 +2183,11 @@
       <section class="approval">
         <div class="approval-head"><div class="approval-title"><span class="approval-mark"></span>ความเห็นและการอนุมัติของผู้บริหาร</div><div class="approval-note">EXECUTIVE REVIEW</div></div>
         <div class="write-line"></div><div class="write-line"></div><div class="write-line"></div>
-        <div class="signature"><div class="sig-line"></div><div class="sig-label">ผู้อนุมัติ / วันที่</div></div>
+        <div class="sig-row">
+          <div class="sig-cell"><div class="sig-line"></div><div class="sig-name">(&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)</div><div class="sig-label"><b>ผู้เสนอจ้าง</b></div><div class="sig-date">วันที่ ......../......../........</div></div>
+          <div class="sig-cell"><div class="sig-line"></div><div class="sig-name">(&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)</div><div class="sig-label"><b>ผู้ตรวจสอบ</b></div><div class="sig-date">วันที่ ......../......../........</div></div>
+          <div class="sig-cell"><div class="sig-line"></div><div class="sig-name">(&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)</div><div class="sig-label"><b>ผู้อนุมัติจ้าง</b></div><div class="sig-date">วันที่ ......../......../........</div></div>
+        </div>
       </section>
       ${resumeNote}
       <div class="foot"><span class="foot-brand">MASARU HR · RECRUITMENT</span><span>จัดทำเมื่อ ${generatedAt}</span><span>เอกสารภายใน</span></div>
