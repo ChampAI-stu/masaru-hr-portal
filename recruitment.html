@@ -2182,7 +2182,10 @@
   .sig-row{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:16px;page-break-inside:avoid}
   .sig-cell{text-align:center;color:#685b42}
   .sig-cell .sig-line{border-bottom:1px dotted #9f927c;height:26px}
-  .sig-cell .sig-name{font-size:9px;color:#9b8f79;margin-top:4px;letter-spacing:.3px}
+  .sig-cell .sig-name{display:flex;align-items:flex-end;justify-content:center;gap:2px;
+    font-size:11px;color:#9b8f79;margin-top:5px;line-height:1}
+  .sig-cell .sig-name .pl{flex:1;max-width:120px;border-bottom:1px dotted #bdb3a0;height:11px}
+  .sig-cell .sig-name .pr{font-size:12px;color:#9f927c}
   .sig-cell .sig-label{font-size:9.5px;margin-top:3px;color:#6b5c3f}
   .sig-cell .sig-label b{color:#4f3d16;font-weight:700}
   .sig-cell .sig-date{font-size:8.5px;color:#a89c85;margin-top:3px}
@@ -2230,9 +2233,9 @@
         <div class="approval-head"><div class="approval-title"><span class="approval-mark"></span>ความเห็นและการอนุมัติของผู้บริหาร</div><div class="approval-note">EXECUTIVE REVIEW</div></div>
         <div class="write-line"></div><div class="write-line"></div><div class="write-line"></div>
         <div class="sig-row">
-          <div class="sig-cell"><div class="sig-line"></div><div class="sig-name">(&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)</div><div class="sig-label"><b>ผู้เสนอจ้าง</b></div><div class="sig-date">วันที่ ......../......../........</div></div>
-          <div class="sig-cell"><div class="sig-line"></div><div class="sig-name">(&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)</div><div class="sig-label"><b>ผู้ตรวจสอบ</b></div><div class="sig-date">วันที่ ......../......../........</div></div>
-          <div class="sig-cell"><div class="sig-line"></div><div class="sig-name">(&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)</div><div class="sig-label"><b>ผู้อนุมัติจ้าง</b></div><div class="sig-date">วันที่ ......../......../........</div></div>
+          <div class="sig-cell"><div class="sig-line"></div><div class="sig-name"><span class="pr">(</span><span class="pl"></span><span class="pr">)</span></div><div class="sig-label"><b>ผู้เสนอจ้าง</b></div><div class="sig-date">วันที่ ......../......../........</div></div>
+          <div class="sig-cell"><div class="sig-line"></div><div class="sig-name"><span class="pr">(</span><span class="pl"></span><span class="pr">)</span></div><div class="sig-label"><b>ผู้ตรวจสอบ</b></div><div class="sig-date">วันที่ ......../......../........</div></div>
+          <div class="sig-cell"><div class="sig-line"></div><div class="sig-name"><span class="pr">(</span><span class="pl"></span><span class="pr">)</span></div><div class="sig-label"><b>ผู้อนุมัติจ้าง</b></div><div class="sig-date">วันที่ ......../......../........</div></div>
         </div>
       </section>
       ${resumeNote}
