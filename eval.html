@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>แบบประเมินผลการทดลองงาน — MASARU</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--ink:#16294d;--muted:#64708a;--line:#e2e7ef;--bg:#eef1f6;--red:#d62030;
+      --ok:#17845f;--warn:#8a5a12;--blue:#2E75B6}
+body{font-family:'IBM Plex Sans Thai',system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.7}
+.wrap{max-width:min(920px,100%);margin:0 auto;padding:20px 16px 90px}
+
+.hd{background:linear-gradient(135deg,#0e1c38,#16294d);color:#fff;padding:20px 24px;border-radius:14px;margin-bottom:16px}
+.hd .bd{font-size:12px;font-weight:800;letter-spacing:2.5px;color:#ff8a92}
+.hd h1{font-size:20px;font-weight:800;margin-top:3px}
+.hd p{font-size:13px;opacity:.85;margin-top:4px}
+
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:14px;
+      box-shadow:0 2px 10px rgba(16,41,77,.05)}
+.card h2{font-size:16px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:9px}
+.card h2 .n{width:26px;height:26px;border-radius:50%;background:var(--ink);color:#fff;font-size:13px;
+      display:grid;place-items:center;flex-shrink:0}
+.sub{font-size:13px;color:var(--muted);margin:-6px 0 12px}
+
+.info{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media(max-width:700px){.info{grid-template-columns:1fr 1fr}}
+.info > div{background:#fbfcfe;border:1px solid var(--line);border-radius:10px;padding:9px 12px}
+.info span{display:block;font-size:11.5px;color:var(--muted)}
+.info b{font-size:14px}
+
+.stat{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:10px}
+@media(max-width:700px){.stat{grid-template-columns:repeat(2,1fr)}}
+.stat > div{background:#fdf6e6;border:1px solid #f0dfb5;border-radius:10px;padding:8px 10px;text-align:center}
+.stat span{display:block;font-size:11.5px;color:#8a5a12}
+.stat b{font-size:20px;color:#7a5a12}
+.hrnote{background:#eef5fc;border-left:4px solid var(--blue);border-radius:0 10px 10px 0;padding:11px 14px;
+        font-size:14px;white-space:pre-wrap;color:#1b4c7a}
+
+.grp{margin-bottom:16px}
+.grp > .gt{font-weight:700;font-size:14.5px;background:#f2f5fa;border-radius:8px;padding:7px 12px;margin-bottom:8px}
+.item{padding:10px 12px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:#fbfcfe}
+.item .q{font-size:14px;margin-bottom:8px}
+.scale{display:flex;gap:5px;flex-wrap:wrap}
+.scale button{width:38px;height:38px;border:1px solid #dde4ee;background:#fff;border-radius:9px;cursor:pointer;
+      font-family:inherit;font-size:14px;font-weight:700;color:#48566e;transition:all .12s}
+.scale button:hover{border-color:var(--blue);color:var(--blue)}
+.scale button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.item.miss{border-color:#f3b4b4;background:#fdf6f6}
+.legend{font-size:12px;color:var(--muted);margin-bottom:12px}
+
+textarea,input[type=text]{width:100%;font-family:inherit;font-size:14px;color:var(--ink);
+      border:1px solid #dde4ee;border-radius:10px;padding:10px 12px;background:#fff;outline:none;resize:vertical}
+textarea:focus,input[type=text]:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(46,117,182,.12)}
+label.fl{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:12px 0 5px}
+.req{color:var(--red)}
+
+.bar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);
+     padding:12px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;box-shadow:0 -4px 18px rgba(16,41,77,.09);z-index:20}
+.bar .sc{font-size:13px;color:var(--muted)}
+.bar .sc b{font-size:22px;color:var(--ink)}
+.bar button{margin-left:auto;border:0;border-radius:11px;background:var(--red);color:#fff;cursor:pointer;
+     font-family:inherit;font-size:15px;font-weight:700;padding:12px 26px}
+.bar button:disabled{opacity:.5;cursor:default}
+.bar button:hover:not(:disabled){filter:brightness(1.12)}
+
+.state{text-align:center;padding:70px 24px}
+.state .ic{font-size:52px;margin-bottom:12px}
+.state h2{font-size:21px;font-weight:800;margin-bottom:8px}
+.state p{color:var(--muted);font-size:14.5px}
+.note{border-radius:10px;padding:11px 14px;font-size:13.5px;line-height:1.7;border-left:4px solid;margin:12px 0}
+.note.warn{background:#fff8e6;border-color:#c99a2e;color:#7a5a12}
+.note.info{background:#eef5fc;border-color:var(--blue);color:#1b4c7a}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="state"><div class="ic">⏳</div><h2>กำลังเปิดแบบประเมิน...</h2></div></div>
+
+<script>
+const SUPABASE_URL = 'https://iyycyvnvfmerxkcfalea.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_ChkZClaeE6NCAxqyTqE4Yw_aTsz4zqi';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const GROUPS = [["1.ผลการปฏิบัติงาน", ["1.1 คุณภาพและความถูกต้องของงาน", "1.2 ปริมาณของงาน"]], ["2.ความรู้ในงานและการเรียนรู้", ["2.1 มีความรู้ ความเข้าใจในงานที่รับผิดชอบ", "2.2 เข้าใจวิธีและขั้นตอนการปฏิบัติงาน"]], ["3.ความรับผิดชอบต่องาน", ["3.1 ความขยันหมั่นเพียร และความใส่ใจงาน", "3.2 ปฏิบัติงานได้ทันตามเวลาที่กำหนด"]], ["4.การสื่อความ", ["4.1 การชี้แจง นำเสนอเรื่องต่างๆ แก่ผู้อื่นให้เกิดความเข้าใจตรงกัน", "4.2 การรับฟัง ตีความสารที่ผู้อื่นต้องการถ่ายทอดได้ถูกต้องครบถ้วน"]], ["5.การทำงานร่วมกับผู้อื่น มนุษย์สัมพันธ์ / ทัศนคติต่อองค์กร", ["5.1 การติดต่อประสานงานกับผู้อื่น / การให้ความร่วมมือในการทำงาน", "5.2 การคิดบวก ไม่อคติต่อเพื่อนร่วมงานและองค์กร"]], ["6.วินัยในการทำงาน", ["6.1 การปฏิบัติตามกฎระเบียบของบริษัท", "6.2 การตรงต่อเวลา ความสม่ำเสมอในการปฏิบัติงาน"]], ["7.ความสามารถในการแก้ปัญหา", ["7.1 การตัดสินใจเมื่อเกิดปัญหาหรือเหตุการณ์เฉพาะหน้าในหน่วยงาน"]], ["8.การเชื่อฟังผู้บังคับบัญชา", ["8.1 การรับฟังคำสั่งของหัวหน้า ปฏิบัติงานให้สำเร็จตามคำสั่ง"]], ["9.ความคิดริเริ่มสร้างสรรค์", ["9.1 การพัฒนาระบบงานเดิมให้มีประสิทธิภาพมากขึ้น กล้าแสดงความคิดเห็น"]]];
+const MAX = 10;
+const TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const esc = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const $ = id => document.getElementById(id);
+function thD(s){ if(!s) return '-'; const p = String(s).slice(0,10).split('-');
+  if(p.length < 3) return s; return Number(p[2])+' '+TH[Number(p[1])-1]+' '+(Number(p[0])+543); }
+
+const TOKEN = new URLSearchParams(location.search).get('t') || '';
+let SCORES = {}, INFO = null;
+
+function state(ic, title, msg, extra){
+  $('app').innerHTML = '<div class="state"><div class="ic">'+ic+'</div><h2>'+esc(title)+'</h2>'
+    + '<p>'+(msg||'')+'</p>' + (extra||'') + '</div>';
+}
+
+async function boot(){
+  if(!TOKEN){ state('🔗','ลิงก์ไม่ถูกต้อง','ไม่พบรหัสแบบประเมินในลิงก์ กรุณาเปิดจากลิงก์ที่ฝ่ายบุคคลส่งให้โดยตรง'); return; }
+  try{
+    const r = await sb.rpc('eval_form_get', { p_token: TOKEN });
+    if(r.error) throw r.error;
+    const d = r.data;
+    if(!d || !d.ok){
+      const why = d ? d.reason : 'notfound';
+      if(why === 'done')    return state('✅','แบบประเมินนี้ส่งเรียบร้อยแล้ว',
+        'ระบบได้รับผลการประเมินของ <b>'+esc(d.emp_name||'')+'</b> แล้วเมื่อ '+esc(d.submitted_at||'')+'<br>ไม่ต้องกรอกซ้ำอีกครั้ง');
+      if(why === 'expired') return state('⌛','ลิงก์หมดอายุแล้ว',
+        'ลิงก์นี้หมดอายุเมื่อ '+esc(d.expired_at||'')+'<br>กรุณาติดต่อฝ่ายบุคคลเพื่อขอลิงก์ใหม่');
+      if(why === 'revoked') return state('🚫','ลิงก์ถูกยกเลิก','ฝ่ายบุคคลได้ยกเลิกลิงก์นี้แล้ว กรุณาติดต่อฝ่ายบุคคล');
+      return state('❓','ไม่พบแบบประเมิน','ลิงก์อาจพิมพ์ไม่ครบ กรุณาคัดลอกลิงก์จากอีเมลทั้งบรรทัด');
+    }
+    INFO = d;
+    render();
+  }catch(e){
+    state('⚠️','เปิดแบบประเมินไม่ได้', esc(e.message || e) + '<br>กรุณาลองใหม่ หรือติดต่อฝ่ายบุคคล');
+  }
+}
+
+function render(){
+  const d = INFO, s = d.hr_stats || {};
+  const statBox = [['ขาดงาน','absent'],['ลากิจ','personal'],['ลาป่วย','sick'],['มาสาย','late'],['ใบเตือน','warn']]
+    .map(x => '<div><span>'+x[0]+'</span><b>'+(s[x[1]] != null && s[x[1]] !== '' ? esc(s[x[1]]) : '0')+'</b></div>').join('');
+
+  let items = '', idx = 0;
+  GROUPS.forEach(g => {
+    items += '<div class="grp"><div class="gt">'+esc(g[0])+'</div>';
+    g[1].forEach(q => {
+      const i = idx++;
+      let btns = '';
+      for(let v = 1; v <= MAX; v++) btns += '<button type="button" data-i="'+i+'" data-v="'+v+'">'+v+'</button>';
+      items += '<div class="item" id="it'+i+'"><div class="q">'+esc(q)+'</div><div class="scale">'+btns+'</div></div>';
+    });
+    items += '</div>';
+  });
+
+  $('app').innerHTML =
+    '<div class="hd"><div class="bd">MASARU</div>'
+    + '<h1>แบบประเมินผลการทดลองงาน</h1>'
+    + '<p>'+esc(d.round_label || '')+(d.expires_at ? ' · กรุณาส่งภายใน '+esc(thD(d.expires_at)) : '')+'</p></div>'
+
+    + '<div class="card"><h2><span class="n">1</span>ข้อมูลพนักงานที่ประเมิน</h2>'
+    + '<div class="info">'
+      + '<div><span>ชื่อ-นามสกุล</span><b>'+esc(d.emp_name)+(d.emp_nick ? ' ('+esc(d.emp_nick)+')' : '')+'</b></div>'
+      + '<div><span>ตำแหน่ง</span><b>'+esc(d.emp_pos || '-')+'</b></div>'
+      + '<div><span>แผนก</span><b>'+esc(d.emp_dept || '-')+'</b></div>'
+      + '<div><span>รหัสพนักงาน</span><b>'+esc(d.emp_code || '-')+'</b></div>'
+      + '<div><span>วันเริ่มงาน</span><b>'+esc(thD(d.start_date))+'</b></div>'
+      + '<div><span>ช่วงที่ประเมิน</span><b>'+esc(thD(d.period_from))+' – '+esc(thD(d.period_to))+'</b></div>'
+    + '</div></div>'
+
+    + '<div class="card"><h2><span class="n">2</span>ข้อมูลจากฝ่ายบุคคล</h2>'
+    + '<div class="sub">สถิติการมาทำงานในช่วงทดลองงาน ใช้ประกอบการพิจารณา</div>'
+    + '<div class="stat">'+statBox+'</div>'
+    + (d.hr_note ? '<div class="hrnote">'+esc(d.hr_note)+'</div>' : '')
+    + '</div>'
+
+    + '<div class="card"><h2><span class="n">3</span>ให้คะแนนการปฏิบัติงาน</h2>'
+    + '<div class="legend">ให้คะแนนข้อละ 1–10 คะแนน · 1 = ต้องปรับปรุงมาก · 5–6 = พอใช้ · 8–10 = ดีมาก · <b>ต้องให้ครบทุกข้อ</b></div>'
+    + items + '</div>'
+
+    + '<div class="card"><h2><span class="n">4</span>ความคิดเห็นของผู้ประเมิน</h2>'
+    + '<label class="fl">จุดเด่นที่ควรรักษาไว้</label><textarea id="c_good" rows="3" placeholder="เช่น เรียนรู้งานเร็ว รับผิดชอบดี..."></textarea>'
+    + '<label class="fl">สิ่งที่ควรพัฒนาเพิ่มเติม</label><textarea id="c_improve" rows="3" placeholder="เช่น ควรสื่อสารกับทีมให้มากขึ้น..."></textarea>'
+    + '<label class="fl">ความเห็นสรุป <span class="req">*</span></label>'
+    + '<textarea id="c_summary" rows="3" placeholder="สรุปภาพรวมและข้อเสนอแนะต่อฝ่ายบุคคล"></textarea>'
+    + '<label class="fl">ข้อเสนอ <span class="req">*</span></label>'
+    + '<select id="c_result" style="width:100%;font-family:inherit;font-size:14px;padding:10px 12px;border:1px solid #dde4ee;border-radius:10px;background:#fff">'
+      + '<option value="">— เลือก —</option>'
+      + '<option value="ผ่านทดลองงาน">ผ่านทดลองงาน</option>'
+      + '<option value="ทดลองงานต่อ">ทดลองงานต่อ</option>'
+      + '<option value="ไม่ผ่านทดลองงาน">ไม่ผ่านทดลองงาน</option>'
+    + '</select>'
+    + '<label class="fl">ชื่อผู้ประเมิน <span class="req">*</span></label>'
+    + '<input type="text" id="c_by" placeholder="ชื่อ-นามสกุล และตำแหน่งของท่าน" value="'+esc(d.evaluator_name || '')+'">'
+    + '<div class="note info">ส่งได้เพียงครั้งเดียว กรุณาตรวจทานก่อนกดส่ง — หลังส่งแล้วหากต้องการแก้ไข กรุณาติดต่อฝ่ายบุคคล</div>'
+    + '</div>'
+
+    + '<div class="bar"><div class="sc">คะแนนรวม <b id="tot">0</b> / '+(countItems()*MAX)+'</div>'
+    + '<div class="sc" id="prog">ให้คะแนนแล้ว 0 / '+countItems()+' ข้อ</div>'
+    + '<button id="send" disabled>ส่งแบบประเมิน</button></div>';
+
+  document.querySelectorAll('.scale button').forEach(b => {
+    b.onclick = () => {
+      const i = b.dataset.i;
+      document.querySelectorAll('.scale button[data-i="'+i+'"]').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      SCORES[i] = Number(b.dataset.v);
+      $('it'+i).classList.remove('miss');
+      sync();
+    };
+  });
+  $('send').onclick = submit;
+  sync();
+}
+
+function countItems(){ return GROUPS.reduce((a, g) => a + g[1].length, 0); }
+function sync(){
+  const n = Object.keys(SCORES).length, tot = Object.values(SCORES).reduce((a, v) => a + v, 0);
+  $('tot').textContent = tot;
+  $('prog').textContent = 'ให้คะแนนแล้ว ' + n + ' / ' + countItems() + ' ข้อ';
+  $('send').disabled = n < countItems();
+}
+
+async function submit(){
+  const by = $('c_by').value.trim(), summary = $('c_summary').value.trim(), result = $('c_result').value;
+  if(!by){ alert('กรุณากรอกชื่อผู้ประเมิน'); $('c_by').focus(); return; }
+  if(!summary){ alert('กรุณากรอกความเห็นสรุป'); $('c_summary').focus(); return; }
+  if(!result){ alert('กรุณาเลือกข้อเสนอ'); $('c_result').focus(); return; }
+
+  const miss = [];
+  for(let i = 0; i < countItems(); i++) if(SCORES[i] == null){ miss.push(i); $('it'+i).classList.add('miss'); }
+  if(miss.length){ $('it'+miss[0]).scrollIntoView({ behavior:'smooth', block:'center' });
+    alert('ยังให้คะแนนไม่ครบ เหลืออีก ' + miss.length + ' ข้อ'); return; }
+
+  const tot = Object.values(SCORES).reduce((a, v) => a + v, 0);
+  if(!confirm('ยืนยันส่งแบบประเมินของ ' + INFO.emp_name + '?\n\nคะแนนรวม ' + tot + ' คะแนน\nข้อเสนอ: ' + result
+    + '\n\nส่งแล้วจะแก้ไขเองไม่ได้')) return;
+
+  const btn = $('send'); btn.disabled = true; btn.textContent = 'กำลังส่ง...';
+  try{
+    const r = await sb.rpc('eval_form_submit', {
+      p_token: TOKEN, p_by: by, p_total: tot,
+      p_scores: SCORES,
+      p_comments: { good: $('c_good').value.trim(), improve: $('c_improve').value.trim(),
+                    summary: summary, result: result }
+    });
+    if(r.error) throw r.error;
+    if(!r.data || !r.data.ok){
+      const why = r.data ? r.data.reason : '';
+      btn.disabled = false; btn.textContent = 'ส่งแบบประเมิน';
+      if(why === 'done') return state('✅','แบบประเมินนี้ถูกส่งไปแล้ว','ระบบได้รับผลก่อนหน้านี้แล้ว ไม่ต้องส่งซ้ำ');
+      if(why === 'expired') return state('⌛','ลิงก์หมดอายุแล้ว','กรุณาติดต่อฝ่ายบุคคลเพื่อขอลิงก์ใหม่');
+      alert('ส่งไม่สำเร็จ กรุณาลองใหม่'); return;
+    }
+    state('🎉','ส่งแบบประเมินเรียบร้อยแล้ว',
+      'ขอบคุณสำหรับการประเมิน <b>' + esc(INFO.emp_name) + '</b><br>ฝ่ายบุคคลได้รับข้อมูลแล้ว และจะดำเนินการต่อ',
+      '<div class="note info" style="max-width:520px;margin:18px auto 0;text-align:left">'
+      + 'คะแนนรวมที่ส่ง <b>' + tot + '</b> คะแนน · ข้อเสนอ: <b>' + esc(result) + '</b><br>'
+      + 'ปิดหน้านี้ได้เลย ไม่ต้องทำอะไรเพิ่ม</div>');
+  }catch(e){
+    btn.disabled = false; btn.textContent = 'ส่งแบบประเมิน';
+    alert('ส่งไม่สำเร็จ: ' + (e.message || e) + '\nกรุณาตรวจอินเทอร์เน็ตแล้วลองใหม่');
+  }
+}
+
+boot();
+</script>
+</body>
+</html>
