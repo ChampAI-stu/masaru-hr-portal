@@ -495,6 +495,39 @@ body.locked{overflow:hidden}
   .rp-badge{display:inline-block;background:#eef2f8;color:#48566e;border-radius:20px;padding:1px 9px;font-size:11.5px;margin-left:6px}
   .rp-badge.bad{background:#FDE4E4;color:#9B1C1C}
   .rp-badge.ok{background:#DCFCE7;color:#166534}
+  .tab-badge{display:inline-grid;place-items:center;min-width:19px;height:19px;padding:0 5px;margin-left:5px;
+    border-radius:20px;background:#d62030;color:#fff;font-size:11px;font-weight:800}
+  .tab-badge.hide{display:none}
+  .lk-card{border:1px solid var(--line);border-radius:12px;background:#fff;padding:14px 16px;margin-bottom:11px}
+  .lk-top{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap}
+  .lk-name{font-size:15.5px;font-weight:700}
+  .lk-meta{font-size:12.5px;color:var(--muted);margin-top:2px}
+  .lk-st{margin-left:auto;font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px}
+  .lk-st.pending{background:#fdf3e3;color:#8a5a12}
+  .lk-st.submitted{background:#dcfce7;color:#166534}
+  .lk-st.expired{background:#eceef0;color:#556066}
+  .lk-st.revoked{background:#fdeaea;color:#9b1c1c}
+  .lk-new{background:#d62030;color:#fff;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:20px;margin-left:6px}
+  .lk-url{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
+  .lk-url input{flex:1;min-width:230px;font-family:inherit;font-size:12.5px;padding:8px 10px;
+    border:1px solid var(--line);border-radius:8px;background:#f7f9fc;color:#48566e}
+  .lk-acts{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+  .lk-res{margin-top:11px;border-top:1px dashed var(--line);padding-top:11px;font-size:13.5px}
+  .lk-res .sc{font-size:22px;font-weight:800;color:var(--ink)}
+  .lk-res .row{margin-top:6px;color:#3b4a66}
+  .lk-res .row b{color:var(--ink)}
+  .lk-empty{text-align:center;color:var(--muted);padding:50px 20px}
+  .mdl-bg{position:fixed;inset:0;background:rgba(9,20,40,.5);display:none;align-items:center;justify-content:center;z-index:90;padding:18px}
+  .mdl-bg.show{display:flex}
+  .mdl{background:#fff;border-radius:15px;max-width:620px;width:100%;max-height:90vh;overflow:auto;padding:22px 24px}
+  .mdl h3{font-size:18px;margin-bottom:4px}
+  .mdl .s{font-size:13px;color:var(--muted);margin-bottom:14px}
+  .mdl label{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin:11px 0 4px}
+  .mdl input,.mdl textarea,.mdl select{width:100%;font-family:inherit;font-size:14px;padding:9px 11px;
+    border:1px solid var(--line);border-radius:9px;background:#fff;resize:vertical}
+  .mdl .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .mdl .g5{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+  .mdl .acts{display:flex;gap:9px;justify-content:flex-end;margin-top:18px}
   .rp-sec{font-size:12px;font-weight:800;letter-spacing:.5px;color:#fff;background:#16294d;
     display:inline-block;padding:4px 12px;border-radius:6px;margin-bottom:12px}
   .rp-h4{font-size:13.5px;font-weight:700;color:#16294d;margin:16px 0 8px;
@@ -622,6 +655,7 @@ body.locked{overflow:hidden}
     <button class="tab active" data-view="alert">🔔 รายการเตือน</button>
     <button class="tab" data-view="form">📝 แบบประเมินผลการทดลองงาน</button>
     <button class="tab" data-view="report">📊 รายงาน / Dashboard</button>
+    <button class="tab" data-view="links">🔗 ลิงก์ประเมิน <span class="tab-badge hide" id="lkBadge">0</span></button>
   </div>
 
   <div id="alertView">
@@ -665,6 +699,79 @@ body.locked{overflow:hidden}
   </div>
   </div><!-- /alertView -->
 </div>
+
+  <!-- โมดัลสร้างลิงก์ -->
+  <div class="mdl-bg" id="lkmBg">
+    <div class="mdl">
+      <h3>สร้างลิงก์ให้หัวหน้าประเมิน</h3>
+      <div class="s">หัวหน้าจะเปิดลิงก์กรอกได้โดยไม่ต้องมีบัญชี — เห็นเฉพาะข้อมูลพนักงานคนนี้คนเดียว</div>
+      <div class="g2">
+        <div><label>ชื่อ-นามสกุล *</label><input id="lkmName"></div>
+        <div><label>ชื่อเล่น</label><input id="lkmNick"></div>
+        <div><label>รหัสพนักงาน</label><input id="lkmCode"></div>
+        <div><label>ตำแหน่ง</label><input id="lkmPos"></div>
+        <div><label>แผนก</label><input id="lkmDept"></div>
+        <div><label>วันเริ่มงาน</label><input id="lkmStart"></div>
+      </div>
+      <label>รอบการประเมิน</label><input id="lkmRound">
+      <div class="g2">
+        <div><label>ช่วงประเมิน ตั้งแต่</label><input id="lkmFrom"></div>
+        <div><label>ถึง</label><input id="lkmTo"></div>
+      </div>
+      <label>สถิติ ขาด-ลา-มาสาย ที่หัวหน้าจะเห็น</label>
+      <div class="g5">
+        <div><label style="margin-top:0">ขาดงาน</label><input id="lkmAbsent"></div>
+        <div><label style="margin-top:0">ลากิจ</label><input id="lkmPersonal"></div>
+        <div><label style="margin-top:0">ลาป่วย</label><input id="lkmSick"></div>
+        <div><label style="margin-top:0">มาสาย</label><input id="lkmLate"></div>
+        <div><label style="margin-top:0">ใบเตือน</label><input id="lkmWarn"></div>
+      </div>
+      <label>ข้อความจากฝ่ายบุคคลถึงหัวหน้า</label>
+      <textarea id="lkmNote" rows="3" placeholder="เช่น ขาดงาน 2 วันเป็นเหตุสุดวิสัย · มาสายส่วนใหญ่ช่วงเดือนแรก · กรุณาพิจารณาประกอบ"></textarea>
+      <div class="g2">
+        <div><label>ชื่อหัวหน้าที่จะส่งให้</label><input id="lkmEvalName" placeholder="เช่น คุณสมชาย — หัวหน้าแผนกคลังสินค้า"></div>
+        <div><label>ลิงก์หมดอายุใน (วัน)</label><input id="lkmDays" value="14"></div>
+      </div>
+      <div class="acts">
+        <button class="btn" id="lkmCancel">ยกเลิก</button>
+        <button class="btn primary" id="lkmSave">สร้างลิงก์</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- โมดัลแสดงลิงก์ที่สร้างเสร็จ -->
+  <div class="mdl-bg" id="lkrBg">
+    <div class="mdl">
+      <h3>ลิงก์พร้อมส่งแล้ว</h3>
+      <div class="s">คัดลอกไปวางในอีเมลถึงหัวหน้าได้เลย</div>
+      <label>ลิงก์แบบประเมิน</label>
+      <input id="lkrUrl" readonly onclick="this.select()">
+      <div style="margin-top:8px"><button class="btn" onclick="copyBox('lkrUrl',this)">คัดลอกลิงก์</button></div>
+      <label>ข้อความอีเมลสำเร็จรูป</label>
+      <textarea id="lkrMail" rows="10" readonly onclick="this.select()"></textarea>
+      <div class="acts">
+        <button class="btn" onclick="copyBox('lkrMail',this)">คัดลอกข้อความ</button>
+        <button class="btn primary" id="lkrClose">เสร็จสิ้น</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= ลิงก์ประเมินสำหรับหัวหน้าภายนอกระบบ ================= -->
+  <div id="linksView" class="hide wrap">
+    <div class="toolbar">
+      <div class="fld"><label>สถานะ</label>
+        <select id="lkFilter">
+          <option value="all">ทั้งหมด</option>
+          <option value="pending">รอหัวหน้ากรอก</option>
+          <option value="submitted">ส่งกลับแล้ว</option>
+          <option value="expired">หมดอายุ</option>
+          <option value="revoked">ยกเลิกแล้ว</option>
+        </select></div>
+      <div class="spacer"></div>
+      <button class="btn" id="lkRefresh">↻ รีเฟรช</button>
+    </div>
+    <div id="lkBody"></div>
+  </div>
 
   <!-- ================= รายงาน / Dashboard ================= -->
   <div id="reportView" class="hide wrap">
@@ -714,6 +821,7 @@ body.locked{overflow:hidden}
         </select></div>
       <button class="btn" id="cvSync" title="ดึงชื่อ/รหัส/ตำแหน่ง/สถิติ จากแบบประเมินมาใส่ใบปะหน้า">↻ เติมข้อมูลใบปะหน้า</button>
       <button class="btn" id="fmNew">ฟอร์มใหม่</button>
+      <button class="btn" id="fmLink" title="สร้างลิงก์ให้หัวหน้าแผนกอื่นกรอกประเมิน โดยไม่ต้องมีบัญชี">🔗 สร้างลิงก์ให้หัวหน้าประเมิน</button>
       <button class="btn primary" id="fmSave">บันทึกฟอร์ม</button>
       <button class="btn ghost" id="fmPdf" title="สร้าง PDF 2 หน้า (v2)">ส่งออก PDF</button>
       <button class="btn ghost" id="fmPrint">พิมพ์</button>
@@ -3663,14 +3771,251 @@ function rpOpenPdf(){
   });
 })();
 
+
+/* ==================================================================
+   🔗 ลิงก์แบบประเมินสำหรับหัวหน้าที่ไม่มีบัญชีในระบบ
+   1 ลิงก์ = 1 การประเมิน = พนักงาน 1 คน · ส่งได้ครั้งเดียว · มีวันหมดอายุ
+   ================================================================== */
+var EVAL_LINKS = [], lkLoaded = false;
+
+function evalUrl(token){
+  var base = location.origin + location.pathname.replace(/[^\/]*$/, '');
+  return base + 'eval.html?t=' + token;
+}
+function lkStatus(r){
+  if(r.status === 'submitted') return 'submitted';
+  if(r.status === 'revoked')   return 'revoked';
+  if(r.expires_at && new Date(r.expires_at) < new Date()) return 'expired';
+  return 'pending';
+}
+var LK_LABEL = { pending:'รอหัวหน้ากรอก', submitted:'ส่งกลับแล้ว', expired:'หมดอายุ', revoked:'ยกเลิกแล้ว' };
+
+/* ---------- สร้างลิงก์: ดึงข้อมูลจากฟอร์มที่เปิดอยู่มาเติมให้ ---------- */
+function openLinkModal(){
+  var v = function(id){ var el = _q(id); return el ? String(el.value || '').trim() : ''; };
+  var name = v('pf_name') || v('cv_name');
+  if(!name){ alert('กรุณาเลือกพนักงานในแบบฟอร์มก่อน แล้วค่อยสร้างลิงก์'); return; }
+
+  var roundSel = _q('fmType');
+  var roundTxt = roundSel ? roundSel.options[roundSel.selectedIndex].text : 'ประเมินผลการทดลองงาน';
+
+  _q('lkmName').value  = name;
+  _q('lkmNick').value  = v('cv_nick');
+  _q('lkmCode').value  = v('pf_code') || v('cv_code');
+  _q('lkmPos').value   = v('pf_pos')  || v('cv_pos');
+  _q('lkmDept').value  = '';
+  _q('lkmStart').value = v('pf_start');
+  _q('lkmRound').value = roundTxt;
+  _q('lkmFrom').value  = v('pf_from') || v('cv_from');
+  _q('lkmTo').value    = v('pf_to')   || v('cv_to');
+  _q('lkmAbsent').value   = v('pf_absent')   || v('cv_absent');
+  _q('lkmPersonal').value = v('pf_personal') || v('cv_personal');
+  _q('lkmSick').value     = v('pf_sick')     || v('cv_sick');
+  _q('lkmLate').value     = v('pf_late')     || v('cv_late');
+  _q('lkmWarn').value     = v('pf_warn');
+  _q('lkmEvalName').value = '';
+  _q('lkmNote').value     = '';
+  _q('lkmDays').value     = '14';
+  _q('lkmBg').classList.add('show');
+}
+
+async function createEvalLink(){
+  var v = function(id){ return String(_q(id).value || '').trim(); };
+  if(!v('lkmName')){ alert('ต้องมีชื่อพนักงาน'); return; }
+  var days = Math.max(1, Math.min(90, parseInt(v('lkmDays'), 10) || 14));
+  var exp = new Date(Date.now() + days * 86400000);
+
+  var btn = _q('lkmSave'); btn.disabled = true; btn.textContent = 'กำลังสร้าง...';
+  try{
+    var payload = {
+      emp_name: v('lkmName'), emp_nick: v('lkmNick') || null, emp_code: v('lkmCode') || null,
+      emp_pos: v('lkmPos') || null, emp_dept: v('lkmDept') || null,
+      start_date: v('lkmStart') || null, round_label: v('lkmRound') || null,
+      period_from: v('lkmFrom') || null, period_to: v('lkmTo') || null,
+      hr_stats: { absent: v('lkmAbsent'), personal: v('lkmPersonal'), sick: v('lkmSick'),
+                  late: v('lkmLate'), warn: v('lkmWarn') },
+      hr_note: v('lkmNote') || null,
+      evaluator_name: v('lkmEvalName') || null,
+      expires_at: exp.toISOString()
+    };
+    var r = await _sb.from('hr_eval_links').insert(payload).select('token').single();
+    if(r.error) throw r.error;
+    _q('lkmBg').classList.remove('show');
+    lkLoaded = false;
+    await loadEvalLinks(true);
+    setTab('links');
+    showLinkReady(r.data.token, payload);
+  }catch(e){
+    alert('สร้างลิงก์ไม่สำเร็จ: ' + (e.message || e)
+      + '\n\nถ้าขึ้นว่าไม่พบตาราง hr_eval_links กรุณาให้ผู้ดูแลระบบติดตั้งส่วนเสริมนี้ก่อน');
+  }finally{
+    btn.disabled = false; btn.textContent = 'สร้างลิงก์';
+  }
+}
+
+/* ---------- แสดงลิงก์ที่สร้างเสร็จ พร้อมข้อความอีเมลสำเร็จรูป ---------- */
+function showLinkReady(token, p){
+  var url = evalUrl(token);
+  var mail = 'เรียน ' + (p.evaluator_name || 'หัวหน้าแผนก') + '\n\n'
+    + 'ฝ่ายบุคคลขอความอนุเคราะห์ประเมินผลการทดลองงานของ ' + p.emp_name
+    + (p.emp_pos ? ' (' + p.emp_pos + ')' : '') + '\n'
+    + 'รอบการประเมิน: ' + (p.round_label || '-') + '\n\n'
+    + 'กรุณากรอกแบบประเมินผ่านลิงก์นี้ (ไม่ต้องล็อกอิน ใช้ได้ครั้งเดียว)\n' + url + '\n\n'
+    + 'ขอความกรุณาส่งกลับภายในวันที่กำหนดในลิงก์\n\nขอบคุณครับ/ค่ะ\nฝ่ายบุคคล';
+  _q('lkrUrl').value = url;
+  _q('lkrMail').value = mail;
+  _q('lkrBg').classList.add('show');
+}
+function copyBox(id, btn){
+  var el = _q(id); el.select(); el.setSelectionRange(0, 99999);
+  try{ document.execCommand('copy'); }catch(e){}
+  if(navigator.clipboard) navigator.clipboard.writeText(el.value).catch(function(){});
+  var t = btn.textContent; btn.textContent = '✓ คัดลอกแล้ว';
+  setTimeout(function(){ btn.textContent = t; }, 1600);
+}
+
+/* ---------- โหลดและวาดรายการลิงก์ ---------- */
+async function loadEvalLinks(force){
+  if(lkLoaded && !force) return;
+  try{
+    var r = await _sb.from('hr_eval_links').select('*').order('created_at', { ascending: false }).limit(500);
+    if(r.error) throw r.error;
+    EVAL_LINKS = r.data || [];
+    lkLoaded = true;
+  }catch(e){
+    console.warn('loadEvalLinks', e);
+    _q('lkBody').innerHTML = '<div class="lk-empty">โหลดรายการไม่สำเร็จ<br><span style="font-size:13px">'
+      + esc(e.message || e) + '</span></div>';
+    return;
+  }
+  renderEvalLinks();
+  updateLkBadge();
+}
+
+function updateLkBadge(){
+  var n = EVAL_LINKS.filter(function(r){ return r.status === 'submitted' && !r.seen_by_hr; }).length;
+  var b = _q('lkBadge'); if(!b) return;
+  b.textContent = n; b.classList.toggle('hide', n === 0);
+}
+
+function renderEvalLinks(){
+  var f = _q('lkFilter').value;
+  var list = EVAL_LINKS.filter(function(r){ return f === 'all' || lkStatus(r) === f; });
+  if(!list.length){
+    _q('lkBody').innerHTML = '<div class="lk-empty">ยังไม่มีลิงก์ในหมวดนี้<br>'
+      + '<span style="font-size:13px">สร้างได้จากแท็บ “แบบประเมินผลการทดลองงาน” → ปุ่ม 🔗 สร้างลิงก์ให้หัวหน้าประเมิน</span></div>';
+    return;
+  }
+  _q('lkBody').innerHTML = list.map(function(r){
+    var st = lkStatus(r), url = evalUrl(r.token);
+    var isNew = (st === 'submitted' && !r.seen_by_hr);
+    var res = '';
+    if(st === 'submitted'){
+      var c = r.comments || {};
+      res = '<div class="lk-res">'
+        + '<div>คะแนนรวม <span class="sc">' + (r.total_score == null ? '-' : r.total_score) + '</span> คะแนน'
+        + ' · ข้อเสนอ <b>' + esc(c.result || '-') + '</b></div>'
+        + '<div class="row">ผู้ประเมิน: <b>' + esc(r.submitted_by || '-') + '</b>'
+        + ' · ส่งเมื่อ ' + esc(String(r.submitted_at || '').slice(0, 16).replace('T', ' ')) + '</div>'
+        + (c.good    ? '<div class="row"><b>จุดเด่น:</b> ' + esc(c.good) + '</div>' : '')
+        + (c.improve ? '<div class="row"><b>ควรพัฒนา:</b> ' + esc(c.improve) + '</div>' : '')
+        + (c.summary ? '<div class="row"><b>สรุป:</b> ' + esc(c.summary) + '</div>' : '')
+        + '</div>';
+    }
+    var acts = '';
+    if(st === 'pending'){
+      acts = '<div class="lk-url"><input id="lku_' + r.token + '" value="' + escAttr(url) + '" readonly onclick="this.select()">'
+        + '<button class="btn sm" onclick="copyBox(\'lku_' + r.token + '\',this)">คัดลอก</button></div>'
+        + '<div class="lk-acts">'
+        + '<button class="btn sm" onclick="reopenMail(\'' + r.token + '\')">📧 ข้อความอีเมล</button>'
+        + '<button class="btn sm danger" onclick="revokeLink(\'' + r.token + '\')">ยกเลิกลิงก์</button></div>';
+    } else if(st === 'submitted'){
+      acts = '<div class="lk-acts">'
+        + (isNew ? '<button class="btn sm primary" onclick="markSeen(\'' + r.token + '\')">✓ รับทราบแล้ว</button>' : '')
+        + '<button class="btn sm" onclick="fillFromLink(\'' + r.token + '\')">↧ เติมคะแนนลงแบบฟอร์ม</button></div>';
+    } else if(st === 'expired'){
+      acts = '<div class="lk-acts"><button class="btn sm" onclick="extendLink(\'' + r.token + '\')">⏱ ต่ออายุอีก 14 วัน</button></div>';
+    }
+    return '<div class="lk-card">'
+      + '<div class="lk-top"><div><div class="lk-name">' + esc(r.emp_name)
+        + (r.emp_nick ? ' (' + esc(r.emp_nick) + ')' : '')
+        + (isNew ? '<span class="lk-new">ใหม่</span>' : '') + '</div>'
+      + '<div class="lk-meta">' + esc(r.emp_pos || '-') + ' · ' + esc(r.round_label || '-')
+        + ' · ส่งให้ ' + esc(r.evaluator_name || 'ยังไม่ระบุ')
+        + ' · หมดอายุ ' + esc(String(r.expires_at || '').slice(0, 10)) + '</div></div>'
+      + '<span class="lk-st ' + st + '">' + LK_LABEL[st] + '</span></div>'
+      + acts + res + '</div>';
+  }).join('');
+}
+
+function findLink(t){ return EVAL_LINKS.filter(function(x){ return String(x.token) === String(t); })[0]; }
+
+function reopenMail(t){
+  var r = findLink(t); if(!r) return;
+  showLinkReady(r.token, r);
+}
+async function revokeLink(t){
+  if(!confirm('ยกเลิกลิงก์นี้? หัวหน้าจะเปิดไม่ได้อีก')) return;
+  var r = await _sb.from('hr_eval_links').update({ status: 'revoked' }).eq('token', t);
+  if(r.error){ alert('ยกเลิกไม่สำเร็จ: ' + r.error.message); return; }
+  await loadEvalLinks(true);
+}
+async function extendLink(t){
+  var exp = new Date(Date.now() + 14 * 86400000);
+  var r = await _sb.from('hr_eval_links').update({ expires_at: exp.toISOString() }).eq('token', t);
+  if(r.error){ alert('ต่ออายุไม่สำเร็จ: ' + r.error.message); return; }
+  await loadEvalLinks(true);
+}
+async function markSeen(t){
+  var r = await _sb.from('hr_eval_links').update({ seen_by_hr: true }).eq('token', t);
+  if(r.error){ alert('บันทึกไม่สำเร็จ: ' + r.error.message); return; }
+  await loadEvalLinks(true);
+}
+
+/* ---------- เติมคะแนนที่หัวหน้าส่งกลับ ลงแบบฟอร์มที่พิมพ์ได้ ---------- */
+function fillFromLink(t){
+  var r = findLink(t); if(!r || !r.scores){ alert('ไม่พบคะแนนในรายการนี้'); return; }
+  if(!confirm('เติมคะแนนของ ' + r.emp_name + ' ลงแบบฟอร์มที่เปิดอยู่?\n\nข้อมูลเดิมในฟอร์มจะถูกเขียนทับ')) return;
+  setTab('form');
+  try{
+    if(_q('pf_name')) _q('pf_name').value = r.emp_name || '';
+    if(_q('pf_pos'))  _q('pf_pos').value  = r.emp_pos || '';
+    if(_q('pf_code')) _q('pf_code').value = r.emp_code || '';
+    if(_q('pf_start'))_q('pf_start').value= r.start_date || '';
+    // คะแนนเก็บเป็น {index: value} → แปลงเป็น array ให้ setScores
+    var arr = [], keys = Object.keys(r.scores);
+    keys.forEach(function(k){ arr[Number(k)] = Number(r.scores[k]) || 0; });
+    for(var i = 0; i < arr.length; i++) if(!arr[i]) arr[i] = 0;
+    setScores(arr);
+    if(_q('pf_mgrname')) _q('pf_mgrname').value = r.submitted_by || '';
+    calcForm();
+    toast('เติมคะแนนจาก ' + (r.submitted_by || 'หัวหน้า') + ' แล้ว ✓ (ความเห็นดูได้ที่แท็บลิงก์ประเมิน)');
+  }catch(e){
+    alert('เติมข้อมูลได้ไม่ครบ กรุณาตรวจสอบอีกครั้ง: ' + (e.message || e));
+  }
+}
+
+/* ---------- ผูกปุ่ม ---------- */
+(function(){
+  var b = _q('fmLink');       if(b) b.onclick = openLinkModal;
+  var s = _q('lkmSave');      if(s) s.onclick = createEvalLink;
+  var c = _q('lkmCancel');    if(c) c.onclick = function(){ _q('lkmBg').classList.remove('show'); };
+  var k = _q('lkrClose');     if(k) k.onclick = function(){ _q('lkrBg').classList.remove('show'); };
+  var f = _q('lkFilter');     if(f) f.onchange = renderEvalLinks;
+  var rf = _q('lkRefresh');   if(rf) rf.onclick = function(){ loadEvalLinks(true); };
+  // โหลดเงียบ ๆ ตอนเปิดหน้า เพื่อให้ป้ายแจ้งเตือนขึ้นทันที
+  setTimeout(function(){ if(_sb) loadEvalLinks(true); }, 1500);
+})();
+
 /* ---------- สลับมุมมอง: รายการเตือน / แบบประเมิน ---------- */
 function showFormView(on){ setTab(on ? 'form' : 'alert'); }
 function setTab(v){
   var tabs=_q('mainTabs');
   if(tabs) tabs.querySelectorAll('.tab').forEach(function(t){ t.classList.toggle('active', t.dataset.view===v); });
-  var map={ alert:_q('alertView'), form:_q('formView'), report:_q('reportView') };
+  var map={ alert:_q('alertView'), form:_q('formView'), report:_q('reportView'), links:_q('linksView') };
   Object.keys(map).forEach(function(k){ if(map[k]) map[k].classList.toggle('hide', k!==v); });
   if(v==='report' && typeof renderReport==='function') renderReport();
+  if(v==='links'  && typeof loadEvalLinks==='function') loadEvalLinks(true);
   window.scrollTo({top:0,behavior:'smooth'});
 }
 (function(){
