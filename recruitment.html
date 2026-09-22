@@ -419,8 +419,19 @@
     .dl-nm { font-weight:600; }
     .dl-ps, .dl-dt, .dl-dy { color:var(--muted); font-size:12.5px; }
     .dl-dy { white-space:nowrap; }
+    .dl-row.has-oc { grid-template-columns:1.25fr .95fr 1.15fr auto; }
+    .dl-oc { text-align:right; }
+    .dl-pill { display:inline-block; font-size:11.5px; font-weight:700; padding:2px 10px; border-radius:20px; white-space:normal; }
+    .dl-pill.ok  { background:#e3f5ec; color:#12674a; }
+    .dl-pill.bad { background:#fdeaea; color:#9b1c1c; }
+    .dl-pill.ns  { background:#fdeee3; color:#8a3d0f; }
+    .dl-pill.rs  { background:#f3ecfb; color:#5a3a8a; }
+    .dl-pill.bk  { background:#e7f0fa; color:#1b4c7a; }
+    .dl-pill.wt  { background:#fdf3e3; color:#8a5a12; }
+    .dl-pill.gy  { background:#eceef0; color:#556066; }
     @media (max-width:760px) {
-      .dl-row { grid-template-columns:1fr; gap:2px; }
+      .dl-row, .dl-row.has-oc { grid-template-columns:1fr; gap:2px; }
+      .dl-oc { text-align:left; margin-top:3px; }
       .dl-chart { height:70px; }
     }
     @media print {
@@ -2757,6 +2768,27 @@
       return 'ยังไม่บันทึกผล';
     }
 
+    /* สถานะล่าสุดของผู้สมัคร ณ ตอนนี้ — ใช้ตอบว่า "คีย์เข้าไปแล้วผลเป็นยังไง" */
+    function curOutcome(a) {
+      const st = statusOf(a);
+      const why = (a.closeReason || '').trim();
+      if (st === 'resigned')  return { t: 'ลาออกแล้ว', c: 'rs' };
+      if (st === 'hired')     return { t: 'รับเข้าทำงาน', c: 'ok' };
+      if (isNoShow(a))        return { t: 'ไม่เข้าสัมภาษณ์' + (why ? ' · ' + why.replace(/^ไม่เข้าสัมภาษณ์[^—]*—?\s*/, '') : ''), c: 'ns' };
+      if (st === 'cancelled') return { t: why || 'ยกเลิก', c: 'gy' };
+      if (st === 'rejected')  return { t: 'ไม่ผ่าน' + (why ? ' · ' + why : ''), c: 'bad' };
+      if (st === 'offer')     return { t: a.offerSentAt ? 'ส่ง Offer แล้ว' : 'ผ่านสัมภาษณ์ · เตรียม Offer', c: 'ok' };
+      if (st === 'interview') {
+        if (!a.intDate) return { t: 'รอนัดสัมภาษณ์', c: 'wt' };
+        const dd = dayDiff(a.intDate);
+        if (dd > 0)  return { t: 'นัดแล้ว ' + (thDate(a.intDate) || a.intDate) + ' (อีก ' + dd + ' วัน)', c: 'bk' };
+        if (dd === 0) return { t: 'นัดวันนี้ ' + (a.intTime || ''), c: 'bk' };
+        return { t: 'สัมภาษณ์แล้ว · รอบันทึกผล', c: 'wt' };
+      }
+      if (st === 'screening') return { t: 'กำลังคัดกรอง', c: 'bk' };
+      return { t: 'ยังไม่ดำเนินการ', c: 'gy' };
+    }
+
     const D_KIND = {
       new:       { l: 'คีย์ผู้สมัครใหม่',      i: 'ti-user-plus',      c: '#2E75B6', bg: '#e7f0fa' },
       interview: { l: 'สัมภาษณ์',             i: 'ti-microphone',     c: '#8a5a12', bg: '#fdf3e3' },
@@ -2818,12 +2850,15 @@
         return `<div class="dl-grp">
           <div class="dl-gh" style="background:${m.bg};color:${m.c}"><i class="ti ${m.i}"></i>${m.l}
             <b>${list.length}</b></div>
-          ${list.map(e => `<div class="dl-row" onclick="openFromDaily('${e.a.id}')">
+          ${list.map(e => {
+            const oc = k === 'new' ? curOutcome(e.a) : null;
+            return `<div class="dl-row${k === 'new' ? ' has-oc' : ''}" onclick="openFromDaily('${e.a.id}')">
             <div class="dl-nm">${esc(e.a.name)}</div>
             <div class="dl-ps">${esc(e.a.pos || '-')}</div>
             <div class="dl-dt">${esc(e.detail)}</div>
+            ${oc ? `<div class="dl-oc"><span class="dl-pill ${oc.c}">${esc(oc.t)}</span></div>` : ''}
             ${same ? '' : `<div class="dl-dy">${esc(thDate(e.when) || e.when)}</div>`}
-          </div>`).join('')}
+          </div>`; }).join('')}
         </div>`;
       }).join('');
 
