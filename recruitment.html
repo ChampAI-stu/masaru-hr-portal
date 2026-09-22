@@ -2724,8 +2724,7 @@
         if (inDay(a.createdAt || a.date, f, t))
           push('new', a, a.createdAt || a.date, (a.src ? 'ช่องทาง ' + a.src : '') + (a.phone ? ' · ' + a.phone : ''));
         if (inDay(a.intDate, f, t))
-          push('interview', a, a.intDate, (a.intTime ? 'เวลา ' + a.intTime : '') +
-            (a.result === 'pass' ? ' · ผลผ่าน' : a.result === 'fail' ? ' · ผลไม่ผ่าน' : ' · ยังไม่บันทึกผล'));
+          push('interview', a, a.intDate, (a.intTime ? 'เวลา ' + a.intTime : '') + ' · ' + intOutcome(a));
         if (inDay(a.offerSentAt, f, t))
           push('offer', a, a.offerSentAt, a.offerChannel ? 'ส่งทาง ' + a.offerChannel : '');
         if (inDay(a.respondedAt, f, t))
@@ -2739,6 +2738,23 @@
           push('resign', a, a.resignDate, a.resignType || '');
       });
       return ev;
+    }
+
+    /* ผลของการนัดสัมภาษณ์ครั้งนั้น — ต้องดูสถานะปลายทางด้วย
+       เพราะเคสที่ปิดไปแล้ว (ยกเลิก/ไม่เข้าสัมภาษณ์/ไม่ผ่าน) จะไม่มีค่าในช่อง "ผล" */
+    function intOutcome(a) {
+      const st = statusOf(a);
+      if (a.result === 'pass') return 'ผลผ่าน';
+      if (a.result === 'fail') return 'ผลไม่ผ่าน';
+      if (isNoShow(a))         return 'ไม่เข้าสัมภาษณ์' + (a.closeReason ? ' — ' + a.closeReason.replace(/^ไม่เข้าสัมภาษณ์[^—]*—?\s*/, '') : '');
+      if (st === 'cancelled')  return 'ยกเลิก' + (a.closeReason ? ' — ' + a.closeReason : '');
+      if (st === 'rejected')   return 'ปิดเคส' + (a.closeReason ? ' — ' + a.closeReason : '');
+      if (st === 'hired')      return 'รับเข้าทำงานแล้ว';
+      if (st === 'resigned')   return 'รับเข้าแล้วและลาออกแล้ว';
+      if (st === 'offer')      return 'ผ่าน → อยู่ขั้น Offer';
+      const dd = dayDiff(a.intDate);
+      if (dd !== null && dd > 0) return 'รอถึงวันนัด';
+      return 'ยังไม่บันทึกผล';
     }
 
     const D_KIND = {
