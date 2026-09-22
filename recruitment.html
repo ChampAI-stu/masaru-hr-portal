@@ -117,9 +117,10 @@
     #main { flex: 1; display: flex; overflow: hidden; }
     .pg { display: none; flex: 1; overflow: hidden; }
     /* หน้าที่เป็นคอลัมน์เดียว ให้เลื่อนดูได้เมื่อเนื้อหายาว */
-    #pg-int, #pg-start, #pg-rep, #pg-hired, #pg-resign { overflow-y: auto; overflow-x: hidden; }
+    #pg-int, #pg-start, #pg-rep, #pg-hired, #pg-resign, #pg-daily { overflow-y: auto; overflow-x: hidden; }
     #pg-int .rep-wrap, #pg-start .rep-wrap, #pg-rep .rep-wrap,
-    #pg-hired .rep-wrap, #pg-resign .rep-wrap { padding-bottom: 60px; }
+    #pg-hired .rep-wrap, #pg-resign .rep-wrap, #pg-daily .rep-wrap { padding-bottom: 60px; }
+    #pg-daily .rep-wrap { max-width: min(1080px, 100%); }
     /* หน้าตารางกว้าง ให้ใช้พื้นที่เต็มจอกว่าหน้าอื่น */
     #pg-hired .rep-wrap { max-width: min(1240px, 100%); }
     /* หน้าคนลาออก — ใช้เต็มความกว้างจอ ตารางจะได้อ่านง่าย ไม่ต้องบีบ */
@@ -395,6 +396,41 @@
     .rs-foot { margin-top:12px; font-size:12.5px; color:var(--muted); background:#fff;
       border:1px solid #e3e8f0; border-radius:9px; padding:9px 12px; line-height:1.7; }
     .rs-foot b { color:var(--ink); }
+    /* ── บันทึกงานรายวัน ── */
+    .dl-bar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+    .dl-bar input[type=date] { font-family:inherit; font-size:13px; padding:7px 10px;
+      border:1px solid var(--line); border-radius:9px; background:#fff; }
+    .dl-to { font-size:13px; color:var(--muted); }
+    .dl-title { font-size:16px; font-weight:700; margin-bottom:12px; }
+    .dl-title b { color:var(--accent, #d62030); }
+    .dl-chart { display:flex; align-items:flex-end; gap:5px; height:92px; background:#fff;
+      border:1px solid var(--line); border-radius:11px; padding:10px 12px 6px; }
+    .dl-col { flex:1; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; height:100%; gap:3px; }
+    .dl-col i { display:block; width:100%; max-width:26px; min-height:2px; background:#2E75B6;
+      border-radius:4px 4px 0 0; opacity:.85; }
+    .dl-col span { font-size:10px; color:var(--faint); }
+    .dl-clab { font-size:11.5px; color:var(--muted); margin:5px 0 16px; text-align:center; }
+    .dl-grp { margin-bottom:14px; border:1px solid var(--line); border-radius:12px; overflow:hidden; background:#fff; }
+    .dl-gh { display:flex; align-items:center; gap:8px; padding:9px 14px; font-size:13.5px; font-weight:700; }
+    .dl-gh b { margin-left:auto; font-size:14px; }
+    .dl-row { display:grid; grid-template-columns:1.4fr 1fr 1.6fr auto; gap:10px; align-items:center;
+      padding:9px 14px; border-top:1px solid #eef1f6; font-size:13.5px; cursor:pointer; }
+    .dl-row:hover { background:#f7f9fc; }
+    .dl-nm { font-weight:600; }
+    .dl-ps, .dl-dt, .dl-dy { color:var(--muted); font-size:12.5px; }
+    .dl-dy { white-space:nowrap; }
+    @media (max-width:760px) {
+      .dl-row { grid-template-columns:1fr; gap:2px; }
+      .dl-chart { height:70px; }
+    }
+    @media print {
+      #sidebar, .dl-bar, .pg:not(#pg-daily) { display:none !important; }
+      #pg-daily { overflow:visible !important; }
+      .dl-grp, .dl-chart, .rs-kpis { break-inside:avoid; page-break-inside:avoid; }
+      .dl-row { cursor:default; }
+      body { background:#fff; }
+      * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+    }
     .rs-sec { font-size:15px; font-weight:700; color:var(--ink); margin:26px 0 12px;
       border-left:4px solid #d62030; padding-left:10px; }
     .rs-tbl { width:100%; border-collapse:collapse; font-size:13px; }
@@ -853,6 +889,7 @@
       <div class="ni on" data-p="list"><i class="ti ti-user-search"></i>ผู้สมัคร<span class="ni-count" id="nc-list">0</span></div>
       <div class="ni" data-p="int"><i class="ti ti-calendar-week"></i>สัมภาษณ์<span class="ni-count" id="nc-int">0</span></div>
       <div class="ni" data-p="start"><i class="ti ti-briefcase"></i>วันเริ่มงาน<span class="ni-count" id="nc-start">0</span></div>
+      <div class="ni" data-p="daily"><i class="ti ti-calendar-stats"></i>บันทึกรายวัน<span class="ni-count" id="nc-daily">0</span></div>
       <div class="ni" data-p="hired"><i class="ti ti-user-check"></i>รับเข้าแล้ว<span class="ni-count" id="nc-hired">0</span></div>
       <div class="ni" data-p="resign"><i class="ti ti-user-off"></i>คนลาออก<span class="ni-count" id="nc-resign">0</span></div>
       <div class="ni" data-p="rep"><i class="ti ti-chart-histogram"></i>รายงาน</div>
@@ -915,6 +952,14 @@
       <div class="rep-wrap">
         <div class="rep-title">ตารางวันเริ่มงาน</div>
         <div id="start-body"></div>
+      </div>
+    </div>
+
+    <!-- Daily log -->
+    <div class="pg" id="pg-daily">
+      <div class="rep-wrap">
+        <div class="rep-title">บันทึกงานรายวัน</div>
+        <div id="daily-body"></div>
       </div>
     </div>
 
@@ -1258,13 +1303,14 @@
       if (p === 'rep') renderRep();
       if (p === 'int') renderInterviews();
       if (p === 'start') renderStartDates();
+      if (p === 'daily') renderDaily();
       if (p === 'hired') renderHired();
       if (p === 'resign') renderResign();
     }
     document.querySelectorAll('.ni').forEach(n => n.addEventListener('click', () => navTo(n.dataset.p)));
 
     // ═══════════════════ RENDER ═══════════════════
-    function renderAll() { renderList(); renderInterviews(); renderStartDates(); renderHired(); renderRep(); }
+    function renderAll() { renderList(); renderInterviews(); renderStartDates(); renderHired(); renderDaily(); renderRep(); }
 
     function setFilter(f) {
       filter = f;
@@ -2651,6 +2697,153 @@
         + 'หลังวันลาออก (ต้องเป็นคนละคน และจับคู่ได้ครั้งเดียว) · '
         + 'ตำแหน่งที่ยังไม่มีคนมาแทนนับจำนวนวันถึงวันนี้ (' + thDate(nowISO) + ')</div>';
     }
+
+
+    /* ================= บันทึกงานรายวัน =================
+       ประมวลจาก "ร่องรอยเวลา" ที่ระบบบันทึกไว้อยู่แล้ว ไม่ต้องกรอกเพิ่ม
+       ใช้ตอบว่า "วันนี้ทำอะไรไปบ้าง" — คีย์ผู้สมัครกี่คน ผลเป็นอย่างไร      */
+    let dailyFrom = '', dailyTo = '';
+
+    function dISO(dt) {
+      const p = n => (n < 10 ? '0' : '') + n;
+      return dt.getFullYear() + '-' + p(dt.getMonth() + 1) + '-' + p(dt.getDate());
+    }
+    function d10(v) { return String(v || '').slice(0, 10); }
+    function inDay(v, f, t) { const x = d10(v); return x && x >= f && x <= t; }
+
+    /* เหตุการณ์ทั้งหมดของช่วงที่เลือก */
+    function dailyEvents(f, t) {
+      const ev = [];
+      const push = (kind, a, when, detail) => ev.push({ kind, a, when: d10(when), detail: detail || '' });
+
+      DATA.forEach(a => {
+        const st = statusOf(a);
+        if (inDay(a.createdAt || a.date, f, t))
+          push('new', a, a.createdAt || a.date, (a.src ? 'ช่องทาง ' + a.src : '') + (a.phone ? ' · ' + a.phone : ''));
+        if (inDay(a.intDate, f, t))
+          push('interview', a, a.intDate, (a.intTime ? 'เวลา ' + a.intTime : '') +
+            (a.result === 'pass' ? ' · ผลผ่าน' : a.result === 'fail' ? ' · ผลไม่ผ่าน' : ' · ยังไม่บันทึกผล'));
+        if (inDay(a.offerSentAt, f, t))
+          push('offer', a, a.offerSentAt, a.offerChannel ? 'ส่งทาง ' + a.offerChannel : '');
+        if (inDay(a.respondedAt, f, t))
+          push(a.offerResult === 'rejected' ? 'declined' : 'accepted', a, a.respondedAt,
+            a.offerStart ? 'เริ่มงาน ' + (thDate(a.offerStart) || a.offerStart) : '');
+        if (inDay(a.closedAt, f, t) && ['rejected', 'cancelled'].includes(st))
+          push(isNoShow(a) ? 'noshow' : (st === 'rejected' ? 'rejected' : 'cancelled'), a, a.closedAt, a.closeReason || '');
+        if (inDay(a.offerStart, f, t) && ['hired', 'resigned'].includes(st))
+          push('start', a, a.offerStart, a.pos || '');
+        if (inDay(a.resignDate, f, t) && st === 'resigned')
+          push('resign', a, a.resignDate, a.resignType || '');
+      });
+      return ev;
+    }
+
+    const D_KIND = {
+      new:       { l: 'คีย์ผู้สมัครใหม่',      i: 'ti-user-plus',      c: '#2E75B6', bg: '#e7f0fa' },
+      interview: { l: 'สัมภาษณ์',             i: 'ti-microphone',     c: '#8a5a12', bg: '#fdf3e3' },
+      offer:     { l: 'ส่ง Offer',            i: 'ti-mail-forward',   c: '#5a3a8a', bg: '#f3ecfb' },
+      accepted:  { l: 'ตอบรับ Offer',         i: 'ti-thumb-up',       c: '#12674a', bg: '#e3f5ec' },
+      declined:  { l: 'ปฏิเสธ Offer',         i: 'ti-thumb-down',     c: '#9b1c1c', bg: '#fdeaea' },
+      start:     { l: 'เริ่มงานวันนี้',        i: 'ti-confetti',       c: '#12674a', bg: '#e3f5ec' },
+      noshow:    { l: 'ไม่เข้าสัมภาษณ์',       i: 'ti-calendar-x',     c: '#8a3d0f', bg: '#fdeee3' },
+      rejected:  { l: 'ปิดเคส — ไม่ผ่าน',      i: 'ti-circle-x',       c: '#9b1c1c', bg: '#fdeaea' },
+      cancelled: { l: 'ปิดเคส — ยกเลิก',       i: 'ti-user-x',         c: '#556066', bg: '#eceef0' },
+      resign:    { l: 'ลาออก',                i: 'ti-door-exit',      c: '#8a3d0f', bg: '#fdeee3' },
+    };
+    const D_ORDER = ['new', 'interview', 'offer', 'accepted', 'declined', 'start', 'noshow', 'rejected', 'cancelled', 'resign'];
+
+    function setDaily(f, t) { dailyFrom = f; dailyTo = t; renderDaily(); }
+    function dailyShift(n) {
+      const a = new Date(dailyFrom + 'T00:00:00'); a.setDate(a.getDate() + n);
+      const b = new Date(dailyTo + 'T00:00:00');   b.setDate(b.getDate() + n);
+      setDaily(dISO(a), dISO(b));
+    }
+    window.setDaily = setDaily; window.dailyShift = dailyShift;
+
+    function renderDaily() {
+      const el = document.getElementById('daily-body');
+      if (!el) return;
+      const today = dISO(new Date());
+      if (!dailyFrom) { dailyFrom = today; dailyTo = today; }
+
+      const ev = dailyEvents(dailyFrom, dailyTo);
+      const byKind = {};
+      ev.forEach(e => { (byKind[e.kind] = byKind[e.kind] || []).push(e); });
+
+      // จำนวนเหตุการณ์ "วันนี้" แสดงบนแท็บ
+      const nc = document.getElementById('nc-daily');
+      if (nc) nc.textContent = dailyEvents(today, today).length;
+
+      const same = dailyFrom === dailyTo;
+      const title = same ? (thDate(dailyFrom) || dailyFrom)
+                         : (thDate(dailyFrom) || dailyFrom) + ' – ' + (thDate(dailyTo) || dailyTo);
+
+      // กราฟ 14 วันย้อนหลังจากวันสิ้นสุด
+      const bars = [];
+      for (let i = 13; i >= 0; i--) {
+        const dt = new Date(dailyTo + 'T00:00:00'); dt.setDate(dt.getDate() - i);
+        const k = dISO(dt);
+        bars.push({ k, n: dailyEvents(k, k).length });
+      }
+      const maxB = Math.max(1, ...bars.map(b => b.n));
+
+      const kpis = [['new', 'คีย์ผู้สมัครใหม่'], ['interview', 'สัมภาษณ์'],
+                    ['noshow', 'ไม่เข้าสัมภาษณ์'], ['accepted', 'ตอบรับ Offer']]
+        .map(x => {
+          const m = D_KIND[x[0]], n = (byKind[x[0]] || []).length;
+          return `<div class="dl-k"><div class="t">${x[1]}</div><div class="v" style="color:${m.c}">${n}<small>คน</small></div></div>`;
+        }).join('');
+
+      const groups = D_ORDER.filter(k => byKind[k]).map(k => {
+        const m = D_KIND[k], list = byKind[k];
+        return `<div class="dl-grp">
+          <div class="dl-gh" style="background:${m.bg};color:${m.c}"><i class="ti ${m.i}"></i>${m.l}
+            <b>${list.length}</b></div>
+          ${list.map(e => `<div class="dl-row" onclick="openFromDaily('${e.a.id}')">
+            <div class="dl-nm">${esc(e.a.name)}</div>
+            <div class="dl-ps">${esc(e.a.pos || '-')}</div>
+            <div class="dl-dt">${esc(e.detail)}</div>
+            ${same ? '' : `<div class="dl-dy">${esc(thDate(e.when) || e.when)}</div>`}
+          </div>`).join('')}
+        </div>`;
+      }).join('');
+
+      el.innerHTML =
+        `<div class="dl-bar">
+          <button class="rs-chip" onclick="dailyShift(-1)">◀ ก่อนหน้า</button>
+          <input type="date" id="dlFrom" value="${dailyFrom}">
+          <span class="dl-to">ถึง</span>
+          <input type="date" id="dlTo" value="${dailyTo}">
+          <button class="rs-chip" onclick="dailyShift(1)">ถัดไป ▶</button>
+          <button class="rs-chip${same && dailyFrom === today ? ' on' : ''}" onclick="setDaily('${today}','${today}')">วันนี้</button>
+          <button class="rs-chip" onclick="dailyWeek()">7 วันล่าสุด</button>
+          <button class="rs-chip" onclick="dailyMonth()">เดือนนี้</button>
+          <button class="rs-chip" onclick="window.print()">🖨️ พิมพ์</button>
+         </div>
+         <div class="dl-title">${esc(title)} · รวม <b>${ev.length}</b> รายการ</div>
+         <div class="rs-kpis">${kpis}</div>
+         <div class="dl-chart">
+           ${bars.map(b => `<div class="dl-col" title="${esc(thDate(b.k) || b.k)} · ${b.n} รายการ">
+              <i style="height:${Math.round(b.n / maxB * 100)}%"></i>
+              <span>${b.k.slice(8)}</span></div>`).join('')}
+         </div>
+         <div class="dl-clab">จำนวนรายการ 14 วันล่าสุด</div>
+         ${ev.length ? groups : '<div class="rs-none" style="text-align:center;padding:40px 0">ไม่มีรายการในช่วงนี้</div>'}`;
+
+      const f = document.getElementById('dlFrom'), t = document.getElementById('dlTo');
+      if (f) f.onchange = () => setDaily(f.value, t.value < f.value ? f.value : t.value);
+      if (t) t.onchange = () => setDaily(f.value, t.value);
+    }
+    function dailyWeek() {
+      const b = new Date(); const a = new Date(); a.setDate(a.getDate() - 6);
+      setDaily(dISO(a), dISO(b));
+    }
+    function dailyMonth() {
+      const n = new Date();
+      setDaily(dISO(new Date(n.getFullYear(), n.getMonth(), 1)), dISO(n));
+    }
+    function openFromDaily(id) { navTo('list'); selectA(id); }
+    window.dailyWeek = dailyWeek; window.dailyMonth = dailyMonth; window.openFromDaily = openFromDaily;
 
     /* ================= แท็บ "รับเข้าแล้ว" =================
        รายชื่อผู้ที่จ้างผ่านระบบนี้และยังทำงานอยู่ (status = hired)
