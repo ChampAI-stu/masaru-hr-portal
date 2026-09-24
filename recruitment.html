@@ -396,6 +396,22 @@
     .rs-foot { margin-top:12px; font-size:12.5px; color:var(--muted); background:#fff;
       border:1px solid #e3e8f0; border-radius:9px; padding:9px 12px; line-height:1.7; }
     .rs-foot b { color:var(--ink); }
+    .hq-box { position:relative; display:flex; align-items:center; margin:0 0 12px; }
+    .hq-box > i { position:absolute; left:13px; font-size:16px; color:var(--faint); pointer-events:none; }
+    .hq-box input { width:100%; font-family:inherit; font-size:14px; color:var(--ink);
+      padding:11px 38px; border:1px solid var(--line); border-radius:12px; background:#fff; outline:none;
+      box-shadow:0 1px 3px rgba(22,41,77,.06); transition:border-color .15s, box-shadow .15s; }
+    .hq-box input:focus { border-color:#2E75B6; box-shadow:0 0 0 3px rgba(46,117,182,.13); }
+    .hq-box input::-webkit-search-cancel-button { display:none; }
+    .hq-box #hqClear { position:absolute; right:9px; display:none; border:0; background:#eef2f7; color:#64748b;
+      width:24px; height:24px; border-radius:50%; cursor:pointer; line-height:1; font-size:13px; }
+    .hq-box.has #hqClear { display:flex; align-items:center; justify-content:center; }
+    .hq-box #hqClear:hover { background:#dde4ee; color:var(--ink); }
+    .hq-info { font-size:12.5px; color:var(--muted); margin:-5px 0 11px; padding-left:3px; }
+    .hq-none { text-align:center; color:var(--muted); padding:34px 20px; font-size:14px;
+      background:#fff; border:1px solid var(--line); border-radius:12px; margin-top:12px; }
+    .hq-none span { font-size:13px; color:var(--faint); }
+    .hitmark { background:#fff3c4; border-radius:3px; padding:0 1px; }
     /* ── บันทึกงานรายวัน ── */
     .dl-bar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
     .dl-bar input[type=date] { font-family:inherit; font-size:13px; padding:7px 10px;
@@ -2905,6 +2921,25 @@
        รายชื่อผู้ที่จ้างผ่านระบบนี้และยังทำงานอยู่ (status = hired)
        ใช้ติดตามช่วงทดลองงาน + ดูว่าคนที่รับเข้ามาอยู่กันได้นานแค่ไหน        */
     let hiredSort = 'new';       // 'new' = เข้าใหม่ก่อน | 'old' = อยู่นานก่อน
+    let hiredQ = '';             // คำค้นหา
+
+    // ตัดวรรณยุกต์และช่องว่างก่อนเทียบ พิมพ์คร่าว ๆ ก็เจอ
+    const hNorm = s => String(s || '').toLowerCase().replace(/\s+/g, '').replace(/[\u0E47-\u0E4E]/g, '');
+    function hiredMatch(a, q) {
+      if (!q) return true;
+      const hay = [a.name, a.pos, a.src, a.phone].filter(Boolean).map(hNorm).join('|');
+      return String(q).trim().split(/\s+/).every(w => hay.includes(hNorm(w)));
+    }
+    function hiredHi(text) {
+      const t = String(text == null ? '' : text), q = hiredQ.trim();
+      if (!q) return esc(t);
+      const words = q.split(/\s+/).filter(w => w.length > 1).map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+      if (!words.length) return esc(t);
+      try { return esc(t).replace(new RegExp('(' + words.join('|') + ')', 'gi'), '<mark class="hitmark">$1</mark>'); }
+      catch (e) { return esc(t); }
+    }
+    function setHiredQ(v) { hiredQ = v; renderHired(); }
+    window.setHiredQ = setHiredQ;
 
     function hiredDays(a) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(a.offerStart || '')) return null;
@@ -2937,11 +2972,12 @@
         return;
       }
 
-      const rows = list.map(a => ({ a, d: hiredDays(a) }));
-      const notYet = rows.filter(r => r.d !== null && r.d < 0).length;
-      const inProb = rows.filter(r => r.d !== null && r.d >= 0 && r.d <= 90).length;
-      const passed = rows.filter(r => r.d !== null && r.d > 90).length;
-      const withD = rows.filter(r => r.d !== null && r.d >= 0);
+      const rows = list.filter(a => hiredMatch(a, hiredQ)).map(a => ({ a, d: hiredDays(a) }));
+      const allRows = list.map(a => ({ a, d: hiredDays(a) }));
+      const notYet = allRows.filter(r => r.d !== null && r.d < 0).length;
+      const inProb = allRows.filter(r => r.d !== null && r.d >= 0 && r.d <= 90).length;
+      const passed = allRows.filter(r => r.d !== null && r.d > 90).length;
+      const withD = allRows.filter(r => r.d !== null && r.d >= 0);
       const avg = withD.length ? Math.round(withD.reduce((s, r) => s + r.d, 0) / withD.length) : null;
 
       // อัตราคงอยู่ เทียบกับคนที่ลาออกไปแล้ว (นับเฉพาะระบบนี้)
@@ -2959,6 +2995,12 @@
       el.innerHTML =
           `<div class="rs-bar">เรียงลำดับ: ${chips}
             <span class="rs-note">นับเฉพาะผู้ที่จ้างผ่านระบบรับสมัครนี้ · ทดลองงาน = ทำงานไม่เกิน 90 วัน</span></div>`
+        + `<div class="hq-box${hiredQ ? ' has' : ''}">
+            <i class="ti ti-search"></i>
+            <input id="hq" type="search" placeholder="ค้นหาชื่อ ตำแหน่ง ช่องทางที่มา หรือเบอร์โทร" value="${escAttr(hiredQ)}" autocomplete="off">
+            <button id="hqClear" title="ล้างคำค้นหา"><i class="ti ti-x"></i></button>
+           </div>`
+        + (hiredQ ? `<div class="hq-info">พบ ${rows.length} คน จากทั้งหมด ${list.length} คน</div>` : '')
         + `<div class="rs-kpis">
             <div class="rs-k"><div class="t">ทำงานอยู่ทั้งหมด</div><div class="v">${list.length}<small>คน</small></div></div>
             <div class="rs-k"><div class="t">อยู่ในช่วงทดลองงาน</div><div class="v prob">${inProb}<small>คน</small></div></div>
@@ -2976,16 +3018,28 @@
                       : d <= 90   ? '<span class="hs prob">ทดลองงาน</span>'
                       :             '<span class="hs ok">ผ่านทดลองงาน</span>';
             return `<tr onclick="openFromHired('${a.id}')" style="cursor:pointer">
-              <td class="nm">${esc(a.name)}</td>
-              <td class="col-pos">${esc(a.pos || '-')}</td><td class="col-src">${esc(a.src || '-')}</td>
+              <td class="nm">${hiredHi(a.name)}</td>
+              <td class="col-pos">${hiredHi(a.pos || '-')}</td><td class="col-src">${hiredHi(a.src || '-')}</td>
               <td class="c">${esc(thDate(a.offerStart) || '-')}</td>
               <td class="c${d !== null && d >= 0 && d <= 90 ? ' prob' : ''}">${esc(hiredDaysText(d))}</td>
               <td class="c">${tag}</td>
             </tr>`;
           }).join('')
         + '</tbody></table></div>'
+        + (rows.length ? '' : `<div class="hq-none">ไม่พบพนักงานที่ตรงกับ "${esc(hiredQ)}"<br>
+            <span>ลองพิมพ์เฉพาะชื่อจริง หรือชื่อเล่น</span></div>`)
         + `<div class="rs-foot">ผ่านทดลองงานแล้ว <b>${passed}</b> คน · อายุงานเฉลี่ยของคนที่ยังอยู่ <b>${avg === null ? '-' : hiredDaysText(avg)}</b>
             · ลาออกไปแล้ว <b>${gone}</b> คน (ดูรายละเอียดที่แท็บ “คนลาออก”)</div>`;
+
+      // ผูกช่องค้นหา — คงตำแหน่งเคอร์เซอร์ไว้หลังวาดใหม่
+      const q = document.getElementById('hq'), clr = document.getElementById('hqClear');
+      if (q) {
+        let t;
+        q.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => setHiredQ(q.value), 150); });
+        q.addEventListener('keydown', e => { if (e.key === 'Escape') { q.value = ''; setHiredQ(''); } });
+        if (hiredQ) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); }
+      }
+      if (clr) clr.onclick = () => setHiredQ('');
     }
 
     function setResignRange(m) { resignMonths = m; renderResign(); }
