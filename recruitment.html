@@ -2997,7 +2997,7 @@
             <span class="rs-note">นับเฉพาะผู้ที่จ้างผ่านระบบรับสมัครนี้ · ทดลองงาน = ทำงานไม่เกิน 90 วัน</span></div>`
         + `<div class="hq-box${hiredQ ? ' has' : ''}">
             <i class="ti ti-search"></i>
-            <input id="hq" type="search" placeholder="ค้นหาชื่อ ตำแหน่ง ช่องทางที่มา หรือเบอร์โทร" value="${escAttr(hiredQ)}" autocomplete="off">
+            <input id="hq" type="search" placeholder="ค้นหาชื่อ ตำแหน่ง ช่องทางที่มา หรือเบอร์โทร" value="${esc(hiredQ)}" autocomplete="off">
             <button id="hqClear" title="ล้างคำค้นหา"><i class="ti ti-x"></i></button>
            </div>`
         + (hiredQ ? `<div class="hq-info">พบ ${rows.length} คน จากทั้งหมด ${list.length} คน</div>` : '')
