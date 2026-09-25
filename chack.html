@@ -194,6 +194,7 @@
 .telx{color:#1F6F9C;text-decoration:none;font-weight:600}
     .telx:hover{text-decoration:underline}
     .grpchip{display:inline-block;background:var(--navy);color:#fff;font-size:10px;padding:1px 8px;border-radius:999px;margin-left:6px;vertical-align:middle;font-weight:600}
+  .shiftchip{display:inline-block;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:600;background:#EAF1FA;color:#1B2D51;white-space:nowrap}
 #view-dash #tblWrap, #view-employees #empWrap, #view-summary #sumTable, #view-leave #quotaWrap{overflow:visible}
 #view-dash #tblWrap thead th, #view-employees #empWrap thead th, #view-summary #sumTable thead th, #view-leave #quotaWrap thead th{position:sticky;top:var(--tabbarH,62px);z-index:5;background:#F4F4EF;box-shadow:inset 0 -1px 0 var(--line)}
 @media print{
@@ -1638,10 +1639,11 @@ window.__gridEnsure=function(){try{ if(SB && loadedYM===null) loadMonth(); }catc
     var sb=getSB(); if(!sb){ say('ยังเชื่อมต่อฐานข้อมูลไม่ได้','err'); return; }
     say('กำลังโหลด...','');
     try{
-      var r=await sb.from('daiki_employees').select('id,emp_code,full_name,nickname,position,phone,start_date,day_off,is_active,resign_date,seq,group_name')
+      var r=await sb.from('daiki_employees').select('id,emp_code,full_name,nickname,position,phone,start_date,day_off,is_active,resign_date,seq,group_name,shift_id')
         .order('seq',{ascending:true,nullsFirst:false}).order('full_name',{ascending:true}).limit(5000);
       if(r.error) throw r.error;
       LIST=r.data||[];
+      await loadShifts(true);          // ดึงรายชื่อกะมาด้วย เพื่อแสดงชื่อกะในตาราง
       LIST.sort(function(a,b){
         var la=window.__nameLangRank(a.full_name), lb=window.__nameLangRank(b.full_name);
         if(la!==lb) return la-lb;
@@ -1671,7 +1673,7 @@ window.__gridEnsure=function(){try{ if(SB && loadedYM===null) loadMonth(); }catc
     var nActive=LIST.filter(function(e){return e.is_active!==false;}).length;
     var nOut=LIST.length-nActive;
     $('empSub').textContent='ทั้งหมด '+LIST.length+' คน · ทำงานอยู่ '+nActive+' · ลาออกแล้ว '+nOut+' · แสดง '+rows.length;
-    var head='<table><thead><tr><th style=\"width:40px\">#</th><th>รหัส</th><th class=\"l\">ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th>แผนก</th><th>เบอร์โทร</th><th>เริ่มงาน</th><th>สถานะ</th><th style=\"width:210px\">จัดการ</th></tr></thead><tbody>';
+    var head='<table><thead><tr><th style=\"width:40px\">#</th><th>รหัส</th><th class=\"l\">ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th>แผนก</th><th>กะงาน</th><th>เบอร์โทร</th><th>เริ่มงาน</th><th>สถานะ</th><th style=\"width:210px\">จัดการ</th></tr></thead><tbody>';
     var body=rows.map(function(e,i){
       var active=(e.is_active!==false);
       var pill=active?'<span class=\"pill on\">ทำงานอยู่</span>':'<span class=\"pill off\">ลาออก'+(e.resign_date?(' '+e.resign_date):'')+'</span>';
@@ -1681,6 +1683,7 @@ window.__gridEnsure=function(){try{ if(SB && loadedYM===null) loadMonth(); }catc
         '<td class=\"who\"><div class=\"nm\">'+esc(e.full_name)+(e.nickname?' <span class=\"nick\">('+esc(e.nickname)+')</span>':'')+'</div></td>'+
         '<td>'+esc(e.position||'—')+'</td>'+
         '<td>'+(e.group_name?'<span class=\"grpchip\">'+esc(e.group_name)+'</span>':'—')+'</td>'+
+        '<td>'+(shiftLabel(e.shift_id)?'<span class=\"shiftchip\">'+esc(shiftLabel(e.shift_id))+'</span>':'<span style=\"color:var(--muted)\">—</span>')+'</td>'+
         '<td class=\"num\">'+(e.phone?('<a class=\"telx\" href=\"tel:'+esc(String(e.phone).replace(/[^0-9+]/g,''))+'\">'+esc(fmtPhone(e.phone))+'</a>'):'—')+'</td>'+
         '<td class=\"num\">'+esc(e.start_date||'—')+'</td>'+
         '<td>'+pill+'</td>'+
@@ -1718,6 +1721,24 @@ window.__gridEnsure=function(){try{ if(SB && loadedYM===null) loadMonth(); }catc
     if(y<100) y+=2000; if(y>=2500) y-=543;
     if(mo<1||mo>12||d<1||d>31) return null;
     return y+'-'+('0'+mo).slice(-2)+'-'+('0'+d).slice(-2); }
+  /* ---------- กะงาน: โหลดรายชื่อกะไว้ใช้ในฟอร์มและตาราง ---------- */
+  var SHIFTS = [], shiftsLoaded = false;
+  async function loadShifts(force){
+    if(shiftsLoaded && !force) return SHIFTS;
+    try{
+      var r = await sb.from('daiki_shifts').select('id,name,time_in,time_out').order('time_in').order('name');
+      if(r.error) throw r.error;
+      SHIFTS = r.data || []; shiftsLoaded = true;
+    }catch(e){ console.warn('loadShifts', e); SHIFTS = []; }
+    return SHIFTS;
+  }
+  function shiftLabel(id){
+    if(!id) return '';
+    var s = SHIFTS.filter(function(x){ return String(x.id)===String(id); })[0];
+    if(!s) return '';
+    return s.name + (s.time_in ? ' (' + String(s.time_in).slice(0,5) + '–' + String(s.time_out||'').slice(0,5) + ')' : '');
+  }
+
   function showForm(emp){
     editingId = emp? emp.id : null;
     var e=emp||{};
@@ -1734,8 +1755,18 @@ window.__gridEnsure=function(){try{ if(SB && loadedYM===null) loadMonth(); }catc
       return '<div class=\"ef-f\"><label>'+f[1]+(f[2]==='req'?' <span class=\"req\">*</span>':'')+'</label>'+
         '<input id=\"ef_'+f[0]+'\" type=\"text\" value=\"'+esc(val)+'\"'+ph+'></div>';
     }).join('');
+    var shiftOpts = '<option value=\"\">— ไม่ระบุกะ —</option>' + SHIFTS.map(function(s){
+      var lb = s.name + (s.time_in ? ' (' + String(s.time_in).slice(0,5) + '–' + String(s.time_out||'').slice(0,5) + ')' : '');
+      return '<option value=\"'+esc(s.id)+'\"'+(String(e.shift_id||'')===String(s.id)?' selected':'')+'>'+esc(lb)+'</option>';
+    }).join('');
+    var shiftField = '<div class=\"ef-f\"><label>กะงาน</label>' +
+      (SHIFTS.length
+        ? '<select id=\"ef_shift_id\">'+shiftOpts+'</select>'
+        : '<select id=\"ef_shift_id\" disabled><option>ยังไม่มีกะในระบบ — สร้างที่แท็บ “กะงาน”</option></select>')
+      + '</div>';
+
     $('empForm').innerHTML='<h3>'+(emp?'แก้ไขข้อมูลพนักงาน':'เพิ่มพนักงานใหม่')+'</h3>'+
-      '<div class=\"ef-grid\">'+fields+'</div>'+
+      '<div class=\"ef-grid\">'+fields+shiftField+'</div>'+
       '<div class=\"ef-actions\"><button class=\"ebtn save\" id=\"efSave\">บันทึก</button><button class=\"ebtn\" id=\"efCancel\">ยกเลิก</button></div>';
     $('empForm').style.display='block'; $('empBackdrop').style.display='block';
     $('efSave').onclick=saveForm; $('efCancel').onclick=closeForm; $('empBackdrop').onclick=closeForm;
@@ -1797,7 +1828,8 @@ window.__gridEnsure=function(){try{ if(SB && loadedYM===null) loadMonth(); }catc
     var sb=getSB(); if(!sb) return;
     function v(k){ var el=$('ef_'+k); var s=(el.value||'').trim(); return s===''?null:s; }
     var name=v('full_name'); if(!name){ say('กรุณากรอกชื่อ-นามสกุล','err'); return; }
-    var rec={emp_code:v('emp_code'), full_name:name, nickname:v('nickname'), position:v('position'), group_name:v('group_name'), phone:cleanPhone(v('phone')), start_date:parseDMY($('ef_start_date').value), day_off:v('day_off')};
+    var shiftEl=$('ef_shift_id');
+    var rec={emp_code:v('emp_code'), full_name:name, nickname:v('nickname'), position:v('position'), group_name:v('group_name'), phone:cleanPhone(v('phone')), start_date:parseDMY($('ef_start_date').value), day_off:v('day_off'), shift_id:(shiftEl && shiftEl.value) ? shiftEl.value : null};
     if($('ef_start_date').value.trim() && !rec.start_date){ say('วันเริ่มงานไม่ถูกต้อง ใช้รูปแบบ วัน/เดือน/ปี เช่น 3/8/2026','err'); return; }
     say('กำลังตรวจข้อมูลซ้ำ...','');
     try{
@@ -1822,7 +1854,7 @@ window.__gridEnsure=function(){try{ if(SB && loadedYM===null) loadMonth(); }catc
 
   async function act(a,id){
     var e=byId(id); if(!e) return;
-    if(a==='edit'){ showForm(e); return; }
+    if(a==='edit'){ loadShifts().then(function(){ showForm(e); }); return; }
     var sb=getSB(); if(!sb){ say('ยังไม่ได้เชื่อมต่อฐานข้อมูล','err'); return; }
     try{
       if(a==='resign'){
@@ -1842,7 +1874,7 @@ window.__gridEnsure=function(){try{ if(SB && loadedYM===null) loadMonth(); }catc
     }catch(err){ say('ทำรายการไม่สำเร็จ: '+(err.message||err),'err'); }
   }
 
-  $('empAdd').addEventListener('click',function(){ showForm(null); });
+  $('empAdd').addEventListener('click',function(){ loadShifts().then(function(){ showForm(null); }); });
   $('empSearch').addEventListener('input',render);
   $('empFilter').addEventListener('change',render);
   $('empGroup').addEventListener('change',render);
