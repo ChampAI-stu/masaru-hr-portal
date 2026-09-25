@@ -438,6 +438,12 @@ async function showHub(session){
       desc:'แผนอบรมประจำปี · หลักสูตรและผู้เข้าร่วม · แบบประเมิน QR · ประวัติการฝึกอบรมรายบุคคล',
       url:'training.html', roles:['hr','hr_manager','executive'] });
   }
+  // การ์ดสวัสดิการพนักงาน
+  if(!all.some(a => a.url==='welfare.html' || a.key==='welfare')){
+    all.push({ key:'welfare', icon:'ti-gift', title:'สวัสดิการพนักงาน',
+      desc:'ดูสิทธิสวัสดิการ · ลงชื่อรับปริญญา · ยื่นคำขอช่วยเหลือ · ปฏิทินวันเกิด',
+      url:'welfare.html', roles:[] });
+  }
   // การ์ดคู่มือการใช้งาน — ทุกบทบาทเห็นได้ และวางไว้ท้ายสุดเสมอ
   if(!all.some(a => a.url==='guide.html' || a.key==='guide')){
     all.push({ key:'guide', icon:'ti-book-2', title:'คู่มือการใช้งานระบบ',
