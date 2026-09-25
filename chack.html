@@ -1760,10 +1760,9 @@ window.__gridEnsure=function(){try{ if(SB && loadedYM===null) loadMonth(); }catc
       return '<option value=\"'+esc(s.id)+'\"'+(String(e.shift_id||'')===String(s.id)?' selected':'')+'>'+esc(lb)+'</option>';
     }).join('');
     var shiftField = '<div class=\"ef-f\"><label>กะงาน</label>' +
-      (SHIFTS.length
-        ? '<select id=\"ef_shift_id\">'+shiftOpts+'</select>'
-        : '<select id=\"ef_shift_id\" disabled><option>ยังไม่มีกะในระบบ — สร้างที่แท็บ “กะงาน”</option></select>')
-      + '</div>';
+      '<select id=\"ef_shift_id\">'+shiftOpts+'</select>' +
+      (SHIFTS.length ? '' : '<div class=\"ef-hint\">ยังไม่มีกะในระบบ — ไปสร้างที่แท็บ “กะงาน” แล้วกดโหลดใหม่</div>') +
+      '</div>';
 
     $('empForm').innerHTML='<h3>'+(emp?'แก้ไขข้อมูลพนักงาน':'เพิ่มพนักงานใหม่')+'</h3>'+
       '<div class=\"ef-grid\">'+fields+shiftField+'</div>'+
