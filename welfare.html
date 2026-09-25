@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>สวัสดิการพนักงาน — MASARU HR</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--ink:#16294d;--muted:#64708a;--faint:#97a1b5;--line:#e2e7ef;--bg:#eef1f6;
+      --red:#d62030;--ok:#17845f;--warn:#8a5a12;--blue:#2E75B6;--shadow:0 2px 10px rgba(16,41,77,.06)}
+body{font-family:'IBM Plex Sans Thai',system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.7}
+.wrap{max-width:min(1080px,100%);margin:0 auto;padding:20px 16px 80px}
+
+.top{background:linear-gradient(135deg,#0e1c38,#16294d);color:#fff;padding:20px 24px;border-radius:16px;
+     margin-bottom:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.top .bd{font-size:12px;font-weight:800;letter-spacing:2.5px;color:#ff8a92}
+.top h1{font-size:21px;font-weight:800;margin-top:2px}
+.top p{font-size:13px;opacity:.85}
+.top .sp{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.top button,.top a{border:0;border-radius:9px;background:rgba(255,255,255,.15);color:#fff;cursor:pointer;
+     font-family:inherit;font-size:12.5px;font-weight:700;padding:8px 14px;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.top button:hover,.top a:hover{background:rgba(255,255,255,.28)}
+
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:14px;box-shadow:var(--shadow)}
+.card h2{font-size:16.5px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.sub{font-size:13px;color:var(--muted);margin-bottom:12px}
+
+label.fl{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin:11px 0 5px}
+input,select,textarea{width:100%;font-family:inherit;font-size:14px;color:var(--ink);
+   border:1px solid #dde4ee;border-radius:10px;padding:10px 12px;background:#fff;outline:none;resize:vertical}
+input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(46,117,182,.12)}
+.req{color:var(--red)}
+.btn{border:0;border-radius:10px;background:var(--ink);color:#fff;cursor:pointer;font-family:inherit;
+   font-size:14px;font-weight:700;padding:11px 20px}
+.btn:hover{filter:brightness(1.15)}.btn:disabled{opacity:.5;cursor:default}
+.btn.red{background:var(--red)}.btn.ghost{background:#eef2f8;color:var(--ink)}
+.btn.sm{font-size:12.5px;padding:7px 13px;border-radius:8px}
+
+.me{display:flex;align-items:center;gap:13px;flex-wrap:wrap}
+.me .av{width:46px;height:46px;border-radius:50%;background:#e7f0fa;color:var(--blue);
+   display:grid;place-items:center;font-size:19px;font-weight:800;flex-shrink:0}
+.me .nm{font-size:16px;font-weight:700}.me .ps{font-size:13px;color:var(--muted)}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:13px}
+.wc{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow);
+    display:flex;flex-direction:column;gap:7px;cursor:pointer;transition:transform .12s,box-shadow .12s}
+.wc:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(16,41,77,.11)}
+.wc .ic{font-size:30px;line-height:1}
+.wc .ti2{font-size:15.5px;font-weight:700}
+.wc .sm2{font-size:13px;color:var(--muted);flex:1}
+.pill{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 11px;border-radius:20px;align-self:flex-start}
+.pill.open{background:#e3f5ec;color:#12674a}.pill.auto{background:#e7f0fa;color:#1b4c7a}
+.pill.always{background:#fdf3e3;color:#8a5a12}.pill.closed{background:#eceef0;color:#556066}
+.pill.pending{background:#fdf3e3;color:#8a5a12}.pill.approved{background:#e3f5ec;color:#12674a}
+.pill.rejected{background:#fdeaea;color:#9b1c1c}.pill.done{background:#f3ecfb;color:#5a3a8a}
+
+.rq{border:1px solid var(--line);border-radius:12px;padding:12px 15px;margin-bottom:9px;background:#fbfcfe}
+.rq .h{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.rq .h b{font-size:14.5px}
+.rq .d{font-size:12.5px;color:var(--muted);margin-top:3px}
+.rq .n{font-size:13px;color:#1b4c7a;background:#eef5fc;border-radius:8px;padding:7px 11px;margin-top:8px}
+
+.bd{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:9px}
+.bd > div{background:#fff7ed;border:1px solid #f6dcbb;border-radius:11px;padding:9px 12px}
+.bd .dy{font-size:11.5px;color:#8a5a12;font-weight:700}
+.bd .nm{font-size:13.5px;font-weight:600}
+.bd .dp{font-size:11.5px;color:var(--muted)}
+
+.mdlbg{position:fixed;inset:0;background:rgba(9,20,40,.55);display:none;align-items:center;justify-content:center;z-index:80;padding:16px}
+.mdlbg.show{display:flex}
+.mdl{background:#fff;border-radius:16px;max-width:620px;width:100%;max-height:92vh;overflow:auto;padding:22px 24px}
+.mdl h3{font-size:19px;display:flex;align-items:center;gap:9px}
+.mdl .acts{display:flex;gap:9px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
+.info{background:#f7f9fc;border:1px solid var(--line);border-radius:11px;padding:11px 14px;font-size:13.5px;margin:10px 0}
+.info b{display:block;font-size:12px;color:var(--muted);font-weight:600}
+.note{border-radius:10px;padding:11px 14px;font-size:13.5px;line-height:1.7;border-left:4px solid;margin:10px 0}
+.note.info2{background:#eef5fc;border-color:var(--blue);color:#1b4c7a}
+.note.warn{background:#fff8e6;border-color:#c99a2e;color:#7a5a12}
+.state{text-align:center;padding:60px 20px;color:var(--muted)}
+.state .ic{font-size:46px;margin-bottom:10px}
+.err{background:#fdeaea;border:1px solid #f3c0c0;color:#9b1c1c;border-radius:10px;padding:11px 14px;font-size:13.5px;margin-top:10px}
+.hide{display:none!important}
+
+/* ฝั่ง HR */
+.tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
+.tabs button{border:1px solid var(--line);background:#fff;border-radius:20px;padding:8px 16px;cursor:pointer;
+   font-family:inherit;font-size:13px;font-weight:600;color:var(--muted)}
+.tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{background:#f2f5fa;text-align:left;padding:9px 11px;border-bottom:1px solid var(--line);font-size:12.5px;color:#48566e}
+td{padding:9px 11px;border-bottom:1px solid #eef1f6;vertical-align:top}
+.badge{display:inline-grid;place-items:center;min-width:19px;height:19px;padding:0 6px;border-radius:20px;
+   background:var(--red);color:#fff;font-size:11px;font-weight:800;margin-left:5px}
+@media print{ .top,.tabs,.btn{display:none!important} body{background:#fff} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <div class="bd">MASARU HR</div>
+      <h1 id="topTitle">สวัสดิการพนักงาน</h1>
+      <p id="topSub">ดูสิทธิสวัสดิการและยื่นคำขอได้ด้วยตนเอง</p>
+    </div>
+    <div class="sp">
+      <button id="btnOut" class="hide"><i class="ti ti-logout"></i> ออก</button>
+      <button id="btnHr"><i class="ti ti-settings"></i> สำหรับฝ่ายบุคคล</button>
+      <a href="index.html"><i class="ti ti-arrow-left"></i> หน้าหลัก</a>
+    </div>
+  </div>
+  <div id="app"><div class="state"><div class="ic">⏳</div>กำลังโหลด...</div></div>
+</div>
+
+<div class="mdlbg" id="mdlBg"><div class="mdl" id="mdlBox"></div></div>
+
+<script>
+const SUPABASE_URL = 'https://iyycyvnvfmerxkcfalea.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_ChkZClaeE6NCAxqyTqE4Yw_aTsz4zqi';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const THFULL = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+function thD(s){ if(!s) return '-'; const p = String(s).slice(0,10).split('-');
+  if(p.length < 3) return s; return Number(p[2])+' '+TH[Number(p[1])-1]+' '+(Number(p[0])+543); }
+const todayISO = () => { const d = new Date(), p = n => (n<10?'0':'')+n;
+  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); };
+
+let ME = null, ITEMS = [], MYREQ = [], HRMODE = false;
+const LS = 'masaru_welfare_me';
+
+function modal(html){ $('mdlBox').innerHTML = html; $('mdlBg').classList.add('show'); }
+function closeModal(){ $('mdlBg').classList.remove('show'); }
+$('mdlBg').onclick = e => { if(e.target === $('mdlBg')) closeModal(); };
+window.closeModal = closeModal;
+
+/* ═══════════════ ฝั่งพนักงาน ═══════════════ */
+function loginScreen(msg){
+  const saved = JSON.parse(localStorage.getItem(LS) || 'null');
+  $('app').innerHTML =
+    `<div class="card" style="max-width:480px;margin:30px auto">
+      <h2><i class="ti ti-id-badge-2"></i>ยืนยันตัวตน</h2>
+      <div class="sub">กรอกรหัสพนักงานและชื่อของคุณ เพื่อดูสิทธิสวัสดิการ ไม่ต้องสมัครบัญชี</div>
+      <label class="fl">รหัสพนักงาน <span class="req">*</span></label>
+      <input id="inCode" placeholder="เช่น LDM514" value="${esc(saved ? saved.code : '')}">
+      <label class="fl">ชื่อจริง หรือชื่อเล่น <span class="req">*</span></label>
+      <input id="inName" placeholder="พิมพ์บางส่วนก็ได้ เช่น ธัญพิชชา หรือ บีม" value="${esc(saved ? saved.name : '')}">
+      ${msg ? '<div class="err">'+esc(msg)+'</div>' : ''}
+      <div style="margin-top:16px"><button class="btn red" id="btnIn" style="width:100%">เข้าดูสวัสดิการ</button></div>
+      <div class="note info2" style="margin-top:14px">ใช้เพื่อยืนยันว่าเป็นพนักงานจริงเท่านั้น
+        ระบบจะแสดงเฉพาะข้อมูลของคุณ ไม่เห็นคำขอของคนอื่น</div>
+    </div>`;
+  $('btnIn').onclick = doLogin;
+  $('inName').onkeydown = e => { if(e.key === 'Enter') doLogin(); };
+}
+
+async function doLogin(){
+  const code = $('inCode').value.trim(), name = $('inName').value.trim();
+  if(!code || !name){ loginScreen('กรุณากรอกทั้งรหัสพนักงานและชื่อ'); return; }
+  $('btnIn').disabled = true; $('btnIn').textContent = 'กำลังตรวจสอบ...';
+  try{
+    const r = await sb.rpc('welfare_verify', { p_code: code, p_name: name });
+    if(r.error) throw r.error;
+    if(!r.data || !r.data.ok){
+      const why = r.data ? r.data.reason : '';
+      loginScreen(why === 'mismatch' ? 'รหัสพนักงานกับชื่อไม่ตรงกัน กรุณาตรวจสอบอีกครั้ง'
+        : 'ไม่พบรหัสพนักงานนี้ในระบบ หากเพิ่งเริ่มงานกรุณาติดต่อฝ่ายบุคคล');
+      return;
+    }
+    ME = r.data;
+    localStorage.setItem(LS, JSON.stringify({ code, name }));
+    await loadAll();
+  }catch(e){
+    loginScreen('เชื่อมต่อไม่สำเร็จ: ' + (e.message || e));
+  }
+}
+
+async function loadAll(){
+  $('app').innerHTML = '<div class="state"><div class="ic">⏳</div>กำลังโหลดสวัสดิการ...</div>';
+  const saved = JSON.parse(localStorage.getItem(LS) || '{}');
+  try{
+    const [a, b] = await Promise.all([
+      sb.rpc('welfare_list'),
+      sb.rpc('welfare_my_requests', { p_code: saved.code, p_name: saved.name })
+    ]);
+    if(a.error) throw a.error;
+    ITEMS = a.data || [];
+    MYREQ = (b.data && b.data.ok) ? (b.data.items || []) : [];
+    renderEmp();
+  }catch(e){
+    $('app').innerHTML = '<div class="err">โหลดข้อมูลไม่สำเร็จ: ' + esc(e.message || e) + '</div>';
+  }
+}
+
+function itemState(it){
+  if(it.mode === 'auto') return { k: 'auto', t: 'สิทธิอัตโนมัติ' };
+  if(it.mode === 'always') return { k: 'always', t: 'ยื่นได้ตลอดปี' };
+  const t = todayISO();
+  if(it.open_from && t < it.open_from) return { k: 'closed', t: 'เปิดรับ ' + thD(it.open_from) };
+  if(it.open_to && t > it.open_to)     return { k: 'closed', t: 'ปิดรับแล้ว' };
+  return { k: 'open', t: 'เปิดรับสมัคร' + (it.open_to ? ' ถึง ' + thD(it.open_to) : '') };
+}
+const ST_LABEL = { pending:'รอฝ่ายบุคคลตรวจสอบ', approved:'อนุมัติแล้ว', rejected:'ไม่อนุมัติ', done:'ดำเนินการเสร็จสิ้น' };
+
+async function renderEmp(){
+  $('btnOut').classList.remove('hide');
+  const ini = (ME.nickname || ME.full_name || '?').trim().charAt(0);
+  const mon = new Date().getMonth() + 1;
+
+  let bdHtml = '';
+  try{
+    const r = await sb.rpc('welfare_birthdays', { p_month: mon });
+    const list = r.data || [];
+    bdHtml = list.length
+      ? `<div class="card"><h2>🎂 วันเกิดเดือน${THFULL[mon-1]} <span class="pill auto">${list.length} คน</span></h2>
+          <div class="bd">${list.map(b => `<div><div class="dy">${b.day} ${THFULL[mon-1]}</div>
+            <div class="nm">${esc(b.nickname || b.full_name)}</div>
+            <div class="dp">${esc(b.dept || '-')}</div></div>`).join('')}</div></div>`
+      : '';
+  }catch(e){ bdHtml = ''; }
+
+  const myBd = ME.birth_date ? `<div class="note info2">🎂 วันเกิดของคุณในระบบคือ <b>${esc(thD(ME.birth_date))}</b>
+      — หากไม่ถูกต้องกรุณาแจ้งฝ่ายบุคคล</div>`
+    : `<div class="note warn">⚠️ ระบบยังไม่มีวันเกิดของคุณ กรุณาแจ้งฝ่ายบุคคลเพื่อบันทึก
+       จะได้ไม่พลาดของขวัญวันเกิด</div>`;
+
+  $('app').innerHTML =
+    `<div class="card"><div class="me">
+      <div class="av">${esc(ini)}</div>
+      <div><div class="nm">${esc(ME.full_name)}${ME.nickname ? ' ('+esc(ME.nickname)+')' : ''}</div>
+      <div class="ps">${esc(ME.position || '-')} · ${esc(ME.dept || '-')} · รหัส ${esc(ME.emp_code)}</div></div>
+    </div>${myBd}</div>`
+
+    + `<div class="card"><h2><i class="ti ti-gift"></i>สวัสดิการทั้งหมด</h2>
+        <div class="sub">แตะที่การ์ดเพื่อดูรายละเอียดและยื่นคำขอ</div>
+        <div class="grid">${ITEMS.map(it => {
+          const s = itemState(it);
+          return `<div class="wc" onclick="openItem('${it.id}')">
+            <div class="ic">${esc(it.icon || '🎁')}</div>
+            <div class="ti2">${esc(it.title)}</div>
+            <div class="sm2">${esc(it.summary || '')}</div>
+            <span class="pill ${s.k}">${esc(s.t)}</span></div>`;
+        }).join('')}</div></div>`
+
+    + `<div class="card"><h2><i class="ti ti-file-check"></i>คำขอของฉัน
+        ${MYREQ.length ? '<span class="pill auto">'+MYREQ.length+'</span>' : ''}</h2>
+       ${MYREQ.length ? MYREQ.map(r => `<div class="rq">
+          <div class="h"><b>${esc(r.item_title)}</b>
+            <span class="pill ${r.status}">${ST_LABEL[r.status] || r.status}</span></div>
+          <div class="d">ยื่นเมื่อ ${esc(thD(r.created_on))}${r.decided_on ? ' · ตอบกลับ ' + esc(thD(r.decided_on)) : ''}</div>
+          ${r.hr_note ? '<div class="n">ฝ่ายบุคคล: '+esc(r.hr_note)+'</div>' : ''}
+        </div>`).join('') : '<div class="sub">ยังไม่มีคำขอ — เลือกสวัสดิการด้านบนเพื่อยื่นคำขอ</div>'}</div>`
+    + bdHtml;
+}
+
+function openItem(id){
+  const it = ITEMS.filter(x => String(x.id) === String(id))[0];
+  if(!it) return;
+  const s = itemState(it);
+  const canApply = s.k === 'open' || s.k === 'always';
+  const pending = MYREQ.some(r => r.item_title === it.title && r.status === 'pending');
+
+  modal(`<h3>${esc(it.icon || '🎁')} ${esc(it.title)}</h3>
+    <div class="sub" style="margin-top:6px">${esc(it.summary || '')}</div>
+    <span class="pill ${s.k}">${esc(s.t)}</span>
+    ${it.detail ? '<div class="info"><b>รายละเอียด</b>'+esc(it.detail)+'</div>' : ''}
+    ${it.eligibility ? '<div class="info"><b>ผู้มีสิทธิ</b>'+esc(it.eligibility)+'</div>' : ''}
+    ${it.amount_text ? '<div class="info"><b>สิ่งที่ได้รับ</b>'+esc(it.amount_text)+'</div>' : ''}
+    ${it.docs ? '<div class="info"><b>เอกสารที่ต้องเตรียม</b>'+esc(it.docs)+'</div>' : ''}
+    ${it.mode === 'auto' ? '<div class="note info2">สวัสดิการนี้เป็นสิทธิอัตโนมัติ ไม่ต้องยื่นคำขอ ฝ่ายบุคคลจะดำเนินการให้เอง</div>' : ''}
+    ${pending ? '<div class="note warn">คุณยื่นคำขอสวัสดิการนี้ไปแล้ว และอยู่ระหว่างรอผล</div>' : ''}
+    <div class="acts">
+      <button class="btn ghost" onclick="closeModal()">ปิด</button>
+      ${canApply && !pending ? `<button class="btn red" onclick="openForm('${it.id}')">ยื่นคำขอ</button>` : ''}
+    </div>`);
+}
+window.openItem = openItem;
+
+function openForm(id){
+  const it = ITEMS.filter(x => String(x.id) === String(id))[0];
+  if(!it) return;
+  const fs = it.fields || [];
+  const body = fs.map((f, i) => {
+    const lab = `<label class="fl">${esc(f.label)}${f.required ? ' <span class="req">*</span>' : ''}</label>`;
+    if(f.type === 'textarea') return lab + `<textarea id="wf${i}" rows="3"></textarea>`;
+    if(f.type === 'select')   return lab + `<select id="wf${i}"><option value="">— เลือก —</option>`
+      + (f.options || []).map(o => `<option>${esc(o)}</option>`).join('') + '</select>';
+    const t = f.type === 'date' ? 'date' : f.type === 'number' ? 'number' : 'text';
+    return lab + `<input id="wf${i}" type="${t}">`;
+  }).join('');
+
+  modal(`<h3>${esc(it.icon || '🎁')} ยื่นคำขอ — ${esc(it.title)}</h3>
+    <div class="sub" style="margin-top:6px">ผู้ยื่น: ${esc(ME.full_name)} · ${esc(ME.dept || '-')}</div>
+    ${body || '<div class="sub">สวัสดิการนี้ไม่ต้องกรอกข้อมูลเพิ่ม กดยืนยันได้เลย</div>'}
+    ${it.docs ? '<div class="note warn">อย่าลืมนำเอกสารไปยื่นที่ฝ่ายบุคคล: '+esc(it.docs)+'</div>' : ''}
+    <div id="wfErr"></div>
+    <div class="acts">
+      <button class="btn ghost" onclick="closeModal()">ยกเลิก</button>
+      <button class="btn red" id="wfSend">ยืนยันยื่นคำขอ</button>
+    </div>`);
+
+  $('wfSend').onclick = async () => {
+    const data = {};
+    for(let i = 0; i < fs.length; i++){
+      const f = fs[i], v = ($('wf'+i).value || '').trim();
+      if(f.required && !v){ $('wfErr').innerHTML = '<div class="err">กรุณากรอก "'+esc(f.label)+'"</div>';
+        $('wf'+i).focus(); return; }
+      if(v) data[f.label] = v;
+    }
+    const saved = JSON.parse(localStorage.getItem(LS) || '{}');
+    const b = $('wfSend'); b.disabled = true; b.textContent = 'กำลังส่ง...';
+    try{
+      const r = await sb.rpc('welfare_submit', {
+        p_code: saved.code, p_name: saved.name, p_item: it.id, p_data: data });
+      if(r.error) throw r.error;
+      if(!r.data || !r.data.ok){
+        const why = r.data ? r.data.reason : '';
+        const msg = why === 'duplicate' ? 'คุณยื่นคำขอนี้ไปแล้ว และยังรอผลอยู่'
+                  : why === 'closed' ? 'สวัสดิการนี้ปิดรับแล้ว'
+                  : why === 'auto' ? 'สวัสดิการนี้เป็นสิทธิอัตโนมัติ ไม่ต้องยื่น'
+                  : 'ส่งไม่สำเร็จ กรุณาลองใหม่';
+        $('wfErr').innerHTML = '<div class="err">'+esc(msg)+'</div>';
+        b.disabled = false; b.textContent = 'ยืนยันยื่นคำขอ'; return;
+      }
+      closeModal();
+      await loadAll();
+      alert('ยื่นคำขอ "' + it.title + '" เรียบร้อยแล้ว\nฝ่ายบุคคลจะตรวจสอบและแจ้งผลกลับ');
+    }catch(e){
+      b.disabled = false; b.textContent = 'ยืนยันยื่นคำขอ';
+      $('wfErr').innerHTML = '<div class="err">ส่งไม่สำเร็จ: '+esc(e.message || e)+'</div>';
+    }
+  };
+}
+window.openForm = openForm;
+
+$('btnOut').onclick = () => { localStorage.removeItem(LS); ME = null; $('btnOut').classList.add('hide'); loginScreen(); };
+
+/* ═══════════════ ฝั่งฝ่ายบุคคล ═══════════════ */
+$('btnHr').onclick = () => hrLogin();
+
+function hrLogin(msg){
+  HRMODE = true;
+  $('topTitle').textContent = 'สวัสดิการ — ฝ่ายบุคคล';
+  $('topSub').textContent = 'จัดการรายการสวัสดิการและอนุมัติคำขอ';
+  $('app').innerHTML =
+    `<div class="card" style="max-width:430px;margin:30px auto">
+      <h2><i class="ti ti-lock"></i>เข้าสู่ระบบฝ่ายบุคคล</h2>
+      <label class="fl">อีเมล</label><input id="hrEmail" type="email">
+      <label class="fl">รหัสผ่าน</label><input id="hrPass" type="password">
+      ${msg ? '<div class="err">'+esc(msg)+'</div>' : ''}
+      <div style="margin-top:16px;display:flex;gap:9px">
+        <button class="btn ghost" onclick="location.reload()">ย้อนกลับ</button>
+        <button class="btn red" id="hrIn" style="flex:1">เข้าสู่ระบบ</button></div>
+    </div>`;
+  $('hrIn').onclick = async () => {
+    const r = await sb.auth.signInWithPassword({ email: $('hrEmail').value.trim(), password: $('hrPass').value });
+    if(r.error){ hrLogin('เข้าสู่ระบบไม่สำเร็จ: ' + r.error.message); return; }
+    hrPanel();
+  };
+  $('hrPass').onkeydown = e => { if(e.key === 'Enter') $('hrIn').click(); };
+}
+
+let hrTab = 'req', REQS = [], HRITEMS = [];
+async function hrPanel(){
+  $('app').innerHTML = '<div class="state"><div class="ic">⏳</div>กำลังโหลด...</div>';
+  try{
+    const [a, b] = await Promise.all([
+      sb.from('welfare_requests').select('*').order('created_at', { ascending: false }).limit(1000),
+      sb.from('welfare_items').select('*').order('sort')
+    ]);
+    if(a.error) throw a.error; if(b.error) throw b.error;
+    REQS = a.data || []; HRITEMS = b.data || [];
+    hrRender();
+  }catch(e){ $('app').innerHTML = '<div class="err">โหลดไม่สำเร็จ: '+esc(e.message || e)+'</div>'; }
+}
+function hrRender(){
+  const nNew = REQS.filter(r => r.status === 'pending').length;
+  const tabs = `<div class="tabs">
+      <button class="${hrTab==='req'?'on':''}" onclick="hrGo('req')">คำขอสวัสดิการ${nNew?'<span class="badge">'+nNew+'</span>':''}</button>
+      <button class="${hrTab==='item'?'on':''}" onclick="hrGo('item')">รายการสวัสดิการ</button>
+      <button class="${hrTab==='bd'?'on':''}" onclick="hrGo('bd')">วันเกิดพนักงาน</button>
+    </div>`;
+  if(hrTab === 'req'){
+    $('app').innerHTML = tabs + `<div class="card"><h2>คำขอทั้งหมด (${REQS.length})</h2>
+      ${REQS.length ? `<table><thead><tr><th style="width:15%">วันที่</th><th style="width:20%">พนักงาน</th>
+        <th style="width:20%">สวัสดิการ</th><th>ข้อมูลที่กรอก</th><th style="width:16%">สถานะ</th></tr></thead><tbody>`
+      + REQS.map(r => `<tr>
+          <td>${esc(String(r.created_at).slice(0,10))}</td>
+          <td><b>${esc(r.emp_name)}</b><br><span style="color:var(--muted);font-size:12px">${esc(r.emp_code)} · ${esc(r.emp_dept||'-')}</span></td>
+          <td>${esc(r.item_title)}</td>
+          <td style="font-size:12.5px">${Object.keys(r.data||{}).map(k => '<b>'+esc(k)+':</b> '+esc(r.data[k])).join('<br>') || '-'}</td>
+          <td><span class="pill ${r.status}">${ST_LABEL[r.status]||r.status}</span>
+            ${r.hr_note ? '<div style="font-size:12px;color:var(--muted);margin-top:3px">'+esc(r.hr_note)+'</div>' : ''}
+            <div style="margin-top:6px;display:flex;gap:5px;flex-wrap:wrap">
+            ${r.status === 'pending' ? `<button class="btn sm" onclick="hrDecide('${r.id}','approved')">อนุมัติ</button>
+              <button class="btn sm ghost" onclick="hrDecide('${r.id}','rejected')">ไม่อนุมัติ</button>` : ''}
+            ${r.status === 'approved' ? `<button class="btn sm" onclick="hrDecide('${r.id}','done')">ดำเนินการเสร็จ</button>` : ''}
+            </div></td></tr>`).join('') + '</tbody></table>'
+      : '<div class="sub">ยังไม่มีคำขอ</div>'}</div>`;
+  } else if(hrTab === 'item'){
+    $('app').innerHTML = tabs + `<div class="card"><h2>รายการสวัสดิการ (${HRITEMS.length})</h2>
+      <div class="sub">แก้ไขรายการได้ที่ฐานข้อมูล ตาราง welfare_items — เปิด/ปิดรับได้จากปุ่มด้านล่าง</div>
+      <table><thead><tr><th style="width:38%">สวัสดิการ</th><th style="width:18%">รูปแบบ</th>
+        <th style="width:22%">ช่วงเปิดรับ</th><th>สถานะ</th></tr></thead><tbody>`
+      + HRITEMS.map(it => `<tr>
+          <td>${esc(it.icon||'🎁')} <b>${esc(it.title)}</b><br><span style="color:var(--muted);font-size:12px">${esc(it.summary||'')}</span></td>
+          <td>${it.mode === 'auto' ? 'สิทธิอัตโนมัติ' : it.mode === 'always' ? 'ยื่นได้ตลอดปี' : 'เปิดรับเป็นช่วง'}</td>
+          <td>${it.open_from ? esc(thD(it.open_from)) : '-'} ${it.open_to ? '– '+esc(thD(it.open_to)) : ''}</td>
+          <td><span class="pill ${it.active?'open':'closed'}">${it.active?'เปิดใช้':'ปิดอยู่'}</span>
+            <div style="margin-top:6px"><button class="btn sm ghost" onclick="hrToggle('${it.id}',${!it.active})">${it.active?'ปิด':'เปิด'}</button></div></td>
+        </tr>`).join('') + '</tbody></table></div>';
+  } else {
+    const mon = new Date().getMonth() + 1;
+    $('app').innerHTML = tabs + `<div class="card"><h2>วันเกิดพนักงาน</h2>
+      <label class="fl">เลือกเดือน</label>
+      <select id="bdMon" style="max-width:220px">${THFULL.map((m,i)=>`<option value="${i+1}" ${i+1===mon?'selected':''}>${m}</option>`).join('')}</select>
+      <div id="bdList" style="margin-top:14px"></div>
+      <div class="note info2">วันเกิดดึงจากทะเบียนพนักงาน หากยังไม่มีข้อมูล ให้กรอกในระบบบันทึกการมาทำงาน (ช่องวันเกิด)</div></div>`;
+    $('bdMon').onchange = hrBd; hrBd();
+  }
+}
+async function hrBd(){
+  const m = Number($('bdMon').value);
+  const r = await sb.rpc('welfare_birthdays', { p_month: m });
+  const list = r.data || [];
+  $('bdList').innerHTML = list.length
+    ? `<div class="bd">${list.map(b=>`<div><div class="dy">${b.day} ${THFULL[m-1]}</div>
+        <div class="nm">${esc(b.full_name)}${b.nickname?' ('+esc(b.nickname)+')':''}</div>
+        <div class="dp">${esc(b.dept||'-')}</div></div>`).join('')}</div>`
+    : '<div class="sub">ยังไม่มีพนักงานที่บันทึกวันเกิดในเดือนนี้</div>';
+}
+function hrGo(t){ hrTab = t; hrRender(); }
+async function hrDecide(id, st){
+  let note = '';
+  if(st === 'rejected'){ note = prompt('เหตุผลที่ไม่อนุมัติ (แจ้งให้พนักงานเห็น)', ''); if(note === null) return; }
+  if(st === 'approved'){ note = prompt('ข้อความถึงพนักงาน (ไม่ใส่ก็ได้)', '') || ''; }
+  const r = await sb.from('welfare_requests').update({
+    status: st, hr_note: note || null, decided_at: new Date().toISOString(), seen_by_hr: true }).eq('id', id);
+  if(r.error){ alert('บันทึกไม่สำเร็จ: ' + r.error.message); return; }
+  hrPanel();
+}
+async function hrToggle(id, v){
+  const r = await sb.from('welfare_items').update({ active: v }).eq('id', id);
+  if(r.error){ alert('แก้ไขไม่สำเร็จ: ' + r.error.message); return; }
+  hrPanel();
+}
+window.hrGo = hrGo; window.hrDecide = hrDecide; window.hrToggle = hrToggle;
+
+/* ═══════════════ เริ่มทำงาน ═══════════════ */
+(async function boot(){
+  const saved = JSON.parse(localStorage.getItem(LS) || 'null');
+  if(saved && saved.code){
+    try{
+      const r = await sb.rpc('welfare_verify', { p_code: saved.code, p_name: saved.name });
+      if(r.data && r.data.ok){ ME = r.data; await loadAll(); return; }
+    }catch(e){}
+  }
+  loginScreen();
+})();
+</script>
+</body>
+</html>
